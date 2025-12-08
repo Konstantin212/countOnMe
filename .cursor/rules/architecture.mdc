@@ -1,0 +1,166 @@
+---
+alwaysApply: true
+---
+
+# ARCHITECTURE.md
+
+## 1. Architecture overview
+We build MVP as a **local offline React Native app (Expo)**.
+Core principles:
+- **Offline-first**: no backend needed for MVP.
+- **Separation of concerns**: UI ≠ state ≠ storage ≠ pure business logic.
+- **Incremental complexity**: start simple (AsyncStorage), migrate to SQLite only if needed.
+- **AI as a layer** later, not part of core domain.
+
+---
+
+## 2. Tech stack (MVP)
+
+### Runtime
+- **Expo (React Native)** — fastest setup and iteration.
+- **TypeScript**.
+
+### Navigation
+- **@react-navigation/native**
+- **@react-navigation/bottom-tabs**
+- **@react-navigation/native-stack**
+- Expo deps: `react-native-screens`, `react-native-safe-area-context`.
+
+### Persistence
+- **@react-native-async-storage/async-storage** for MVP.
+
+### Utilities
+- **uuid** for ids.
+
+### Linting / formatting
+- **eslint**
+- **prettier**
+- (Optional) `eslint-config-universe` for Expo-friendly defaults.
+
+### Later (post-MVP)
+- **expo-sqlite** if storage grows.
+- Backend for AI (Node/Next/Supabase), never ship LLM keys in the app.
+
+---
+
+## 3. Folder structure
+
+Rules:
+- `screens/` = composition + navigation + UI only.
+- `hooks/` = state + side effects.
+- `storage/` = raw persistence API.
+- `utils/` = pure functions only (testable).
+
+---
+
+## 4. Data model
+### Product
+- id (uuid)
+- name
+- caloriesPer100g
+- optional macros
+- createdAt, updatedAt
+
+### Meal
+- id (uuid)
+- name
+- items: MealItem[]
+- totalCalories (derived + stored for speed)
+- createdAt, updatedAt
+
+### MealItem
+- productId
+- grams
+
+All business math must go through `calcMealCalories()`.
+
+---
+
+## 5. Patterns to follow
+
+### 5.1 State + repository pattern
+- **Hooks own state**.
+- Hooks use a tiny **storage repository** (`loadX/saveX`) so persistence is swappable.
+
+Example flow:
+1. `useProducts` loads from storage → sets local state.
+2. UI calls `addProduct` → hook updates state → persists.
+
+No screen should talk to AsyncStorage directly.
+
+### 5.2 “Pure logic in utils”
+- All calorie calculations in `utils/calories.ts`.
+- No React imports inside utils.
+
+### 5.3 Derive totals, don’t duplicate logic
+- Totals always recalculated in hook on save.
+- UI can show live totals from the same util.
+
+---
+
+## 6. Navigation design
+- Bottom Tabs: `Products`, `Meals`.
+
+Products stack:
+- ProductsList
+- ProductForm (add/edit)
+
+Meals stack:
+- MealsList
+- MealBuilder (add/edit)
+- MealDetails
+
+Param lists must be typed for safety.
+
+---
+
+## 7. Validation strategy
+- UI validates inputs before calling hook.
+- Hooks must still be defensive:
+  - no crashes on bad numbers.
+  - missing product ids in meals skipped.
+
+---
+
+## 8. Testing approach (MVP)
+### Unit tests
+- `calcMealCalories` (pure math).
+- Storage round-trip (save → load).
+
+### Manual QA checklist
+- Add/edit/delete product.
+- Create/edit meal.
+- Restart app → data persists.
+- Edge cases:
+  - grams = 0
+  - calories = 0
+  - missing product referenced by meal.
+
+Keep tests minimal until MVP works.
+
+---
+
+## 9. Styling approach
+- Use `StyleSheet.create` per screen/component.
+- Common values (spacing, typography) can go to `src/app/theme.ts` later.
+
+Avoid heavy UI libs for MVP.
+
+---
+
+## 10. Future AI integration (post-MVP)
+
+### Why backend
+LLM keys must not be embedded in the app.  
+AI calls go through your backend.
+
+### Contract
+Backend returns normalized meal draft:
+```json
+{
+  "dish": "Chicken salad",
+  "items": [
+    { "name": "Chicken breast", "grams": 150 },
+    { "name": "Tomato", "grams": 80 }
+  ]
+}

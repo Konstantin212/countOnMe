@@ -1,0 +1,427 @@
+---
+alwaysApply: true
+---
+
+# CODING_STYLE.md
+
+## 1. TypeScript Standards
+
+### 1.1 Type Safety
+- **Always use strict TypeScript** (`strict: true` in tsconfig).
+- Prefer explicit types over `any`. Use `unknown` when type is truly unknown.
+- Use type inference when types are obvious from context.
+- Define interfaces/types in `models/types.ts` for shared domain models.
+
+### 1.2 Type Definitions
+```typescript
+// ✅ Good: Explicit, reusable types
+export type Product = {
+  id: string;
+  name: string;
+  caloriesPer100g: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+// ❌ Bad: Inline types for domain models
+const product: { id: string; name: string } = { ... };
+```
+
+### 1.3 Null Safety
+- Use optional chaining (`?.`) and nullish coalescing (`??`) for safe access.
+- Prefer explicit `undefined` checks over truthy checks when nullability matters.
+- Never use `!` (non-null assertion) unless absolutely necessary and well-documented.
+
+```typescript
+// ✅ Good
+const calories = product?.caloriesPer100g ?? 0;
+const name = meal?.name || 'Unnamed Meal';
+
+// ❌ Bad
+const calories = product!.caloriesPer100g;
+```
+
+---
+
+## 2. React Patterns
+
+### 2.1 Component Structure
+- Use functional components only (no class components).
+- Keep components small and focused on a single responsibility.
+- Extract reusable logic into custom hooks.
+- Prefer composition over complex prop drilling.
+
+### 2.2 Hooks Best Practices
+- **Custom hooks** (`hooks/`) own state and side effects.
+- Hooks return objects with clear, action-oriented method names.
+- Use `useMemo` and `useCallback` only when performance is proven to be an issue.
+- Always handle loading and error states in hooks.
+
+```typescript
+// ✅ Good: Clear API, handles state internally
+export const useProducts = () => {
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  
+  const addProduct = useCallback(async (product: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>) => {
+    // Implementation
+  }, []);
+  
+  return { products, loading, addProduct, updateProduct, deleteProduct };
+};
+
+// ❌ Bad: Exposing raw state setters
+export const useProducts = () => {
+  const [products, setProducts] = useState<Product[]>([]);
+  return { products, setProducts }; // Screen shouldn't call setProducts directly
+};
+```
+
+### 2.3 Component Props
+- Use TypeScript interfaces for props, not inline types.
+- Destructure props at the function signature.
+- Use default parameters for optional props.
+
+```typescript
+// ✅ Good
+interface ProductListItemProps {
+  product: Product;
+  onPress: (id: string) => void;
+  showCalories?: boolean;
+}
+
+export const ProductListItem = ({ 
+  product, 
+  onPress, 
+  showCalories = true 
+}: ProductListItemProps) => {
+  // Component implementation
+};
+
+// ❌ Bad
+export const ProductListItem = (props: any) => {
+  const product = props.product;
+  // ...
+};
+```
+
+---
+
+## 3. Naming Conventions
+
+### 3.1 Files and Directories
+- **Files**: PascalCase for components (`ProductFormScreen.tsx`), camelCase for utilities (`calories.ts`), kebab-case for config files.
+- **Directories**: lowercase with hyphens if needed (`src/screens/`, `src/utils/`).
+- **Hooks**: Always prefix with `use` (`useProducts.ts`, `useMeals.ts`).
+
+### 3.2 Variables and Functions
+- **Variables**: camelCase (`productName`, `totalCalories`).
+- **Functions**: camelCase, verb-based (`calculateCalories`, `saveProduct`, `loadMeals`).
+- **Constants**: UPPER_SNAKE_CASE for true constants (`MAX_PRODUCTS`, `STORAGE_KEYS`).
+- **Booleans**: Prefix with `is`, `has`, `should` (`isLoading`, `hasError`, `shouldShowDetails`).
+
+### 3.3 Types and Interfaces
+- **Types**: PascalCase (`Product`, `Meal`, `MealItem`).
+- **Interfaces**: PascalCase, often with `Props` suffix for component props (`ProductFormProps`).
+
+### 3.4 Event Handlers
+- Prefix with `handle` for UI event handlers (`handleSave`, `handleDelete`).
+- Prefix with `on` for props that are callbacks (`onPress`, `onChange`).
+
+```typescript
+// ✅ Good
+const handleSave = () => {
+  onSave(product);
+};
+
+// ❌ Bad
+const save = () => { ... };
+const onClick = () => { ... };
+```
+
+---
+
+## 4. Code Organization
+
+### 4.1 Import Order
+1. React and React Native imports
+2. Third-party libraries
+3. Internal imports (hooks, utils, models, components)
+4. Types (if separate from implementation)
+5. Relative imports (use sparingly)
+
+```typescript
+// ✅ Good
+import React, { useState, useCallback } from 'react';
+import { View, Text, StyleSheet } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+
+import { useProducts } from '../hooks/useProducts';
+import { Product } from '../models/types';
+import { calculateCalories } from '../utils/calories';
+```
+
+### 4.2 Function Organization
+Within a file, organize in this order:
+1. Type/interface definitions
+2. Constants
+3. Main component/hook
+4. Helper functions
+5. Styles (if using StyleSheet)
+
+### 4.3 File Size
+- Keep files under 300 lines when possible.
+- If a component exceeds 200 lines, consider extracting sub-components or hooks.
+- Split large utility files into focused modules.
+
+---
+
+## 5. Error Handling
+
+### 5.1 Defensive Programming
+- Always validate inputs in hooks, even if UI validates first.
+- Handle edge cases gracefully (missing data, invalid numbers, etc.).
+- Never crash on bad user input—show errors or use safe defaults.
+
+```typescript
+// ✅ Good: Defensive, handles edge cases
+export const calcMealCalories = (items: MealItem[], products: Product[]): number => {
+  if (!items || items.length === 0) return 0;
+  
+  return items.reduce((total, item) => {
+    const product = products.find(p => p.id === item.productId);
+    if (!product || item.grams <= 0) return total;
+    
+    const calories = (product.caloriesPer100g * item.grams) / 100;
+    return total + calories;
+  }, 0);
+};
+
+// ❌ Bad: Assumes data is always valid
+export const calcMealCalories = (items: MealItem[], products: Product[]): number => {
+  return items.reduce((total, item) => {
+    const product = products.find(p => p.id === item.productId);
+    return total + (product.caloriesPer100g * item.grams) / 100;
+  }, 0);
+};
+```
+
+### 5.2 Async Error Handling
+- Always use try/catch for async operations.
+- Provide meaningful error messages or fallback behavior.
+- Log errors for debugging but don't expose raw errors to users.
+
+```typescript
+// ✅ Good
+const saveProduct = async (product: Product) => {
+  try {
+    await storage.saveProduct(product);
+    setProducts(prev => [...prev, product]);
+  } catch (error) {
+    console.error('Failed to save product:', error);
+    // Show user-friendly error message
+    throw new Error('Could not save product. Please try again.');
+  }
+};
+```
+
+---
+
+## 6. Performance Considerations
+
+### 6.1 Memoization
+- Use `useMemo` for expensive calculations (e.g., filtering large lists).
+- Use `useCallback` for functions passed as props to memoized components.
+- Don't over-optimize—measure first, then optimize.
+
+```typescript
+// ✅ Good: Memoize expensive computation
+const filteredProducts = useMemo(() => {
+  return products.filter(p => 
+    p.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+}, [products, searchQuery]);
+
+// ❌ Bad: Unnecessary memoization
+const productCount = useMemo(() => products.length, [products]);
+```
+
+### 6.2 List Rendering
+- Use `FlatList` or `SectionList` for long lists, not `map()` with `ScrollView`.
+- Provide `keyExtractor` and optimize `renderItem` if needed.
+
+---
+
+## 7. Styling Guidelines
+
+### 7.1 StyleSheet Usage
+- Always use `StyleSheet.create` for styles (better performance and validation).
+- Define styles at the bottom of the component file or in a separate styles file for large components.
+- Use consistent spacing values (consider a theme file later).
+
+```typescript
+// ✅ Good
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    padding: 16,
+  },
+  title: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+});
+
+// ❌ Bad: Inline styles
+<View style={{ flex: 1, padding: 16 }} />
+```
+
+### 7.2 Naming Styles
+- Use descriptive names that reflect purpose (`container`, `title`, `input`, `button`).
+- Avoid generic names (`box`, `text`, `view`) unless truly generic.
+
+---
+
+## 8. Comments and Documentation
+
+### 8.1 When to Comment
+- Explain **why**, not **what** (code should be self-documenting).
+- Document complex business logic or non-obvious decisions.
+- Add JSDoc comments for public APIs (hooks, utility functions).
+
+```typescript
+// ✅ Good: Explains business logic
+/**
+ * Calculates total calories for a meal based on items and their grams.
+ * Handles missing products gracefully by skipping invalid items.
+ */
+export const calcMealCalories = (items: MealItem[], products: Product[]): number => {
+  // Implementation
+};
+
+// ❌ Bad: States the obvious
+// This function calculates calories
+export const calcCalories = () => { ... };
+```
+
+### 8.2 Code Clarity Over Comments
+- Prefer clear variable names and function names over comments.
+- Extract complex logic into well-named functions.
+
+```typescript
+// ✅ Good: Self-documenting
+const hasValidProducts = items.every(item => 
+  products.some(p => p.id === item.productId)
+);
+
+// ❌ Bad: Needs comment to understand
+const valid = items.every(i => products.some(p => p.id === i.productId));
+// Check if all items have valid products
+```
+
+---
+
+## 9. Testing Considerations
+
+### 9.1 Testable Code
+- Keep pure functions in `utils/` (easy to unit test).
+- Avoid side effects in utility functions.
+- Make hooks testable by accepting dependencies (dependency injection when needed).
+
+```typescript
+// ✅ Good: Pure, testable function
+export const calcMealCalories = (items: MealItem[], products: Product[]): number => {
+  // No side effects, deterministic output
+};
+
+// ❌ Bad: Hard to test (depends on global state)
+export const calcMealCalories = (items: MealItem[]): number => {
+  const products = getProductsFromStorage(); // Side effect
+  // ...
+};
+```
+
+---
+
+## 10. React Native Specific
+
+### 10.1 Platform Considerations
+- Use Platform-specific code only when necessary.
+- Prefer cross-platform solutions (Expo APIs when available).
+
+### 10.2 Accessibility
+- Add `accessibilityLabel` for interactive elements.
+- Use semantic HTML equivalents (`TouchableOpacity` for buttons, etc.).
+
+```typescript
+// ✅ Good
+<TouchableOpacity
+  onPress={handleSave}
+  accessibilityLabel="Save product"
+  accessibilityRole="button"
+>
+  <Text>Save</Text>
+</TouchableOpacity>
+```
+
+---
+
+## 11. Code Review Checklist
+
+Before submitting code, ensure:
+- [ ] Types are explicit and correct (no `any` without justification)
+- [ ] Error cases are handled gracefully
+- [ ] No console.logs in production code (use proper logging)
+- [ ] Functions are pure when possible (utils/)
+- [ ] Hooks follow the established patterns
+- [ ] Components are focused and not too large
+- [ ] Naming is clear and consistent
+- [ ] No unused imports or variables
+- [ ] Code follows the separation of concerns (UI ≠ state ≠ storage)
+
+---
+
+## 12. Common Pitfalls to Avoid
+
+### 12.1 State Management
+- ❌ Don't store derived data in state (calculate on the fly).
+- ❌ Don't mutate state directly (always use setState/functional updates).
+- ✅ Do use functional updates for state that depends on previous state.
+
+```typescript
+// ✅ Good
+setProducts(prev => [...prev, newProduct]);
+
+// ❌ Bad
+products.push(newProduct);
+setProducts(products);
+```
+
+### 12.2 Async Operations
+- ❌ Don't forget to handle loading and error states.
+- ❌ Don't call async functions without await in useEffect (missing cleanup).
+- ✅ Do use proper cleanup in useEffect for subscriptions/timers.
+
+### 12.3 Type Safety
+- ❌ Don't use `as` type assertions unless absolutely necessary.
+- ❌ Don't ignore TypeScript errors with `@ts-ignore`.
+- ✅ Do fix type errors properly or use `@ts-expect-error` with explanation.
+
+---
+
+## 13. MVP-Specific Guidelines
+
+### 13.1 Keep It Simple
+- Prioritize working code over perfect architecture.
+- Don't over-engineer for future needs that may not materialize.
+- Focus on user-facing features, not premature optimization.
+
+### 13.2 Incremental Complexity
+- Start with the simplest solution (AsyncStorage).
+- Refactor when you have concrete evidence it's needed.
+- Document decisions to migrate (e.g., "Move to SQLite if product count > 1000").
+
+---
+
+This style guide should be followed consistently to maintain code quality and readability throughout the MVP and beyond.

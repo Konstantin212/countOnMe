@@ -11,6 +11,9 @@ import MealDetailsScreen from '../screens/MealDetailsScreen';
 import MealsListScreen from '../screens/MealsListScreen';
 import ProductFormScreen from '../screens/ProductFormScreen';
 import ProductsListScreen from '../screens/ProductsListScreen';
+import ProductSearchScreen from '../screens/ProductSearchScreen';
+import ProductConfirmScreen from '../screens/ProductConfirmScreen';
+import ProductDetailsScreen from '../screens/ProductDetailsScreen';
 
 enableScreens();
 
@@ -34,9 +37,24 @@ const ProductsStackNavigator = () => (
       options={{ title: 'Products' }}
     />
     <ProductsStack.Screen
+      name="ProductDetails"
+      component={ProductDetailsScreen}
+      options={{ title: 'Product Details' }}
+    />
+    <ProductsStack.Screen
       name="ProductForm"
       component={ProductFormScreen}
       options={{ title: 'Product' }}
+    />
+    <ProductsStack.Screen
+      name="ProductSearch"
+      component={ProductSearchScreen}
+      options={{ title: 'Add Product' }}
+    />
+    <ProductsStack.Screen
+      name="ProductConfirm"
+      component={ProductConfirmScreen}
+      options={{ title: 'Confirm Product' }}
     />
   </ProductsStack.Navigator>
 );

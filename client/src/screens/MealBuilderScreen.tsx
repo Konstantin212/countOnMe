@@ -37,7 +37,7 @@ const MealBuilderScreen = ({ navigation, route }: Props) => {
   // Load meal data if editing
   useEffect(() => {
     if (isEditing && route.params?.mealId) {
-      const meal = meals.find((m) => m.id === route.params.mealId);
+      const meal = meals.find((m) => m.id === route.params?.mealId);
       if (meal) {
         setMealName(meal.name);
         const itemsMap = new Map<string, number>();

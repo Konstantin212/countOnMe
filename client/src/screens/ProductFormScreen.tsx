@@ -30,7 +30,7 @@ const ProductFormScreen = ({ navigation, route }: Props) => {
   // Load product data if editing
   useEffect(() => {
     if (isEditing && route.params?.productId) {
-      const product = products.find((p) => p.id === route.params.productId);
+      const product = products.find((p) => p.id === route.params?.productId);
       if (product) {
         setName(product.name);
         setCalories(String(product.caloriesPer100g));

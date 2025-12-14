@@ -22,6 +22,30 @@ Project conventions:
 - Keep persistence access in `src/storage` only.
 - Comments must be in English.
 
+### Theme System
+- **ALWAYS use theme colors** via `useTheme()` hook. Never hardcode color hex values.
+- Import theme: `import { useTheme } from '../hooks/useTheme';`
+- Get colors: `const { colors } = useTheme();`
+- Move `StyleSheet.create()` inside components to access theme colors dynamically
+- Use semantic color names: `colors.background`, `colors.text`, `colors.primary`, etc.
+- Theme supports light and dark modes with system preference detection
+- Available color tokens: See `src/theme/colors.ts` for complete list
+
+Example:
+```typescript
+const MyComponent = () => {
+  const { colors } = useTheme();
+  
+  const styles = StyleSheet.create({
+    container: { backgroundColor: colors.background },
+    text: { color: colors.text },
+    button: { backgroundColor: colors.primary },
+  });
+  
+  return <View style={styles.container}>...</View>;
+};
+```
+
 ---
 
 ## Pre-Commit Verification Workflow (mandatory)

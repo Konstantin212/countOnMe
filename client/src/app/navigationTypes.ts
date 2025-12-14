@@ -1,4 +1,13 @@
-export type ProductsStackParamList = {
+export type MyDayStackParamList = {
+  MyDay: undefined;
+};
+
+export type MyPathStackParamList = {
+  MyPath: undefined;
+};
+
+export type ProfileStackParamList = {
+  ProfileMenu: undefined;
   ProductsList: undefined;
   ProductDetails: { productId: string };
   ProductForm: { productId?: string } | undefined;
@@ -14,16 +23,14 @@ export type ProductsStackParamList = {
       fatPer100g?: number;
     };
   };
-};
-
-export type MealsStackParamList = {
   MealsList: undefined;
   MealBuilder: { mealId?: string } | undefined;
   MealDetails: { mealId: string };
 };
 
 export type RootTabParamList = {
-  ProductsTab: undefined;
-  MealsTab: undefined;
+  MyDayTab: undefined;
+  MyPathTab: undefined;
+  ProfileTab: undefined;
 };
 

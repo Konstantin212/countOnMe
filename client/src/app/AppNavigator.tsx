@@ -5,7 +5,12 @@ import { enableScreens } from 'react-native-screens';
 
 import { Ionicons } from '@expo/vector-icons';
 
-import { RootTabParamList, MealsStackParamList, ProductsStackParamList } from './navigationTypes';
+import {
+  RootTabParamList,
+  MyDayStackParamList,
+  MyPathStackParamList,
+  ProfileStackParamList,
+} from './navigationTypes';
 import MealBuilderScreen from '../screens/MealBuilderScreen';
 import MealDetailsScreen from '../screens/MealDetailsScreen';
 import MealsListScreen from '../screens/MealsListScreen';
@@ -14,80 +19,104 @@ import ProductsListScreen from '../screens/ProductsListScreen';
 import ProductSearchScreen from '../screens/ProductSearchScreen';
 import ProductConfirmScreen from '../screens/ProductConfirmScreen';
 import ProductDetailsScreen from '../screens/ProductDetailsScreen';
+import MyDayScreen from '../screens/MyDayScreen';
+import MyPathScreen from '../screens/MyPathScreen';
+import ProfileScreen from '../screens/ProfileScreen';
+import { useTheme } from '../hooks/useTheme';
 
 enableScreens();
 
 const Tab = createBottomTabNavigator<RootTabParamList>();
-const ProductsStack = createNativeStackNavigator<ProductsStackParamList>();
-const MealsStack = createNativeStackNavigator<MealsStackParamList>();
+const MyDayStack = createNativeStackNavigator<MyDayStackParamList>();
+const MyPathStack = createNativeStackNavigator<MyPathStackParamList>();
+const ProfileStack = createNativeStackNavigator<ProfileStackParamList>();
 
 type TabName = keyof RootTabParamList;
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
 const TAB_ICONS: Record<TabName, { focused: IoniconName; unfocused: IoniconName }> = {
-  ProductsTab: { focused: 'basket', unfocused: 'basket-outline' },
-  MealsTab: { focused: 'restaurant', unfocused: 'restaurant-outline' },
+  MyDayTab: { focused: 'calendar', unfocused: 'calendar-outline' },
+  MyPathTab: { focused: 'trending-up', unfocused: 'trending-up-outline' },
+  ProfileTab: { focused: 'person', unfocused: 'person-outline' },
 };
 
-const ProductsStackNavigator = () => (
-  <ProductsStack.Navigator>
-    <ProductsStack.Screen
+const ProfileStackNavigator = () => (
+  <ProfileStack.Navigator>
+    <ProfileStack.Screen
+      name="ProfileMenu"
+      component={ProfileScreen}
+      options={{ title: 'Profile' }}
+    />
+    <ProfileStack.Screen
       name="ProductsList"
       component={ProductsListScreen}
-      options={{ title: 'Products' }}
+      options={{ title: 'My Products' }}
     />
-    <ProductsStack.Screen
+    <ProfileStack.Screen
       name="ProductDetails"
       component={ProductDetailsScreen}
       options={{ title: 'Product Details' }}
     />
-    <ProductsStack.Screen
+    <ProfileStack.Screen
       name="ProductForm"
       component={ProductFormScreen}
       options={{ title: 'Product' }}
     />
-    <ProductsStack.Screen
+    <ProfileStack.Screen
       name="ProductSearch"
       component={ProductSearchScreen}
       options={{ title: 'Add Product' }}
     />
-    <ProductsStack.Screen
+    <ProfileStack.Screen
       name="ProductConfirm"
       component={ProductConfirmScreen}
       options={{ title: 'Confirm Product' }}
     />
-  </ProductsStack.Navigator>
-);
-
-const MealsStackNavigator = () => (
-  <MealsStack.Navigator>
-    <MealsStack.Screen
+    <ProfileStack.Screen
       name="MealsList"
       component={MealsListScreen}
-      options={{ title: 'Meals' }}
+      options={{ title: 'My Meals' }}
     />
-    <MealsStack.Screen
+    <ProfileStack.Screen
       name="MealBuilder"
       component={MealBuilderScreen}
       options={{ title: 'Build Meal' }}
     />
-    <MealsStack.Screen
+    <ProfileStack.Screen
       name="MealDetails"
       component={MealDetailsScreen}
       options={{ title: 'Meal Details' }}
     />
-  </MealsStack.Navigator>
+  </ProfileStack.Navigator>
 );
 
-export const AppNavigator = () => {
+const MyDayStackNavigator = () => (
+  <MyDayStack.Navigator>
+    <MyDayStack.Screen name="MyDay" component={MyDayScreen} options={{ title: 'My Day' }} />
+  </MyDayStack.Navigator>
+);
+
+const MyPathStackNavigator = () => (
+  <MyPathStack.Navigator>
+    <MyPathStack.Screen name="MyPath" component={MyPathScreen} options={{ title: 'My Path' }} />
+  </MyPathStack.Navigator>
+);
+
+const TabNavigator = () => {
+  const { colors } = useTheme();
+
   return (
     <Tab.Navigator
       screenOptions={({ route }) => {
         const icons = TAB_ICONS[route.name as TabName];
         return {
           headerShown: false,
-          tabBarActiveTintColor: '#111',
-          tabBarInactiveTintColor: '#9ca3af',
+          tabBarActiveTintColor: colors.tabBarActive,
+          tabBarInactiveTintColor: colors.tabBarInactive,
+          tabBarStyle: {
+            backgroundColor: colors.background,
+            borderTopColor: colors.border,
+          },
           tabBarLabelStyle: { fontSize: 12, fontWeight: '600' },
           tabBarIcon: ({ color, size, focused }) => (
             <Ionicons name={focused ? icons.focused : icons.unfocused} color={color} size={size} />
@@ -96,15 +125,24 @@ export const AppNavigator = () => {
       }}
     >
       <Tab.Screen
-        name="ProductsTab"
-        component={ProductsStackNavigator}
-        options={{ title: 'Products' }}
+        name="MyDayTab"
+        component={MyDayStackNavigator}
+        options={{ title: 'My Day' }}
       />
       <Tab.Screen
-        name="MealsTab"
-        component={MealsStackNavigator}
-        options={{ title: 'Meals' }}
+        name="MyPathTab"
+        component={MyPathStackNavigator}
+        options={{ title: 'My Path' }}
+      />
+      <Tab.Screen
+        name="ProfileTab"
+        component={ProfileStackNavigator}
+        options={{ title: 'Profile' }}
       />
     </Tab.Navigator>
   );
+};
+
+export const AppNavigator = () => {
+  return <TabNavigator />;
 };

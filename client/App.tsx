@@ -7,23 +7,34 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StyleSheet } from 'react-native';
 
 import { AppNavigator } from './src/app/AppNavigator';
+import { ThemeProvider } from './src/theme/ThemeContext';
+import { useTheme } from './src/hooks/useTheme';
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#111',
   },
 });
 
-export default function App() {
+const ThemedApp = () => {
+  const { colors, theme } = useTheme();
+
   return (
-    <GestureHandlerRootView style={styles.container}>
+    <GestureHandlerRootView style={[styles.container, { backgroundColor: colors.background }]}>
       <SafeAreaProvider>
         <NavigationContainer>
-          <StatusBar style="light" />
+          <StatusBar style={theme === 'dark' ? 'light' : 'dark'} />
           <AppNavigator />
         </NavigationContainer>
       </SafeAreaProvider>
     </GestureHandlerRootView>
+  );
+};
+
+export default function App() {
+  return (
+    <ThemeProvider>
+      <ThemedApp />
+    </ThemeProvider>
   );
 }

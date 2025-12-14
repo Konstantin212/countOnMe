@@ -11,14 +11,16 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 
-import { ProductsStackParamList } from '../app/navigationTypes';
+import { ProfileStackParamList } from '../app/navigationTypes';
 import { useProducts } from '../hooks/useProducts';
 import { Scale, SCALE_OPTIONS, toGrams } from '../utils/scales';
+import { useTheme } from '../hooks/useTheme';
 
-type Props = NativeStackScreenProps<ProductsStackParamList, 'ProductDetails'>;
+type Props = NativeStackScreenProps<ProfileStackParamList, 'ProductDetails'>;
 
 const ProductDetailsScreen = ({ navigation, route }: Props) => {
   const { products, deleteProduct } = useProducts();
+  const { colors } = useTheme();
   const product = useMemo(() => {
     return products.find((p) => p.id === route.params.productId);
   }, [products, route.params.productId]);
@@ -63,16 +65,214 @@ const ProductDetailsScreen = ({ navigation, route }: Props) => {
           style: 'destructive',
           onPress: async () => {
             try {
-              await deleteProduct(product.id);
-              navigation.goBack();
+              console.log('Deleting product:', product.id);
+              const wasDeleted = await deleteProduct(product.id);
+              console.log('Product deleted successfully:', wasDeleted);
+              
+              if (wasDeleted) {
+                navigation.goBack();
+              } else {
+                Alert.alert('Error', 'Product not found');
+              }
             } catch (error) {
-              Alert.alert('Error', 'Failed to delete product');
+              console.error('Delete error:', error);
+              Alert.alert('Error', 'Failed to delete product. Please try again.');
             }
           },
         },
       ],
     );
   };
+
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    scrollView: {
+      flex: 1,
+    },
+    section: {
+      padding: 16,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    sectionTitle: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.textSecondary,
+      textTransform: 'uppercase',
+      letterSpacing: 0.5,
+      marginBottom: 12,
+    },
+    sectionSubtitle: {
+      fontSize: 13,
+      color: colors.textSecondary,
+      marginBottom: 12,
+      lineHeight: 18,
+    },
+    infoCard: {
+      backgroundColor: colors.cardBackground,
+      padding: 16,
+      borderRadius: 8,
+    },
+    productName: {
+      fontSize: 20,
+      fontWeight: '700',
+      color: colors.text,
+      marginBottom: 8,
+    },
+    productDate: {
+      fontSize: 13,
+      color: colors.textSecondary,
+      marginTop: 4,
+    },
+    amountContainer: {
+      gap: 12,
+    },
+    amountInput: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 8,
+      padding: 12,
+      fontSize: 16,
+      backgroundColor: colors.inputBackground,
+      color: colors.text,
+    },
+    scaleButtons: {
+      flexDirection: 'row',
+      gap: 8,
+    },
+    scaleButton: {
+      flex: 1,
+      paddingVertical: 12,
+      paddingHorizontal: 16,
+      borderRadius: 8,
+      borderWidth: 2,
+      borderColor: colors.border,
+      backgroundColor: colors.cardBackground,
+      alignItems: 'center',
+    },
+    scaleButtonActive: {
+      borderColor: colors.primary,
+      backgroundColor: colors.primary,
+    },
+    scaleButtonText: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: colors.textSecondary,
+    },
+    scaleButtonTextActive: {
+      color: colors.buttonText,
+    },
+    calculatedCard: {
+      backgroundColor: colors.successLight,
+      padding: 20,
+      borderRadius: 12,
+      borderWidth: 2,
+      borderColor: colors.success,
+    },
+    nutrientCard: {
+      backgroundColor: colors.infoLight,
+      padding: 16,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    nutrientRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingVertical: 8,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    nutrientLabel: {
+      fontSize: 15,
+      color: colors.text,
+      fontWeight: '500',
+    },
+    nutrientValue: {
+      fontSize: 15,
+      color: colors.text,
+      fontWeight: '600',
+    },
+    nutrientValueLarge: {
+      fontSize: 24,
+      color: colors.success,
+      fontWeight: '700',
+    },
+    equivalentText: {
+      fontSize: 13,
+      color: colors.success,
+      marginTop: 12,
+      textAlign: 'center',
+      fontWeight: '500',
+    },
+    footer: {
+      padding: 16,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+      backgroundColor: colors.background,
+    },
+    buttonRow: {
+      flexDirection: 'row',
+      gap: 12,
+    },
+    button: {
+      flex: 1,
+      padding: 16,
+      borderRadius: 8,
+      alignItems: 'center',
+    },
+    editButton: {
+      backgroundColor: colors.primary,
+    },
+    editButtonText: {
+      color: colors.buttonText,
+      fontSize: 16,
+      fontWeight: '600',
+    },
+    deleteButton: {
+      backgroundColor: colors.cardBackground,
+      borderWidth: 2,
+      borderColor: colors.error,
+    },
+    deleteButtonText: {
+      color: colors.error,
+      fontSize: 16,
+      fontWeight: '600',
+    },
+    notFoundContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: 32,
+    },
+    notFoundText: {
+      fontSize: 20,
+      fontWeight: '600',
+      color: colors.text,
+      marginBottom: 8,
+    },
+    notFoundSubtext: {
+      fontSize: 14,
+      color: colors.textSecondary,
+      textAlign: 'center',
+      marginBottom: 24,
+    },
+    backButton: {
+      backgroundColor: colors.primary,
+      paddingHorizontal: 24,
+      paddingVertical: 12,
+      borderRadius: 8,
+    },
+    backButtonText: {
+      color: colors.buttonText,
+      fontSize: 16,
+      fontWeight: '600',
+    },
+  });
 
   if (!product) {
     return (
@@ -233,193 +433,4 @@ const ProductDetailsScreen = ({ navigation, route }: Props) => {
 };
 
 export default ProductDetailsScreen;
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
-  scrollView: {
-    flex: 1,
-  },
-  section: {
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-  },
-  sectionTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#666',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginBottom: 12,
-  },
-  sectionSubtitle: {
-    fontSize: 13,
-    color: '#666',
-    marginBottom: 12,
-    lineHeight: 18,
-  },
-  infoCard: {
-    backgroundColor: '#f9fafb',
-    padding: 16,
-    borderRadius: 8,
-  },
-  productName: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#333',
-    marginBottom: 8,
-  },
-  productDate: {
-    fontSize: 13,
-    color: '#666',
-    marginTop: 4,
-  },
-  amountContainer: {
-    gap: 12,
-  },
-  amountInput: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    backgroundColor: '#fafafa',
-  },
-  scaleButtons: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  scaleButton: {
-    flex: 1,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    borderWidth: 2,
-    borderColor: '#ddd',
-    backgroundColor: '#fff',
-    alignItems: 'center',
-  },
-  scaleButtonActive: {
-    borderColor: '#2563eb',
-    backgroundColor: '#2563eb',
-  },
-  scaleButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#666',
-  },
-  scaleButtonTextActive: {
-    color: '#fff',
-  },
-  calculatedCard: {
-    backgroundColor: '#dcfce7',
-    padding: 20,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: '#16a34a',
-  },
-  nutrientCard: {
-    backgroundColor: '#f0f9ff',
-    padding: 16,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#bfdbfe',
-  },
-  nutrientRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0,0,0,0.05)',
-  },
-  nutrientLabel: {
-    fontSize: 15,
-    color: '#334155',
-    fontWeight: '500',
-  },
-  nutrientValue: {
-    fontSize: 15,
-    color: '#1e293b',
-    fontWeight: '600',
-  },
-  nutrientValueLarge: {
-    fontSize: 24,
-    color: '#15803d',
-    fontWeight: '700',
-  },
-  equivalentText: {
-    fontSize: 13,
-    color: '#16a34a',
-    marginTop: 12,
-    textAlign: 'center',
-    fontWeight: '500',
-  },
-  footer: {
-    padding: 16,
-    borderTopWidth: 1,
-    borderTopColor: '#eee',
-    backgroundColor: '#fff',
-  },
-  buttonRow: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  button: {
-    flex: 1,
-    padding: 16,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  editButton: {
-    backgroundColor: '#2563eb',
-  },
-  editButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  deleteButton: {
-    backgroundColor: '#fff',
-    borderWidth: 2,
-    borderColor: '#ef4444',
-  },
-  deleteButtonText: {
-    color: '#ef4444',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  notFoundContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 32,
-  },
-  notFoundText: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 8,
-  },
-  notFoundSubtext: {
-    fontSize: 14,
-    color: '#666',
-    textAlign: 'center',
-    marginBottom: 24,
-  },
-  backButton: {
-    backgroundColor: '#2563eb',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
-  },
-  backButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-});
 

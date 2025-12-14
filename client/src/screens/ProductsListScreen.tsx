@@ -1,17 +1,85 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useFocusEffect } from '@react-navigation/native';
 
 import ProductListItem from '../components/ProductListItem';
 import { Product } from '../models/types';
-import { ProductsStackParamList } from '../app/navigationTypes';
+import { ProfileStackParamList } from '../app/navigationTypes';
 import { useProducts } from '../hooks/useProducts';
+import { useTheme } from '../hooks/useTheme';
 
-type Props = NativeStackScreenProps<ProductsStackParamList, 'ProductsList'>;
+type Props = NativeStackScreenProps<ProfileStackParamList, 'ProductsList'>;
 
 const ProductsListScreen = ({ navigation }: Props) => {
-  const { products, loading } = useProducts();
+  const { products, loading, refresh } = useProducts();
+  const { colors } = useTheme();
+
+  // Refresh products when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      console.log('ProductsList screen focused, refreshing...');
+      refresh();
+    }, [refresh])
+  );
+
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      paddingHorizontal: 16,
+      paddingTop: 24,
+      backgroundColor: colors.background,
+    },
+    header: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 16,
+    },
+    heading: {
+      fontSize: 24,
+      fontWeight: '600',
+      color: colors.text,
+    },
+    addButton: {
+      backgroundColor: colors.primary,
+      paddingHorizontal: 16,
+      paddingVertical: 8,
+      borderRadius: 8,
+    },
+    addButtonText: {
+      color: colors.buttonText,
+      fontSize: 14,
+      fontWeight: '600',
+    },
+    listContent: {
+      gap: 12,
+      paddingBottom: 24,
+    },
+    emptyContainer: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: 48,
+    },
+    emptyText: {
+      fontSize: 18,
+      fontWeight: '600',
+      color: colors.text,
+      marginBottom: 8,
+    },
+    emptySubtext: {
+      fontSize: 14,
+      color: colors.textSecondary,
+      textAlign: 'center',
+    },
+    loadingText: {
+      fontSize: 16,
+      color: colors.textSecondary,
+      textAlign: 'center',
+      marginTop: 32,
+    },
+  });
 
   const renderItem = ({ item }: { item: Product }) => (
     <ProductListItem
@@ -59,59 +127,3 @@ const ProductsListScreen = ({ navigation }: Props) => {
 };
 
 export default ProductsListScreen;
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    paddingHorizontal: 16,
-    paddingTop: 24,
-    backgroundColor: '#fff',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  heading: {
-    fontSize: 24,
-    fontWeight: '600',
-  },
-  addButton: {
-    backgroundColor: '#2563eb',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
-  },
-  addButtonText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  listContent: {
-    gap: 12,
-    paddingBottom: 24,
-  },
-  emptyContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 48,
-  },
-  emptyText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 8,
-  },
-  emptySubtext: {
-    fontSize: 14,
-    color: '#666',
-    textAlign: 'center',
-  },
-  loadingText: {
-    fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
-    marginTop: 32,
-  },
-});

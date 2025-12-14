@@ -169,19 +169,26 @@ export const useProducts = (): UseProductsResult => {
 
   const deleteProduct = useCallback(
     async (id: string) => {
+      console.log('deleteProduct called with id:', id);
       let removed = false;
+      
       await applyChanges((prev) => {
+        console.log('Current products count:', prev.length);
         const next = prev.filter((product) => {
           if (product.id === id) {
+            console.log('Found product to delete:', product.name);
             removed = true;
             return false;
           }
           return true;
         });
+        console.log('New products count:', next.length);
+        console.log('Product was removed:', removed);
 
         return removed ? next : prev;
       });
 
+      console.log('deleteProduct returning:', removed);
       return removed;
     },
     [applyChanges],

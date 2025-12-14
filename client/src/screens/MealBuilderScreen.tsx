@@ -11,13 +11,14 @@ import {
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 
-import { MealsStackParamList } from '../app/navigationTypes';
+import { ProfileStackParamList } from '../app/navigationTypes';
 import { useProducts } from '../hooks/useProducts';
 import { useMeals } from '../hooks/useMeals';
 import { MealItem } from '../models/types';
 import { calcMealCalories } from '../utils/calories';
+import { useTheme } from '../hooks/useTheme';
 
-type Props = NativeStackScreenProps<MealsStackParamList, 'MealBuilder'>;
+type Props = NativeStackScreenProps<ProfileStackParamList, 'MealBuilder'>;
 
 type SelectedProduct = {
   productId: string;

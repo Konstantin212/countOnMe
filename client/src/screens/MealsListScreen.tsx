@@ -3,16 +3,18 @@ import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 
-import { MealsStackParamList } from '../app/navigationTypes';
+import { ProfileStackParamList } from '../app/navigationTypes';
 import { useProducts } from '../hooks/useProducts';
 import { useMeals } from '../hooks/useMeals';
 import { Meal } from '../models/types';
+import { useTheme } from '../hooks/useTheme';
 
-type Props = NativeStackScreenProps<MealsStackParamList, 'MealsList'>;
+type Props = NativeStackScreenProps<ProfileStackParamList, 'MealsList'>;
 
 const MealsListScreen = ({ navigation }: Props) => {
   const { products } = useProducts();
   const { meals, loading } = useMeals(products);
+  const { colors } = useTheme();
 
   // Sort meals newest first
   const sortedMeals = React.useMemo(() => {
@@ -50,6 +52,117 @@ const MealsListScreen = ({ navigation }: Props) => {
     </View>
   );
 
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      paddingHorizontal: 16,
+      paddingTop: 24,
+      backgroundColor: colors.background,
+    },
+    header: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 16,
+    },
+    heading: {
+      fontSize: 24,
+      fontWeight: '600',
+      color: colors.text,
+    },
+    addButton: {
+      backgroundColor: colors.primary,
+      paddingHorizontal: 16,
+      paddingVertical: 8,
+      borderRadius: 8,
+    },
+    addButtonText: {
+      color: colors.buttonText,
+      fontSize: 14,
+      fontWeight: '600',
+    },
+    newButton: {
+      backgroundColor: colors.primary,
+      paddingHorizontal: 16,
+      paddingVertical: 8,
+      borderRadius: 8,
+    },
+    newButtonText: {
+      color: colors.buttonText,
+      fontSize: 14,
+      fontWeight: '600',
+    },
+    listContent: {
+      gap: 12,
+      paddingBottom: 24,
+    },
+    mealCard: {
+      backgroundColor: colors.cardBackground,
+      padding: 16,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    mealCardPressed: {
+      backgroundColor: colors.pressed,
+    },
+    mealItem: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      padding: 16,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.cardBackground,
+    },
+    mealItemPressed: {
+      opacity: 0.6,
+    },
+    mealInfo: {
+      flex: 1,
+    },
+    mealName: {
+      fontSize: 18,
+      fontWeight: '600',
+      color: colors.text,
+      marginBottom: 8,
+    },
+    mealCalories: {
+      fontSize: 24,
+      fontWeight: '700',
+      color: colors.primary,
+      marginBottom: 4,
+    },
+    mealDate: {
+      fontSize: 13,
+      color: colors.textSecondary,
+      marginTop: 4,
+    },
+    emptyContainer: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: 48,
+    },
+    emptyText: {
+      fontSize: 18,
+      fontWeight: '600',
+      color: colors.text,
+      marginBottom: 8,
+    },
+    emptySubtext: {
+      fontSize: 14,
+      color: colors.textSecondary,
+      textAlign: 'center',
+    },
+    loadingText: {
+      fontSize: 16,
+      color: colors.textSecondary,
+      textAlign: 'center',
+      marginTop: 32,
+    },
+  });
+
   if (loading) {
     return (
       <SafeAreaView style={styles.container} edges={['bottom']}>
@@ -79,91 +192,3 @@ const MealsListScreen = ({ navigation }: Props) => {
 };
 
 export default MealsListScreen;
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    paddingHorizontal: 16,
-    paddingTop: 24,
-    backgroundColor: '#fff',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  heading: {
-    fontSize: 24,
-    fontWeight: '600',
-  },
-  newButton: {
-    backgroundColor: '#2563eb',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
-  },
-  newButtonText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  listContent: {
-    gap: 12,
-    paddingBottom: 24,
-  },
-  mealItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#eee',
-    backgroundColor: '#fafafa',
-  },
-  mealItemPressed: {
-    opacity: 0.6,
-  },
-  mealInfo: {
-    flex: 1,
-  },
-  mealName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 4,
-  },
-  mealDate: {
-    fontSize: 14,
-    color: '#666',
-  },
-  mealCalories: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#2563eb',
-    marginLeft: 12,
-  },
-  emptyContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 48,
-  },
-  emptyText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 8,
-  },
-  emptySubtext: {
-    fontSize: 14,
-    color: '#666',
-    textAlign: 'center',
-  },
-  loadingText: {
-    fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
-    marginTop: 32,
-  },
-});

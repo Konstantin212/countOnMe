@@ -14,10 +14,11 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 
-import { ProductsStackParamList } from '../app/navigationTypes';
+import { ProfileStackParamList } from '../app/navigationTypes';
 import { useProducts } from '../hooks/useProducts';
+import { useTheme } from '../hooks/useTheme';
 
-type Props = NativeStackScreenProps<ProductsStackParamList, 'ProductForm'>;
+type Props = NativeStackScreenProps<ProfileStackParamList, 'ProductForm'>;
 
 // Scale types
 const SCALE_TYPES = ['Liquid', 'Solid', 'Dry'] as const;
@@ -73,6 +74,7 @@ type ProductFormData = z.infer<typeof productFormSchema>;
 const ProductFormScreen = ({ navigation, route }: Props) => {
   const isEditing = Boolean(route.params?.productId);
   const { products, addProduct, updateProduct } = useProducts();
+  const { colors } = useTheme();
   const [saving, setSaving] = useState(false);
 
   const {
@@ -158,6 +160,114 @@ const ProductFormScreen = ({ navigation, route }: Props) => {
 
   const isFormValid = Object.keys(errors).length === 0;
   const isSaveDisabled = saving || (isSubmitted && !isFormValid);
+
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    scrollView: {
+      flex: 1,
+    },
+    section: {
+      padding: 16,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    sectionTitle: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: colors.text,
+      marginBottom: 16,
+    },
+    sectionSubtitle: {
+      fontSize: 13,
+      color: colors.textSecondary,
+    },
+    label: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.text,
+      marginBottom: 8,
+    },
+    required: {
+      color: colors.error,
+    },
+    input: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 8,
+      padding: 12,
+      fontSize: 16,
+      backgroundColor: colors.inputBackground,
+      color: colors.text,
+    },
+    inputError: {
+      borderColor: colors.error,
+      borderWidth: 2,
+    },
+    errorText: {
+      color: colors.error,
+      fontSize: 13,
+      marginTop: 4,
+    },
+    radioGroup: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 8,
+    },
+    radioButton: {
+      paddingVertical: 10,
+      paddingHorizontal: 16,
+      borderRadius: 8,
+      borderWidth: 2,
+      borderColor: colors.border,
+      backgroundColor: colors.inputBackground,
+    },
+    radioButtonActive: {
+      borderColor: colors.primary,
+      backgroundColor: colors.primary + '20',
+    },
+    radioButtonText: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.textSecondary,
+    },
+    radioButtonTextActive: {
+      color: colors.primary,
+    },
+    switchRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    switchLabel: {
+      flex: 1,
+    },
+    nutrientField: {
+      marginBottom: 16,
+    },
+    footer: {
+      padding: 16,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+      backgroundColor: colors.background,
+    },
+    saveButton: {
+      backgroundColor: colors.primary,
+      padding: 16,
+      borderRadius: 8,
+      alignItems: 'center',
+    },
+    saveButtonDisabled: {
+      backgroundColor: colors.disabled,
+    },
+    saveButtonText: {
+      color: colors.buttonText,
+      fontSize: 16,
+      fontWeight: '600',
+    },
+  });
 
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
@@ -464,110 +574,3 @@ const ProductFormScreen = ({ navigation, route }: Props) => {
 };
 
 export default ProductFormScreen;
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
-  scrollView: {
-    flex: 1,
-  },
-  section: {
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 16,
-  },
-  sectionSubtitle: {
-    fontSize: 13,
-    color: '#666',
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 8,
-  },
-  required: {
-    color: '#ef4444',
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    backgroundColor: '#fafafa',
-  },
-  inputError: {
-    borderColor: '#ef4444',
-    borderWidth: 2,
-  },
-  errorText: {
-    color: '#ef4444',
-    fontSize: 13,
-    marginTop: 4,
-  },
-  radioGroup: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  radioButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    borderWidth: 2,
-    borderColor: '#ddd',
-    backgroundColor: '#fafafa',
-  },
-  radioButtonActive: {
-    borderColor: '#2563eb',
-    backgroundColor: '#eff6ff',
-  },
-  radioButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#666',
-  },
-  radioButtonTextActive: {
-    color: '#2563eb',
-  },
-  switchRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  switchLabel: {
-    flex: 1,
-  },
-  nutrientField: {
-    marginBottom: 16,
-  },
-  footer: {
-    padding: 16,
-    borderTopWidth: 1,
-    borderTopColor: '#eee',
-    backgroundColor: '#fff',
-  },
-  saveButton: {
-    backgroundColor: '#2563eb',
-    padding: 16,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  saveButtonDisabled: {
-    backgroundColor: '#94a3b8',
-  },
-  saveButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-});

@@ -12,10 +12,11 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 
-import { ProductsStackParamList } from '../app/navigationTypes';
+import { ProfileStackParamList } from '../app/navigationTypes';
 import { useProducts } from '../hooks/useProducts';
+import { useTheme } from '../hooks/useTheme';
 
-type Props = NativeStackScreenProps<ProductsStackParamList, 'ProductSearch'>;
+type Props = NativeStackScreenProps<ProfileStackParamList, 'ProductSearch'>;
 
 type SearchResultItem = {
   id: string;
@@ -25,6 +26,7 @@ type SearchResultItem = {
 
 const ProductSearchScreen = ({ navigation }: Props) => {
   const { products } = useProducts();
+  const { colors } = useTheme();
   const [searchQuery, setSearchQuery] = useState('');
 
   // Get 5 most recent products
@@ -71,11 +73,8 @@ const ProductSearchScreen = ({ navigation }: Props) => {
   }, [navigation]);
 
   const handleAddMeal = useCallback(() => {
-    // Navigate to Meals tab and then to MealBuilder
-    const parent = navigation.getParent();
-    if (parent) {
-      parent.navigate('MealsTab', { screen: 'MealBuilder' });
-    }
+    // Navigate to MealBuilder in the same stack
+    navigation.navigate('MealBuilder', {});
   }, [navigation]);
 
   const renderItem = ({ item }: { item: SearchResultItem }) => (
@@ -127,6 +126,114 @@ const ProductSearchScreen = ({ navigation }: Props) => {
     return null;
   };
 
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    buttonRow: {
+      flexDirection: 'row',
+      padding: 16,
+      gap: 12,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    actionButton: {
+      flex: 1,
+      backgroundColor: colors.primary,
+      paddingVertical: 14,
+      paddingHorizontal: 16,
+      borderRadius: 8,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    actionButtonText: {
+      color: colors.buttonText,
+      fontSize: 15,
+      fontWeight: '600',
+    },
+    searchContainer: {
+      padding: 16,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    searchInput: {
+      flex: 1,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 8,
+      padding: 12,
+      fontSize: 16,
+      backgroundColor: colors.inputBackground,
+      color: colors.text,
+    },
+    sectionHeader: {
+      paddingVertical: 12,
+      paddingHorizontal: 16,
+      backgroundColor: colors.cardBackground,
+    },
+    sectionTitle: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.textSecondary,
+      textTransform: 'uppercase',
+      letterSpacing: 0.5,
+    },
+    listContent: {
+      paddingBottom: 24,
+    },
+    resultItem: {
+      padding: 16,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    resultItemPressed: {
+      backgroundColor: colors.pressed,
+    },
+    resultContent: {
+      flexDirection: 'column',
+    },
+    resultName: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: colors.text,
+      marginBottom: 4,
+    },
+    badge: {
+      alignSelf: 'flex-start',
+      backgroundColor: colors.primary + '20',
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 4,
+      marginTop: 4,
+    },
+    badgeText: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: colors.primary,
+    },
+    emptyContainer: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: 48,
+      paddingHorizontal: 32,
+    },
+    emptyText: {
+      fontSize: 18,
+      fontWeight: '600',
+      color: colors.text,
+      marginBottom: 8,
+      textAlign: 'center',
+    },
+    emptySubtext: {
+      fontSize: 14,
+      color: colors.textSecondary,
+      textAlign: 'center',
+    },
+  });
+
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
       {/* Button Row */}
@@ -168,111 +275,4 @@ const ProductSearchScreen = ({ navigation }: Props) => {
 };
 
 export default ProductSearchScreen;
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
-  buttonRow: {
-    flexDirection: 'row',
-    padding: 16,
-    gap: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-  },
-  actionButton: {
-    flex: 1,
-    backgroundColor: '#2563eb',
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  actionButtonText: {
-    color: '#fff',
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  searchContainer: {
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  searchInput: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    backgroundColor: '#fafafa',
-  },
-  sectionHeader: {
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    backgroundColor: '#f9fafb',
-  },
-  sectionTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#666',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  listContent: {
-    paddingBottom: 24,
-  },
-  resultItem: {
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-  },
-  resultItemPressed: {
-    backgroundColor: '#f9fafb',
-  },
-  resultContent: {
-    flexDirection: 'column',
-  },
-  resultName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 4,
-  },
-  badge: {
-    alignSelf: 'flex-start',
-    backgroundColor: '#dbeafe',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
-    marginTop: 4,
-  },
-  badgeText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#1e40af',
-  },
-  emptyContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 48,
-    paddingHorizontal: 32,
-  },
-  emptyText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  emptySubtext: {
-    fontSize: 14,
-    color: '#666',
-    textAlign: 'center',
-  },
-});
 

@@ -42,6 +42,11 @@ export const LightTheme = {
   buttonText: '#FFFFFF',
   iconPrimary: '#2563eb',
   iconSecondary: '#9ca3af',
+
+  // Data visualization colors
+  macroProtein: '#0D7A73',
+  macroCarb: '#F59E0B',
+  macroFat: '#2563EB',
   
   // Specific component colors
   tabBarActive: '#111111',
@@ -89,6 +94,11 @@ export const DarkTheme = {
   buttonText: '#333333',
   iconPrimary: '#EFF5D2',
   iconSecondary: '#9CA3AF',
+
+  // Data visualization colors
+  macroProtein: '#7BE0C3',
+  macroCarb: '#FFD166',
+  macroFat: '#7EA8F8',
   
   // Specific component colors
   tabBarActive: '#EFF5D2',

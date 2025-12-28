@@ -99,6 +99,20 @@ No screen should talk to AsyncStorage directly.
 - Totals always recalculated in hook on save.
 - UI can show live totals from the same util.
 
+### 5.4 Import aliases (client/src)
+- Use the configured aliases instead of relative paths:
+  - `@app` → `src/app`
+  - `@components` → `src/components`
+  - `@hooks` → `src/hooks`
+  - `@models` → `src/models`
+  - `@particles` → `src/particles`
+  - `@screens` → `src/screens`
+  - `@services` → `src/services`
+  - `@storage` → `src/storage`
+  - `@theme` → `src/theme`
+- Configured in `tsconfig.json` (`baseUrl`, `paths`), `babel.config.js` (`module-resolver`), and `vitest.config.ts` (`resolve.alias`). Keep these in sync if new folders are added.
+- Prefer aliases for cross-folder imports to avoid brittle `../../` chains; relative imports are fine within the same folder.
+
 ---
 
 ## 6. Navigation design

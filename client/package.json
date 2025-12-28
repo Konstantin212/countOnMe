@@ -29,6 +29,7 @@
     "zod": "^4.1.13"
   },
   "devDependencies": {
+    "babel-plugin-module-resolver": "^5.0.0",
     "@testing-library/react": "^16.0.0",
     "@types/node": "^22.7.4",
     "@types/react": "~19.1.0",

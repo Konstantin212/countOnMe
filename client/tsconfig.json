@@ -3,6 +3,18 @@
   "compilerOptions": {
     "strict": true,
     "esModuleInterop": true,
-    "types": ["vitest/globals"]
+    "types": ["vitest/globals"],
+    "baseUrl": "src",
+    "paths": {
+      "@app/*": ["app/*"],
+      "@components/*": ["components/*"],
+      "@hooks/*": ["hooks/*"],
+      "@models/*": ["models/*"],
+      "@particles/*": ["particles/*"],
+      "@screens/*": ["screens/*"],
+      "@services/*": ["services/*"],
+      "@storage/*": ["storage/*"],
+      "@theme/*": ["theme/*"]
+    }
   }
 }

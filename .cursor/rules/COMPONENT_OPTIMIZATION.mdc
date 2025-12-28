@@ -1,5 +1,7 @@
 ---
-alwaysApply: true
+alwaysApply: false
+globs:
+  - "client/**/*.tsx"
 ---
 
 # Component Optimization Guide

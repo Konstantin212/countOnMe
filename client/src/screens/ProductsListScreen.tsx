@@ -3,6 +3,7 @@ import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 
 import ProductListItem from '@components/ProductListItem';
 import { Product } from '@models/types';
@@ -33,9 +34,17 @@ const ProductsListScreen = ({ navigation }: Props) => {
     },
     header: {
       flexDirection: 'row',
-      justifyContent: 'space-between',
       alignItems: 'center',
       marginBottom: 16,
+    },
+    backButton: {
+      padding: 8,
+      borderRadius: 999,
+      backgroundColor: colors.cardBackground,
+    },
+    headerTitle: {
+      flex: 1,
+      marginLeft: 12,
     },
     heading: {
       fontSize: 24,
@@ -97,16 +106,21 @@ const ProductsListScreen = ({ navigation }: Props) => {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.container} edges={['bottom']}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
         <Text style={styles.loadingText}>Loading products...</Text>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['bottom']}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <View style={styles.header}>
-        <Text style={styles.heading}>Products</Text>
+        <Pressable onPress={() => navigation.goBack()} style={styles.backButton}>
+          <Ionicons name="arrow-back" size={22} color={colors.text} />
+        </Pressable>
+        <View style={styles.headerTitle}>
+          <Text style={styles.heading}>Products</Text>
+        </View>
         <Pressable
           style={styles.addButton}
           onPress={() => navigation.navigate('ProductSearch')}

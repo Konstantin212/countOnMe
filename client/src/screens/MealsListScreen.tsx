@@ -2,6 +2,7 @@
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { Ionicons } from '@expo/vector-icons';
 
 import { ProfileStackParamList } from '@app/navigationTypes';
 import { useProducts } from '@hooks/useProducts';
@@ -61,9 +62,17 @@ const MealsListScreen = ({ navigation }: Props) => {
     },
     header: {
       flexDirection: 'row',
-      justifyContent: 'space-between',
       alignItems: 'center',
       marginBottom: 16,
+    },
+    backButton: {
+      padding: 8,
+      borderRadius: 999,
+      backgroundColor: colors.cardBackground,
+    },
+    headerTitle: {
+      flex: 1,
+      marginLeft: 12,
     },
     heading: {
       fontSize: 24,
@@ -165,16 +174,21 @@ const MealsListScreen = ({ navigation }: Props) => {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.container} edges={['bottom']}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
         <Text style={styles.loadingText}>Loading meals...</Text>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['bottom']}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <View style={styles.header}>
+        <Pressable onPress={() => navigation.goBack()} style={styles.backButton}>
+          <Ionicons name="arrow-back" size={22} color={colors.text} />
+        </Pressable>
+        <View style={styles.headerTitle}>
         <Text style={styles.heading}>Meals</Text>
+        </View>
         <Pressable style={styles.newButton} onPress={() => navigation.navigate('MealBuilder')}>
           <Text style={styles.newButtonText}>+ New Meal</Text>
         </Pressable>

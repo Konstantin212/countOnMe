@@ -9,6 +9,8 @@ import {
   View,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 
 import { ProfileStackParamList } from '@app/navigationTypes';
 import { useProducts } from '@hooks/useProducts';
@@ -133,23 +135,30 @@ const MealBuilderScreen = ({ navigation, route }: Props) => {
 
   if (productsLoading) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
         <Text style={styles.loadingText}>Loading products...</Text>
-      </View>
+      </SafeAreaView>
     );
   }
 
   if (products.length === 0) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
         <Text style={styles.emptyText}>No products available.</Text>
         <Text style={styles.emptySubtext}>Please add products first in the Products tab.</Text>
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+      <View style={styles.header}>
+        <Pressable onPress={() => navigation.goBack()} style={styles.backButton}>
+          <Ionicons name="arrow-back" size={22} color="#111" />
+        </Pressable>
+        <Text style={styles.title}>{isEditing ? 'Edit Meal' : 'New Meal'}</Text>
+      </View>
+
       <ScrollView style={styles.scrollView} keyboardShouldPersistTaps="handled">
         {/* Meal Name Input */}
         <View style={styles.section}>
@@ -231,7 +240,7 @@ const MealBuilderScreen = ({ navigation, route }: Props) => {
           <Text style={styles.saveButtonText}>{saving ? 'Saving...' : 'Save Meal'}</Text>
         </Pressable>
       </View>
-    </View>
+    </SafeAreaView>
   );
 };
 
@@ -241,6 +250,24 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
+    paddingTop: 16,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    marginBottom: 8,
+  },
+  backButton: {
+    padding: 8,
+    borderRadius: 999,
+    backgroundColor: '#f4f4f5',
+    marginRight: 12,
+  },
+  title: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#111',
   },
   scrollView: {
     flex: 1,

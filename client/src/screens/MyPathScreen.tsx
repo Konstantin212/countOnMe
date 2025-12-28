@@ -30,7 +30,7 @@ const MyPathScreen = () => {
   });
 
   return (
-    <SafeAreaView style={styles.container} edges={['bottom']}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <View style={styles.content}>
         <Text style={styles.title}>My Path</Text>
         <Text style={styles.subtitle}>Track your progress and journey</Text>

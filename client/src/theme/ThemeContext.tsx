@@ -27,6 +27,7 @@ export const ThemeProvider = ({ children }: ThemeProviderProps) => {
 
   // Listen for system theme changes
   useEffect(() => {
+    console.log('System color scheme:', Appearance.getColorScheme());
     const listener = Appearance.addChangeListener(({ colorScheme }) => {
       console.log('System color scheme changed to:', colorScheme);
       setSystemColorScheme(colorScheme);

@@ -41,11 +41,11 @@ const TAB_ICONS: Record<TabName, { focused: IoniconName; unfocused: IoniconName 
 };
 
 const ProfileStackNavigator = () => (
-  <ProfileStack.Navigator>
+  <ProfileStack.Navigator screenOptions={{ headerShown: false }}>
     <ProfileStack.Screen
       name="ProfileMenu"
       component={ProfileScreen}
-      options={{ title: 'Profile' }}
+      options={{ headerShown: false }}
     />
     <ProfileStack.Screen
       name="ProductsList"
@@ -91,14 +91,14 @@ const ProfileStackNavigator = () => (
 );
 
 const MyDayStackNavigator = () => (
-  <MyDayStack.Navigator>
-    <MyDayStack.Screen name="MyDay" component={MyDayScreen} options={{ title: 'My Day' }} />
+  <MyDayStack.Navigator screenOptions={{ headerShown: false }}>
+    <MyDayStack.Screen name="MyDay" component={MyDayScreen} options={{ headerShown: false }} />
   </MyDayStack.Navigator>
 );
 
 const MyPathStackNavigator = () => (
-  <MyPathStack.Navigator>
-    <MyPathStack.Screen name="MyPath" component={MyPathScreen} options={{ title: 'My Path' }} />
+  <MyPathStack.Navigator screenOptions={{ headerShown: false }}>
+    <MyPathStack.Screen name="MyPath" component={MyPathScreen} options={{ headerShown: false }} />
   </MyPathStack.Navigator>
 );
 

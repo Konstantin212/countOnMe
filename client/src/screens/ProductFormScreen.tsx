@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -116,6 +117,24 @@ const ProductFormScreen = ({ navigation, route }: Props) => {
     container: {
       flex: 1,
       backgroundColor: colors.background,
+      paddingHorizontal: 16,
+      paddingTop: 16,
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 12,
+    },
+    backButton: {
+      padding: 8,
+      borderRadius: 999,
+      backgroundColor: colors.cardBackground,
+      marginRight: 12,
+    },
+    title: {
+      fontSize: 22,
+      fontWeight: '700',
+      color: colors.text,
     },
     scrollView: {
       flex: 1,
@@ -132,7 +151,14 @@ const ProductFormScreen = ({ navigation, route }: Props) => {
   });
 
   return (
-    <SafeAreaView style={styles.container} edges={['bottom']}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+      <View style={styles.header}>
+        <Pressable onPress={() => navigation.goBack()} style={styles.backButton}>
+          <Ionicons name="arrow-back" size={22} color={colors.text} />
+        </Pressable>
+        <Text style={styles.title}>Product</Text>
+      </View>
+
       <ScrollView style={styles.scrollView} keyboardShouldPersistTaps="handled">
         {/* Product Name */}
         <FormField>

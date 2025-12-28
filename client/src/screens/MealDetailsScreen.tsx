@@ -1,6 +1,8 @@
 ﻿import React, { useMemo } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 
 import { ProfileStackParamList } from '@app/navigationTypes';
 import { useProducts } from '@hooks/useProducts';
@@ -49,7 +51,13 @@ const MealDetailsScreen = ({ navigation, route }: Props) => {
 
   if (!meal) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+        <View style={styles.topBar}>
+          <Pressable onPress={() => navigation.goBack()} style={styles.topBarBackButton}>
+            <Ionicons name="arrow-back" size={22} color="#111" />
+          </Pressable>
+          <Text style={styles.topBarTitle}>Meal</Text>
+        </View>
         <View style={styles.notFoundContainer}>
           <Text style={styles.notFoundText}>Meal not found</Text>
           <Text style={styles.notFoundSubtext}>This meal may have been deleted.</Text>
@@ -57,12 +65,19 @@ const MealDetailsScreen = ({ navigation, route }: Props) => {
             <Text style={styles.backButtonText}>Go Back</Text>
           </Pressable>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+      <View style={styles.topBar}>
+        <Pressable onPress={() => navigation.goBack()} style={styles.topBarBackButton}>
+          <Ionicons name="arrow-back" size={22} color="#111" />
+        </Pressable>
+        <Text style={styles.topBarTitle}>{meal.name}</Text>
+      </View>
+
       <ScrollView style={styles.scrollView}>
         {/* Meal Header */}
         <View style={styles.header}>
@@ -103,7 +118,7 @@ const MealDetailsScreen = ({ navigation, route }: Props) => {
           <Text style={styles.editButtonText}>Edit Meal</Text>
         </Pressable>
       </View>
-    </View>
+    </SafeAreaView>
   );
 };
 
@@ -113,6 +128,24 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
+    paddingTop: 16,
+  },
+  topBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    marginBottom: 8,
+    gap: 12,
+  },
+  topBarBackButton: {
+    padding: 8,
+    borderRadius: 999,
+    backgroundColor: '#f4f4f5',
+  },
+  topBarTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#111',
   },
   scrollView: {
     flex: 1,

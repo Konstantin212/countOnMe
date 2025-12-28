@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { Ionicons } from '@expo/vector-icons';
 
 import { ProfileStackParamList } from '@app/navigationTypes';
 import { useProducts } from '@hooks/useProducts';
@@ -88,6 +89,24 @@ const ProductDetailsScreen = ({ navigation, route }: Props) => {
     container: {
       flex: 1,
       backgroundColor: colors.background,
+      paddingTop: 16,
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 16,
+      marginBottom: 8,
+    },
+    topBarBackButton: {
+      padding: 8,
+      borderRadius: 999,
+      backgroundColor: colors.cardBackground,
+      marginRight: 12,
+    },
+    title: {
+      fontSize: 20,
+      fontWeight: '700',
+      color: colors.text,
     },
     scrollView: {
       flex: 1,
@@ -276,7 +295,13 @@ const ProductDetailsScreen = ({ navigation, route }: Props) => {
 
   if (!product) {
     return (
-      <SafeAreaView style={styles.container} edges={['bottom']}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+        <View style={styles.header}>
+          <Pressable onPress={() => navigation.goBack()} style={styles.topBarBackButton}>
+            <Ionicons name="arrow-back" size={22} color={colors.text} />
+          </Pressable>
+          <Text style={styles.title}>Product</Text>
+        </View>
         <View style={styles.notFoundContainer}>
           <Text style={styles.notFoundText}>Product not found</Text>
           <Text style={styles.notFoundSubtext}>This product may have been deleted.</Text>
@@ -289,7 +314,14 @@ const ProductDetailsScreen = ({ navigation, route }: Props) => {
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['bottom']}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+      <View style={styles.header}>
+        <Pressable onPress={() => navigation.goBack()} style={styles.topBarBackButton}>
+          <Ionicons name="arrow-back" size={22} color={colors.text} />
+        </Pressable>
+        <Text style={styles.title}>{product.name}</Text>
+      </View>
+
       <ScrollView style={styles.scrollView} keyboardShouldPersistTaps="handled">
         {/* Product Info */}
         <View style={styles.section}>

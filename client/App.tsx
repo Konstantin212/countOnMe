@@ -1,7 +1,12 @@
 import 'react-native-gesture-handler';
 import React from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { NavigationContainer } from '@react-navigation/native';
+import {
+  NavigationContainer,
+  DefaultTheme as NavigationDefaultTheme,
+  DarkTheme as NavigationDarkTheme,
+  Theme as NavigationTheme,
+} from '@react-navigation/native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StyleSheet } from 'react-native';
@@ -19,10 +24,35 @@ const styles = StyleSheet.create({
 const ThemedApp = () => {
   const { colors, theme } = useTheme();
 
+  const navigationTheme: NavigationTheme =
+    theme === 'dark'
+      ? {
+          ...NavigationDarkTheme,
+          colors: {
+            ...NavigationDarkTheme.colors,
+            background: colors.background,
+            card: colors.background,
+            primary: colors.primary,
+            text: colors.text,
+            border: colors.border,
+          },
+        }
+      : {
+          ...NavigationDefaultTheme,
+          colors: {
+            ...NavigationDefaultTheme.colors,
+            background: colors.background,
+            card: colors.background,
+            primary: colors.primary,
+            text: colors.text,
+            border: colors.border,
+          },
+        };
+
   return (
     <GestureHandlerRootView style={[styles.container, { backgroundColor: colors.background }]}>
       <SafeAreaProvider>
-        <NavigationContainer>
+        <NavigationContainer theme={navigationTheme}>
           <StatusBar style={theme === 'dark' ? 'light' : 'dark'} />
           <AppNavigator />
         </NavigationContainer>

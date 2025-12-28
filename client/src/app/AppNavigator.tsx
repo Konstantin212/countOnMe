@@ -40,67 +40,86 @@ const TAB_ICONS: Record<TabName, { focused: IoniconName; unfocused: IoniconName 
   ProfileTab: { focused: 'person', unfocused: 'person-outline' },
 };
 
-const ProfileStackNavigator = () => (
-  <ProfileStack.Navigator screenOptions={{ headerShown: false }}>
-    <ProfileStack.Screen
-      name="ProfileMenu"
-      component={ProfileScreen}
-      options={{ headerShown: false }}
-    />
-    <ProfileStack.Screen
-      name="ProductsList"
-      component={ProductsListScreen}
-      options={{ title: 'My Products' }}
-    />
-    <ProfileStack.Screen
-      name="ProductDetails"
-      component={ProductDetailsScreen}
-      options={{ title: 'Product Details' }}
-    />
-    <ProfileStack.Screen
-      name="ProductForm"
-      component={ProductFormScreen}
-      options={{ title: 'Product' }}
-    />
-    <ProfileStack.Screen
-      name="ProductSearch"
-      component={ProductSearchScreen}
-      options={{ title: 'Add Product' }}
-    />
-    <ProfileStack.Screen
-      name="ProductConfirm"
-      component={ProductConfirmScreen}
-      options={{ title: 'Confirm Product' }}
-    />
-    <ProfileStack.Screen
-      name="MealsList"
-      component={MealsListScreen}
-      options={{ title: 'My Meals' }}
-    />
-    <ProfileStack.Screen
-      name="MealBuilder"
-      component={MealBuilderScreen}
-      options={{ title: 'Build Meal' }}
-    />
-    <ProfileStack.Screen
-      name="MealDetails"
-      component={MealDetailsScreen}
-      options={{ title: 'Meal Details' }}
-    />
-  </ProfileStack.Navigator>
-);
+const ProfileStackNavigator = () => {
+  const { colors } = useTheme();
 
-const MyDayStackNavigator = () => (
-  <MyDayStack.Navigator screenOptions={{ headerShown: false }}>
-    <MyDayStack.Screen name="MyDay" component={MyDayScreen} options={{ headerShown: false }} />
-  </MyDayStack.Navigator>
-);
+  return (
+    <ProfileStack.Navigator
+      screenOptions={{
+        headerShown: false,
+        contentStyle: { backgroundColor: colors.background },
+      }}
+    >
+      <ProfileStack.Screen
+        name="ProfileMenu"
+        component={ProfileScreen}
+        options={{ headerShown: false }}
+      />
+      <ProfileStack.Screen
+        name="ProductsList"
+        component={ProductsListScreen}
+        options={{ title: 'My Products' }}
+      />
+      <ProfileStack.Screen
+        name="ProductDetails"
+        component={ProductDetailsScreen}
+        options={{ title: 'Product Details' }}
+      />
+      <ProfileStack.Screen
+        name="ProductForm"
+        component={ProductFormScreen}
+        options={{ title: 'Product' }}
+      />
+      <ProfileStack.Screen
+        name="ProductSearch"
+        component={ProductSearchScreen}
+        options={{ title: 'Add Product' }}
+      />
+      <ProfileStack.Screen
+        name="ProductConfirm"
+        component={ProductConfirmScreen}
+        options={{ title: 'Confirm Product' }}
+      />
+      <ProfileStack.Screen
+        name="MealsList"
+        component={MealsListScreen}
+        options={{ title: 'My Meals' }}
+      />
+      <ProfileStack.Screen
+        name="MealBuilder"
+        component={MealBuilderScreen}
+        options={{ title: 'Build Meal' }}
+      />
+      <ProfileStack.Screen
+        name="MealDetails"
+        component={MealDetailsScreen}
+        options={{ title: 'Meal Details' }}
+      />
+    </ProfileStack.Navigator>
+  );
+};
 
-const MyPathStackNavigator = () => (
-  <MyPathStack.Navigator screenOptions={{ headerShown: false }}>
-    <MyPathStack.Screen name="MyPath" component={MyPathScreen} options={{ headerShown: false }} />
-  </MyPathStack.Navigator>
-);
+const MyDayStackNavigator = () => {
+  const { colors } = useTheme();
+  return (
+    <MyDayStack.Navigator
+      screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }}
+    >
+      <MyDayStack.Screen name="MyDay" component={MyDayScreen} options={{ headerShown: false }} />
+    </MyDayStack.Navigator>
+  );
+};
+
+const MyPathStackNavigator = () => {
+  const { colors } = useTheme();
+  return (
+    <MyPathStack.Navigator
+      screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }}
+    >
+      <MyPathStack.Screen name="MyPath" component={MyPathScreen} options={{ headerShown: false }} />
+    </MyPathStack.Navigator>
+  );
+};
 
 const TabNavigator = () => {
   const { colors } = useTheme();

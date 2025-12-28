@@ -1,0 +1,36 @@
+---
+description: "Styling rules for CountOnMe theme usage"
+alwaysApply: false
+globs:
+  - "client/src/**/*.tsx"
+  - "client/src/**/*.ts"
+  - "client/src/theme/**"
+---
+
+# Styling & Theme Rules
+
+These rules keep styling consistent, type-safe, and theme-aware across the app.
+
+## Theme usage
+- Prefer theme values over hardcoded colors. Use `ThemeContext` (or `useTheme`) to pull `colors`.
+- Treat `LightTheme` / `DarkTheme` in `client/src/theme/colors.ts` as the single source of truth. Add new tokens to **both** themes and keep keys aligned.
+- When adding new theme keys, update exported types (`Theme`, `ThemeColors`) so TypeScript enforces usage.
+- Do not import from `colors.ts` directly inside screens/components; consume `colors` from context to respect user mode.
+- Avoid inline style objects; use `StyleSheet.create` to keep styles performant and consistent.
+
+## Components & particles
+- Particles/components should accept minimal style overrides; prefer themed defaults first.
+- Reuse shared spacing/typography patterns; don’t redefine common paddings/margins per screen.
+- Keep status/semantic colors mapped to existing tokens (`success`, `error`, `warning`, `info`) instead of introducing ad-hoc hex values.
+
+## Theme persistence & behavior
+- Theme selection flows through `ThemeContext` with `ThemeMode` (`light | dark | system`). Do not bypass it with local state.
+- Persist user choice via `saveThemePreference` and read with `loadThemePreference`; no duplicate storage keys elsewhere.
+- Avoid logging theme values in production code; remove debug `console.log` when stabilizing.
+
+## Dark/light parity
+- Every new visual element must render legibly in both themes; verify contrast for text and icons.
+- Keep `buttonText`, `iconPrimary`, `tabBarActive/Inactive` coherent across modes; align with accessibility contrast when adding tokens.
+
+## When to update this rule
+- When adding new tokens, typography scale, or spacing primitives, append guidance here so future work stays aligned.

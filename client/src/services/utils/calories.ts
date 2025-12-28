@@ -1,4 +1,4 @@
-﻿import { MealItem, Product } from '../models/types';
+﻿import { MealItem, Product } from '../../models/types';
 
 const CALORIES_SCALE = 100;
 

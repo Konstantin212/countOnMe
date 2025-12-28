@@ -15,7 +15,7 @@ import { ProfileStackParamList } from '../app/navigationTypes';
 import { useProducts } from '../hooks/useProducts';
 import { useMeals } from '../hooks/useMeals';
 import { MealItem } from '../models/types';
-import { calcMealCalories } from '../utils/calories';
+import { calcMealCalories } from '../services/utils/calories';
 import { useTheme } from '../hooks/useTheme';
 
 type Props = NativeStackScreenProps<ProfileStackParamList, 'MealBuilder'>;

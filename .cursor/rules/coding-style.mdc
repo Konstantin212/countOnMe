@@ -1,5 +1,8 @@
 ---
-alwaysApply: true
+alwaysApply: false
+globs:
+  - "client/**/*.tsx"
+  - "client/**/*.ts"
 ---
 
 # CODING_STYLE.md
@@ -111,7 +114,7 @@ export const ProductListItem = (props: any) => {
 
 ### 3.1 Files and Directories
 - **Files**: PascalCase for components (`ProductFormScreen.tsx`), camelCase for utilities (`calories.ts`), kebab-case for config files.
-- **Directories**: lowercase with hyphens if needed (`src/screens/`, `src/utils/`).
+- **Directories**: lowercase with hyphens if needed (`src/screens/`, `src/services/`). Put reusable helpers/logic/constants/schemas under `services/` (no separate `utils/`).
 - **Hooks**: Always prefix with `use` (`useProducts.ts`, `useMeals.ts`).
 
 ### 3.2 Variables and Functions
@@ -146,7 +149,7 @@ const onClick = () => { ... };
 ### 4.1 Import Order
 1. React and React Native imports
 2. Third-party libraries
-3. Internal imports (hooks, utils, models, components)
+3. Internal imports (hooks, services, models, components)
 4. Types (if separate from implementation)
 5. Relative imports (use sparingly)
 
@@ -158,7 +161,7 @@ import { useNavigation } from '@react-navigation/native';
 
 import { useProducts } from '../hooks/useProducts';
 import { Product } from '../models/types';
-import { calculateCalories } from '../utils/calories';
+import { calculateCalories } from '../services/utils/calories';
 ```
 
 ### 4.2 Function Organization
@@ -325,7 +328,7 @@ const valid = items.every(i => products.some(p => p.id === i.productId));
 ## 9. Testing Considerations
 
 ### 9.1 Testable Code
-- Keep pure functions in `utils/` (easy to unit test).
+- Keep pure functions in `services/` (easy to unit test).
 - Avoid side effects in utility functions.
 - Make hooks testable by accepting dependencies (dependency injection when needed).
 
@@ -373,7 +376,7 @@ Before submitting code, ensure:
 - [ ] Types are explicit and correct (no `any` without justification)
 - [ ] Error cases are handled gracefully
 - [ ] No console.logs in production code (use proper logging)
-- [ ] Functions are pure when possible (utils/)
+- [ ] Functions are pure when possible (`services/`)
 - [ ] Hooks follow the established patterns
 - [ ] Components are focused and not too large
 - [ ] Naming is clear and consistent

@@ -3,7 +3,7 @@ import { v4 as uuid } from 'uuid';
 
 import { Meal, MealItem, Product } from '../models/types';
 import { loadMeals, saveMeals } from '../storage/storage';
-import { calcMealCalories } from '../utils/calories';
+import { calcMealCalories } from '../services/utils/calories';
 
 export type NewMealInput = {
   name: string;

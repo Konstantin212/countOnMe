@@ -1,5 +1,8 @@
 ---
-alwaysApply: true
+alwaysApply: false
+globs:
+  - "client/**/*.tsx"
+  - "client/**/*.ts"
 ---
 
 # ARCHITECTURE.md

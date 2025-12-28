@@ -10,6 +10,12 @@ import {
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StyleSheet } from 'react-native';
+import {
+  MD3LightTheme as PaperLightTheme,
+  MD3DarkTheme as PaperDarkTheme,
+  PaperProvider,
+  MD3Theme as PaperTheme,
+} from 'react-native-paper';
 
 import { AppNavigator } from '@app/AppNavigator';
 import { ThemeProvider } from '@theme/ThemeContext';
@@ -49,13 +55,44 @@ const ThemedApp = () => {
           },
         };
 
+  const paperTheme: PaperTheme =
+    theme === 'dark'
+      ? {
+          ...PaperDarkTheme,
+          colors: {
+            ...PaperDarkTheme.colors,
+            primary: colors.primary,
+            secondary: colors.secondary,
+            background: colors.background,
+            surface: colors.cardBackground,
+            surfaceVariant: colors.cardBackground,
+            onSurface: colors.text,
+            outline: colors.border,
+          },
+        }
+      : {
+          ...PaperLightTheme,
+          colors: {
+            ...PaperLightTheme.colors,
+            primary: colors.primary,
+            secondary: colors.secondary,
+            background: colors.background,
+            surface: colors.cardBackground,
+            surfaceVariant: colors.cardBackground,
+            onSurface: colors.text,
+            outline: colors.border,
+          },
+        };
+
   return (
     <GestureHandlerRootView style={[styles.container, { backgroundColor: colors.background }]}>
       <SafeAreaProvider>
-        <NavigationContainer theme={navigationTheme}>
-          <StatusBar style={theme === 'dark' ? 'light' : 'dark'} />
-          <AppNavigator />
-        </NavigationContainer>
+        <PaperProvider theme={paperTheme}>
+          <NavigationContainer theme={navigationTheme}>
+            <StatusBar style={theme === 'dark' ? 'light' : 'dark'} />
+            <AppNavigator />
+          </NavigationContainer>
+        </PaperProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

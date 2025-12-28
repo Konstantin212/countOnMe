@@ -1,13 +1,16 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Dimensions, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ProgressChart } from 'react-native-chart-kit';
+import { FAB, Portal } from 'react-native-paper';
 import { useTheme } from '@hooks/useTheme';
 
 const MyDayScreen = () => {
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
   const screenWidth = Dimensions.get('window').width;
   const chartWidth = Math.max(screenWidth - 64, 200); // account for screen + card padding
+  const [fabOpen, setFabOpen] = useState(false);
 
   const ringColors = [colors.macroProtein, colors.macroCarb, colors.macroFat];
 
@@ -79,6 +82,29 @@ const MyDayScreen = () => {
             }}
           />
         </View>
+
+        <Portal>
+          <FAB.Group
+            open={fabOpen}
+            visible
+            icon={fabOpen ? 'close' : 'plus'}
+            actions={[
+              { icon: 'food', label: 'Add meal', onPress: () => {} },
+              { icon: 'package-variant', label: 'Add product', onPress: () => {} },
+              { icon: 'cup-water', label: 'Add water', onPress: () => {} },
+              { icon: 'barcode-scan', label: 'Scan food', onPress: () => {} },
+            ]}
+            onStateChange={({ open }) => setFabOpen(open)}
+            onPress={() => {
+              if (fabOpen) {
+                setFabOpen(false);
+              }
+            }}
+            fabStyle={{ backgroundColor: colors.primary }}
+            color={colors.textInverse}
+            style={{ bottom: insets.bottom + 72 }}
+          />
+        </Portal>
       </View>
     </SafeAreaView>
   );

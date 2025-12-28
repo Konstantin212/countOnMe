@@ -128,16 +128,31 @@ const TabNavigator = () => {
         name="MyDayTab"
         component={MyDayStackNavigator}
         options={{ title: 'My Day' }}
+        listeners={({ navigation }) => ({
+          tabPress: () => {
+            navigation.navigate('MyDayTab', { screen: 'MyDay' } as any);
+          },
+        })}
       />
       <Tab.Screen
         name="MyPathTab"
         component={MyPathStackNavigator}
         options={{ title: 'My Path' }}
+        listeners={({ navigation }) => ({
+          tabPress: () => {
+            navigation.navigate('MyPathTab', { screen: 'MyPath' } as any);
+          },
+        })}
       />
       <Tab.Screen
         name="ProfileTab"
         component={ProfileStackNavigator}
         options={{ title: 'Profile' }}
+        listeners={({ navigation }) => ({
+          tabPress: () => {
+            navigation.navigate('ProfileTab', { screen: 'ProfileMenu' } as any);
+          },
+        })}
       />
     </Tab.Navigator>
   );

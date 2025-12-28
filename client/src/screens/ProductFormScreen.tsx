@@ -12,64 +12,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
 
 import { ProfileStackParamList } from '../app/navigationTypes';
 import { useProducts } from '../hooks/useProducts';
 import { useTheme } from '../hooks/useTheme';
+import { productFormSchema, ProductFormData } from '../services/schemas/productFormSchema';
+import { SCALE_TYPES, SCALE_UNITS } from '../services/constants/scaleConstants';
 
 type Props = NativeStackScreenProps<ProfileStackParamList, 'ProductForm'>;
-
-// Scale types
-const SCALE_TYPES = ['Liquid', 'Solid', 'Dry'] as const;
-type ScaleType = (typeof SCALE_TYPES)[number];
-
-const SCALE_UNITS: Record<ScaleType, string[]> = {
-  Liquid: ['l', 'ml'],
-  Solid: ['kg', 'g', 'mg'],
-  Dry: ['tbsp', 'tsp', 'cup'],
-};
-
-// Zod validation schema
-const productFormSchema = z
-  .object({
-    name: z
-      .string()
-      .min(1, 'Product name is required')
-      .max(50, 'Product name must be 50 characters or less'),
-    category: z
-      .string()
-      .min(1, 'Category is required')
-      .max(50, 'Category must be 50 characters or less'),
-    portionSize: z
-      .number({ invalid_type_error: 'Portion size must be a number' })
-      .positive('Portion size must be greater than 0'),
-    scaleType: z.enum(SCALE_TYPES, {
-      required_error: 'Please select a scale type',
-    }),
-    scaleUnit: z.string().min(1, 'Please select a unit'),
-    calories: z
-      .number({ invalid_type_error: 'Calories must be a number' })
-      .min(0, 'Calories cannot be negative'),
-    includeNutrients: z.boolean(),
-    fat: z.number({ invalid_type_error: 'Fat must be a number' }).min(0).optional(),
-    carbs: z.number({ invalid_type_error: 'Carbs must be a number' }).min(0).optional(),
-    protein: z.number({ invalid_type_error: 'Protein must be a number' }).min(0).optional(),
-  })
-  .refine(
-    (data) => {
-      if (data.includeNutrients) {
-        return data.fat !== undefined && data.carbs !== undefined && data.protein !== undefined;
-      }
-      return true;
-    },
-    {
-      message: 'All nutrient fields are required when nutrients are enabled',
-      path: ['includeNutrients'],
-    },
-  );
-
-type ProductFormData = z.infer<typeof productFormSchema>;
 
 const ProductFormScreen = ({ navigation, route }: Props) => {
   const isEditing = Boolean(route.params?.productId);
@@ -85,7 +35,7 @@ const ProductFormScreen = ({ navigation, route }: Props) => {
     formState: { errors, isSubmitted },
   } = useForm<ProductFormData>({
     resolver: zodResolver(productFormSchema),
-    mode: isSubmitted ? 'onChange' : 'onSubmit',
+    mode: 'onSubmit',
     defaultValues: {
       name: '',
       category: '',

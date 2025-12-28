@@ -1,3 +1,5 @@
+import { NavigatorScreenParams } from '@react-navigation/native';
+
 export type MyDayStackParamList = {
   MyDay: undefined;
 };
@@ -29,8 +31,8 @@ export type ProfileStackParamList = {
 };
 
 export type RootTabParamList = {
-  MyDayTab: undefined;
-  MyPathTab: undefined;
-  ProfileTab: undefined;
+  MyDayTab: NavigatorScreenParams<MyDayStackParamList>;
+  MyPathTab: NavigatorScreenParams<MyPathStackParamList>;
+  ProfileTab: NavigatorScreenParams<ProfileStackParamList>;
 };
 

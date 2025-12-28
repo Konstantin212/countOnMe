@@ -9,8 +9,10 @@ export const LightTheme = {
   // Core theme colors
   background: '#FFFBDE',
   primary: '#90D1CA',
+  primaryBg: '#d3e6ac',
   secondary: '#129990',
   tertiary: '#096B68',
+  tertiaryBg: '#C5D89D',
 
   // Text colors
   text: '#333333',
@@ -22,7 +24,8 @@ export const LightTheme = {
   border: '#e5e7eb',
   borderLight: '#f3f4f6',
   inputBackground: '#fafafa',
-  cardBackground: '#FFFFFF',
+  cardBackground: '#d3e6ac',
+  cardBackgroundLight: '#e9fcc2',
   
   // Interactive states
   pressed: '#f9fafb',
@@ -61,8 +64,10 @@ export const DarkTheme = {
   // Core theme colors
   background: '#556B2F',
   primary: '#EFF5D2',
+  primaryBg: '#2D4F2B',
   secondary: '#8FA31E',
   tertiary: '#C6D870',
+  tertiaryBg: '#0A400C',
 
   // Text colors
   text: '#FFFFFF',
@@ -75,6 +80,7 @@ export const DarkTheme = {
   borderLight: '#5D7332',
   inputBackground: '#4A5A2A',
   cardBackground: '#4A5A2A',
+  cardBackgroundLight: '#607339',
   
   // Interactive states
   pressed: '#5D7332',

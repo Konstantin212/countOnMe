@@ -1,16 +1,45 @@
-import React, { useState } from 'react';
-import { Dimensions, StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { Dimensions, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ProgressChart } from 'react-native-chart-kit';
 import { FAB, Portal } from 'react-native-paper';
+import { useNavigation } from '@react-navigation/native';
+import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTheme } from '@hooks/useTheme';
+import { MyDayStackParamList, RootTabParamList } from '@app/navigationTypes';
+
+const hexToRgba = (hex: string, alpha: number) => {
+  const normalized = hex.replace('#', '');
+  const bigint = parseInt(normalized.length === 3 ? normalized.repeat(2) : normalized, 16);
+  const r = (bigint >> 16) & 255;
+  const g = (bigint >> 8) & 255;
+  const b = bigint & 255;
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+};
 
 const MyDayScreen = () => {
   const { colors } = useTheme();
+  const navigation = useNavigation<NativeStackNavigationProp<MyDayStackParamList, 'MyDay'>>();
   const insets = useSafeAreaInsets();
   const screenWidth = Dimensions.get('window').width;
   const chartWidth = Math.max(screenWidth - 64, 200); // account for screen + card padding
   const [fabOpen, setFabOpen] = useState(false);
+  const backdropColor = hexToRgba(colors.background, 0.9);
+
+  useEffect(() => {
+    const blurSub = navigation.addListener('blur', () => setFabOpen(false));
+    const focusSub = navigation.addListener('focus', () => setFabOpen(false));
+
+    const parentNav = navigation.getParent<BottomTabNavigationProp<RootTabParamList>>();
+    const tabPressSub = parentNav?.addListener?.('tabPress', () => setFabOpen(false));
+
+    return () => {
+      blurSub();
+      focusSub();
+      tabPressSub?.();
+    };
+  }, [navigation]);
 
   const ringColors = [colors.macroProtein, colors.macroCarb, colors.macroFat];
 
@@ -57,6 +86,10 @@ const MyDayScreen = () => {
       fontSize: 14,
       color: colors.textSecondary,
     },
+    fabOverlay: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: backdropColor,
+    },
   });
 
   return (
@@ -84,6 +117,13 @@ const MyDayScreen = () => {
         </View>
 
         <Portal>
+          {fabOpen && (
+            <Pressable
+              accessibilityLabel="Close quick actions"
+              style={styles.fabOverlay}
+              onPress={() => setFabOpen(false)}
+            />
+          )}
           <FAB.Group
             open={fabOpen}
             visible
@@ -103,6 +143,7 @@ const MyDayScreen = () => {
             fabStyle={{ backgroundColor: colors.primary }}
             color={colors.textInverse}
             style={{ bottom: insets.bottom + 72 }}
+            backdropColor={backdropColor}
           />
         </Portal>
       </View>

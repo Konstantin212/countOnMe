@@ -1,6 +1,13 @@
 import React, { ReactNode } from 'react';
-import { Pressable, Text, StyleSheet, PressableProps, ViewStyle } from 'react-native';
-import { useTheme } from '../hooks/useTheme';
+import {
+  Pressable,
+  Text,
+  StyleSheet,
+  PressableProps,
+  ViewStyle,
+  StyleProp,
+} from 'react-native';
+import { useTheme } from '@hooks/useTheme';
 
 interface ButtonProps extends PressableProps {
   children: ReactNode;
@@ -54,8 +61,8 @@ export const Button = ({
     },
   });
 
-  const getButtonStyle = (): ViewStyle[] => {
-    const baseStyles = [styles.button];
+  const getButtonStyle = (): StyleProp<ViewStyle>[] => {
+    const baseStyles: StyleProp<ViewStyle>[] = [styles.button];
     if (disabled || loading) {
       baseStyles.push(styles.disabled);
     } else {
@@ -85,9 +92,15 @@ export const Button = ({
     }
   };
 
+  const baseButtonStyle = getButtonStyle();
+  const pressableStyle: PressableProps['style'] =
+    typeof style === 'function'
+      ? (state) => [...baseButtonStyle, style(state)]
+      : [...baseButtonStyle, style];
+
   return (
     <Pressable
-      style={[...getButtonStyle(), style]}
+      style={pressableStyle}
       disabled={disabled || loading}
       {...props}
     >

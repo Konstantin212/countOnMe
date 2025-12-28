@@ -4,11 +4,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
 
-import ProductListItem from '../components/ProductListItem';
-import { Product } from '../models/types';
-import { ProfileStackParamList } from '../app/navigationTypes';
-import { useProducts } from '../hooks/useProducts';
-import { useTheme } from '../hooks/useTheme';
+import ProductListItem from '@components/ProductListItem';
+import { Product } from '@models/types';
+import { ProfileStackParamList } from '@app/navigationTypes';
+import { useProducts } from '@hooks/useProducts';
+import { useTheme } from '@hooks/useTheme';
 
 type Props = NativeStackScreenProps<ProfileStackParamList, 'ProductsList'>;
 

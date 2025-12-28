@@ -1,7 +1,7 @@
 import React, { createContext, useEffect, useState, ReactNode } from 'react';
-import { Appearance } from 'react-native';
+import { Appearance, ColorSchemeName } from 'react-native';
 import { LightTheme, DarkTheme, Theme } from './colors';
-import { loadThemePreference, saveThemePreference } from '../storage/storage';
+import { loadThemePreference, saveThemePreference } from '@storage/storage';
 
 export type ThemeMode = 'light' | 'dark' | 'system';
 
@@ -19,7 +19,7 @@ interface ThemeProviderProps {
 }
 
 export const ThemeProvider = ({ children }: ThemeProviderProps) => {
-  const [systemColorScheme, setSystemColorScheme] = useState<'light' | 'dark' | null>(
+  const [systemColorScheme, setSystemColorScheme] = useState<ColorSchemeName>(
     Appearance.getColorScheme()
   );
   const [themeMode, setThemeModeState] = useState<ThemeMode>('system');

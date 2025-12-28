@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Switch, StyleSheet } from 'react-native';
-import { useTheme } from '../hooks/useTheme';
+import { useTheme } from '@hooks/useTheme';
 import { Label, Subtitle, ErrorText } from './Typography';
 
 interface SwitchFieldProps {

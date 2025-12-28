@@ -11,10 +11,10 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 
-import { ProfileStackParamList } from '../app/navigationTypes';
-import { useProducts } from '../hooks/useProducts';
-import { Scale, SCALE_OPTIONS, toGrams } from '../services/utils/scales';
-import { useTheme } from '../hooks/useTheme';
+import { ProfileStackParamList } from '@app/navigationTypes';
+import { useProducts } from '@hooks/useProducts';
+import { Scale, SCALE_OPTIONS, toGrams } from '@services/utils/scales';
+import { useTheme } from '@hooks/useTheme';
 
 type Props = NativeStackScreenProps<ProfileStackParamList, 'ProductDetails'>;
 

@@ -1,8 +1,8 @@
 ﻿import { useCallback, useEffect, useRef, useState } from 'react';
 import { v4 as uuid } from 'uuid';
 
-import { Product } from '../models/types';
-import { loadProducts, saveProducts } from '../storage/storage';
+import { Product } from '@models/types';
+import { loadProducts, saveProducts } from '@storage/storage';
 
 export type NewProductInput = {
   name: string;

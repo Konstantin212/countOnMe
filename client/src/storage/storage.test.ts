@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { Meal, Product } from '../models/types';
+import { Meal, Product } from '@models/types';
 import { loadMeals, loadProducts, saveMeals, saveProducts } from './storage';
 
 const storageStore = new Map<string, string>();

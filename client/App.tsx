@@ -6,9 +6,9 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StyleSheet } from 'react-native';
 
-import { AppNavigator } from './src/app/AppNavigator';
-import { ThemeProvider } from './src/theme/ThemeContext';
-import { useTheme } from './src/hooks/useTheme';
+import { AppNavigator } from '@app/AppNavigator';
+import { ThemeProvider } from '@theme/ThemeContext';
+import { useTheme } from '@hooks/useTheme';
 
 const styles = StyleSheet.create({
   container: {

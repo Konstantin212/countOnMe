@@ -1,8 +1,8 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { vi } from 'vitest';
 
-import { Product } from '../models/types';
-import { loadProducts, saveProducts } from '../storage/storage';
+import { Product } from '@models/types';
+import { loadProducts, saveProducts } from '@storage/storage';
 import { useProducts } from './useProducts';
 
 vi.mock('../storage/storage', () => ({

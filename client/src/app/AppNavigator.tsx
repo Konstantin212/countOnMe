@@ -11,18 +11,18 @@ import {
   MyPathStackParamList,
   ProfileStackParamList,
 } from './navigationTypes';
-import MealBuilderScreen from '../screens/MealBuilderScreen';
-import MealDetailsScreen from '../screens/MealDetailsScreen';
-import MealsListScreen from '../screens/MealsListScreen';
-import ProductFormScreen from '../screens/ProductFormScreen';
-import ProductsListScreen from '../screens/ProductsListScreen';
-import ProductSearchScreen from '../screens/ProductSearchScreen';
-import ProductConfirmScreen from '../screens/ProductConfirmScreen';
-import ProductDetailsScreen from '../screens/ProductDetailsScreen';
-import MyDayScreen from '../screens/MyDayScreen';
-import MyPathScreen from '../screens/MyPathScreen';
-import ProfileScreen from '../screens/ProfileScreen';
-import { useTheme } from '../hooks/useTheme';
+import MealBuilderScreen from '@screens/MealBuilderScreen';
+import MealDetailsScreen from '@screens/MealDetailsScreen';
+import MealsListScreen from '@screens/MealsListScreen';
+import ProductFormScreen from '@screens/ProductFormScreen';
+import ProductsListScreen from '@screens/ProductsListScreen';
+import ProductSearchScreen from '@screens/ProductSearchScreen';
+import ProductConfirmScreen from '@screens/ProductConfirmScreen';
+import ProductDetailsScreen from '@screens/ProductDetailsScreen';
+import MyDayScreen from '@screens/MyDayScreen';
+import MyPathScreen from '@screens/MyPathScreen';
+import ProfileScreen from '@screens/ProfileScreen';
+import { useTheme } from '@hooks/useTheme';
 
 enableScreens();
 

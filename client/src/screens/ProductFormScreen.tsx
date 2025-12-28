@@ -5,11 +5,11 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 
-import { ProfileStackParamList } from '../app/navigationTypes';
-import { useProducts } from '../hooks/useProducts';
-import { useTheme } from '../hooks/useTheme';
-import { productFormSchema, ProductFormData } from '../services/schemas/productFormSchema';
-import { SCALE_TYPES, SCALE_UNITS } from '../services/constants/scaleConstants';
+import { ProfileStackParamList } from '@app/navigationTypes';
+import { useProducts } from '@hooks/useProducts';
+import { useTheme } from '@hooks/useTheme';
+import { productFormSchema, ProductFormData } from '@services/schemas/productFormSchema';
+import { SCALE_TYPES, SCALE_UNITS } from '@services/constants/scaleConstants';
 import {
   FormField,
   Input,
@@ -18,7 +18,7 @@ import {
   SwitchField,
   Button,
   SectionTitle,
-} from '../particles';
+} from '@particles/index';
 
 type Props = NativeStackScreenProps<ProfileStackParamList, 'ProductForm'>;
 

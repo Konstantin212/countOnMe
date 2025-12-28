@@ -1,7 +1,6 @@
 ﻿import React, { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
-  FlatList,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -11,19 +10,13 @@ import {
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 
-import { ProfileStackParamList } from '../app/navigationTypes';
-import { useProducts } from '../hooks/useProducts';
-import { useMeals } from '../hooks/useMeals';
-import { MealItem } from '../models/types';
-import { calcMealCalories } from '../services/utils/calories';
-import { useTheme } from '../hooks/useTheme';
+import { ProfileStackParamList } from '@app/navigationTypes';
+import { useProducts } from '@hooks/useProducts';
+import { useMeals } from '@hooks/useMeals';
+import { MealItem } from '@models/types';
+import { calcMealCalories } from '@services/utils/calories';
 
 type Props = NativeStackScreenProps<ProfileStackParamList, 'MealBuilder'>;
-
-type SelectedProduct = {
-  productId: string;
-  grams: number;
-};
 
 const MealBuilderScreen = ({ navigation, route }: Props) => {
   const isEditing = Boolean(route.params?.mealId);

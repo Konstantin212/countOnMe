@@ -4,9 +4,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 
-import { ProfileStackParamList } from '../app/navigationTypes';
-import { useTheme } from '../hooks/useTheme';
-import { ThemeMode } from '../theme/ThemeContext';
+import { ProfileStackParamList } from '@app/navigationTypes';
+import { useTheme } from '@hooks/useTheme';
+import { ThemeMode } from '@theme/ThemeContext';
 
 type Props = NativeStackScreenProps<ProfileStackParamList, 'ProfileMenu'>;
 

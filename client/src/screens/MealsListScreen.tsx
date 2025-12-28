@@ -3,11 +3,11 @@ import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 
-import { ProfileStackParamList } from '../app/navigationTypes';
-import { useProducts } from '../hooks/useProducts';
-import { useMeals } from '../hooks/useMeals';
-import { Meal } from '../models/types';
-import { useTheme } from '../hooks/useTheme';
+import { ProfileStackParamList } from '@app/navigationTypes';
+import { useProducts } from '@hooks/useProducts';
+import { useMeals } from '@hooks/useMeals';
+import { Meal } from '@models/types';
+import { useTheme } from '@hooks/useTheme';
 
 type Props = NativeStackScreenProps<ProfileStackParamList, 'MealsList'>;
 

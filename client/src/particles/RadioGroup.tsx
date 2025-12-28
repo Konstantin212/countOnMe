@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Pressable, Text, StyleSheet } from 'react-native';
-import { useTheme } from '../hooks/useTheme';
+import { useTheme } from '@hooks/useTheme';
 import { Label, ErrorText } from './Typography';
 
 interface RadioOption<T> {

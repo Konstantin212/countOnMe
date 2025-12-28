@@ -1,7 +1,7 @@
 ﻿import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import { Meal, Product } from '../models/types';
-import { ThemeMode } from '../theme/ThemeContext';
+import { Meal, Product } from '@models/types';
+import { ThemeMode } from '@theme/ThemeContext';
 
 const STORAGE_PREFIX = '@countOnMe';
 const STORAGE_VERSION = 'v1';

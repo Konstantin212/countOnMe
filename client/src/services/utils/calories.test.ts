@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { MealItem, Product } from '../../models/types';
+import { MealItem, Product } from '@models/types';
 import { calcMealCalories } from './calories';
 
 const createProducts = (): Product[] => [

@@ -2,10 +2,10 @@
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 
-import { ProfileStackParamList } from '../app/navigationTypes';
-import { useProducts } from '../hooks/useProducts';
-import { useMeals } from '../hooks/useMeals';
-import MealItemRow from '../components/MealItemRow';
+import { ProfileStackParamList } from '@app/navigationTypes';
+import { useProducts } from '@hooks/useProducts';
+import { useMeals } from '@hooks/useMeals';
+import MealItemRow from '@components/MealItemRow';
 
 type Props = NativeStackScreenProps<ProfileStackParamList, 'MealDetails'>;
 

@@ -148,7 +148,21 @@ Avoid heavy UI libs for MVP.
 
 ---
 
-## 10. Future AI integration (post-MVP)
+## 10. UI component architecture (atomic particles)
+- Reusable UI lives in `client/src/particles/` as small “atoms”:
+  - `FormField` (section wrapper)
+  - `Input` / `NumericInput`
+  - `RadioGroup`
+  - `SwitchField`
+  - `Button`
+  - `Typography` (Label, ErrorText, SectionTitle, Subtitle)
+- Use particles for all forms to keep screens lean and consistent.
+- Theme-aware: components pull colors/typography from `useTheme()`.
+- Extend by adding new particles and exporting from `particles/index.ts`.
+
+---
+
+## 11. Future AI integration (post-MVP)
 
 ### Why backend
 LLM keys must not be embedded in the app.  

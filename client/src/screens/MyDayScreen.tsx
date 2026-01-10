@@ -28,7 +28,7 @@ const MyDayScreen = () => {
   const backdropColor = colors.background;
   const summaryCardBg = colors.cardBackground;
   const rowCardBg = colors.cardBackgroundLight;
-  const rowCardBorder = colors.primaryBg;
+  const rowCardBorder = colors.border;
 
   useEffect(() => {
     const blurSub = navigation.addListener('blur', () => setFabOpen(false));
@@ -245,7 +245,9 @@ const MyDayScreen = () => {
             chartConfig={{
               backgroundGradientFrom: colors.cardBackground,
               backgroundGradientTo: colors.cardBackground,
-              color: () => colors.text,
+              // This controls the *track* (unfilled) ring color:
+              // ProgressChart calls chartConfig.color(0.2, i) for the background ring.
+              color: (opacity = 1, index = 0) => hexToRgba(ringColors[index] ?? colors.text, opacity),
               labelColor: () => colors.text,
             }}
           />

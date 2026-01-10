@@ -27,9 +27,7 @@ export const ThemeProvider = ({ children }: ThemeProviderProps) => {
 
   // Listen for system theme changes
   useEffect(() => {
-    console.log('System color scheme:', Appearance.getColorScheme());
     const listener = Appearance.addChangeListener(({ colorScheme }) => {
-      console.log('System color scheme changed to:', colorScheme);
       setSystemColorScheme(colorScheme);
     });
 
@@ -45,13 +43,6 @@ export const ThemeProvider = ({ children }: ThemeProviderProps) => {
       : themeMode;
 
   const colors = theme === 'dark' ? DarkTheme : LightTheme;
-
-  // Debug logging
-  console.log('Theme Debug:', {
-    systemColorScheme,
-    themeMode,
-    resolvedTheme: theme,
-  });
 
   // Load saved theme preference on mount
   useEffect(() => {

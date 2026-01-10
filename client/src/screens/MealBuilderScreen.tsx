@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   Pressable,
@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { ProfileStackParamList } from '@app/navigationTypes';
 import { useProducts } from '@hooks/useProducts';
 import { useMeals } from '@hooks/useMeals';
+import { useTheme } from '@hooks/useTheme';
 import { MealItem } from '@models/types';
 import { calcMealCalories } from '@services/utils/calories';
 
@@ -24,11 +25,188 @@ const MealBuilderScreen = ({ navigation, route }: Props) => {
   const isEditing = Boolean(route.params?.mealId);
   const { products, loading: productsLoading } = useProducts();
   const { meals, addMeal, updateMeal } = useMeals(products);
+  const { colors } = useTheme();
 
   const [mealName, setMealName] = useState('');
   const [selectedProducts, setSelectedProducts] = useState<Map<string, number>>(new Map());
   const [searchQuery, setSearchQuery] = useState('');
   const [saving, setSaving] = useState(false);
+
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+      paddingTop: 16,
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 16,
+      marginBottom: 8,
+    },
+    backButton: {
+      padding: 8,
+      borderRadius: 999,
+      backgroundColor: colors.cardBackground,
+      marginRight: 12,
+    },
+    title: {
+      fontSize: 20,
+      fontWeight: '700',
+      color: colors.text,
+    },
+    scrollView: {
+      flex: 1,
+    },
+    section: {
+      padding: 16,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    label: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.textSecondary,
+      marginBottom: 8,
+    },
+    input: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 8,
+      padding: 12,
+      fontSize: 16,
+      backgroundColor: colors.inputBackground,
+      color: colors.text,
+    },
+    totalSection: {
+      padding: 16,
+      backgroundColor: colors.infoLight,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.info,
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    totalLabel: {
+      fontSize: 18,
+      fontWeight: '600',
+      color: colors.info,
+    },
+    totalValue: {
+      fontSize: 24,
+      fontWeight: '700',
+      color: colors.info,
+    },
+    productsContainer: {
+      padding: 16,
+    },
+    productItem: {
+      marginBottom: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 8,
+      backgroundColor: colors.cardBackground,
+    },
+    productCheckbox: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      padding: 12,
+    },
+    checkbox: {
+      width: 24,
+      height: 24,
+      borderWidth: 2,
+      borderColor: colors.border,
+      borderRadius: 4,
+      marginRight: 12,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    checkboxChecked: {
+      backgroundColor: colors.primary,
+      borderColor: colors.primary,
+    },
+    checkmark: {
+      color: colors.buttonText,
+      fontSize: 16,
+      fontWeight: '700',
+    },
+    productInfo: {
+      flex: 1,
+    },
+    productName: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: colors.text,
+      marginBottom: 2,
+    },
+    productMeta: {
+      fontSize: 14,
+      color: colors.textSecondary,
+    },
+    gramsInput: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 12,
+      paddingBottom: 12,
+      paddingLeft: 48,
+    },
+    gramsField: {
+      flex: 1,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 6,
+      padding: 8,
+      fontSize: 16,
+      backgroundColor: colors.cardBackground,
+      color: colors.text,
+    },
+    gramsUnit: {
+      marginLeft: 8,
+      fontSize: 16,
+      color: colors.textSecondary,
+      fontWeight: '600',
+    },
+    footer: {
+      padding: 16,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+      backgroundColor: colors.background,
+    },
+    saveButton: {
+      backgroundColor: colors.primary,
+      padding: 16,
+      borderRadius: 8,
+      alignItems: 'center',
+    },
+    saveButtonDisabled: {
+      backgroundColor: colors.disabled,
+    },
+    saveButtonText: {
+      color: colors.buttonText,
+      fontSize: 16,
+      fontWeight: '600',
+    },
+    loadingText: {
+      fontSize: 16,
+      color: colors.textSecondary,
+      textAlign: 'center',
+      marginTop: 32,
+    },
+    emptyText: {
+      fontSize: 18,
+      fontWeight: '600',
+      color: colors.text,
+      textAlign: 'center',
+      marginTop: 32,
+    },
+    emptySubtext: {
+      fontSize: 14,
+      color: colors.textSecondary,
+      textAlign: 'center',
+      marginTop: 8,
+    },
+  });
 
   // Load meal data if editing
   useEffect(() => {
@@ -154,7 +332,7 @@ const MealBuilderScreen = ({ navigation, route }: Props) => {
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <View style={styles.header}>
         <Pressable onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={22} color="#111" />
+          <Ionicons name="arrow-back" size={22} color={colors.text} />
         </Pressable>
         <Text style={styles.title}>{isEditing ? 'Edit Meal' : 'New Meal'}</Text>
       </View>
@@ -168,7 +346,7 @@ const MealBuilderScreen = ({ navigation, route }: Props) => {
             value={mealName}
             onChangeText={setMealName}
             placeholder="e.g., Breakfast, Lunch..."
-            placeholderTextColor="#999"
+            placeholderTextColor={colors.textTertiary}
           />
         </View>
 
@@ -186,7 +364,7 @@ const MealBuilderScreen = ({ navigation, route }: Props) => {
             value={searchQuery}
             onChangeText={setSearchQuery}
             placeholder="Search products..."
-            placeholderTextColor="#999"
+            placeholderTextColor={colors.textTertiary}
           />
         </View>
 
@@ -219,7 +397,7 @@ const MealBuilderScreen = ({ navigation, route }: Props) => {
                       onChangeText={(value) => handleGramsChange(product.id, value)}
                       keyboardType="numeric"
                       placeholder="100"
-                      placeholderTextColor="#999"
+                      placeholderTextColor={colors.textTertiary}
                     />
                     <Text style={styles.gramsUnit}>g</Text>
                   </View>
@@ -245,177 +423,3 @@ const MealBuilderScreen = ({ navigation, route }: Props) => {
 };
 
 export default MealBuilderScreen;
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    paddingTop: 16,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    marginBottom: 8,
-  },
-  backButton: {
-    padding: 8,
-    borderRadius: 999,
-    backgroundColor: '#f4f4f5',
-    marginRight: 12,
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#111',
-  },
-  scrollView: {
-    flex: 1,
-  },
-  section: {
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 8,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    backgroundColor: '#fafafa',
-  },
-  totalSection: {
-    padding: 16,
-    backgroundColor: '#f0f9ff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#bfdbfe',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  totalLabel: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#1e40af',
-  },
-  totalValue: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#1e40af',
-  },
-  productsContainer: {
-    padding: 16,
-  },
-  productItem: {
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: '#eee',
-    borderRadius: 8,
-    backgroundColor: '#fafafa',
-  },
-  productCheckbox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 12,
-  },
-  checkbox: {
-    width: 24,
-    height: 24,
-    borderWidth: 2,
-    borderColor: '#ddd',
-    borderRadius: 4,
-    marginRight: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  checkboxChecked: {
-    backgroundColor: '#2563eb',
-    borderColor: '#2563eb',
-  },
-  checkmark: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  productInfo: {
-    flex: 1,
-  },
-  productName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 2,
-  },
-  productMeta: {
-    fontSize: 14,
-    color: '#666',
-  },
-  gramsInput: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingBottom: 12,
-    paddingLeft: 48,
-  },
-  gramsField: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 6,
-    padding: 8,
-    fontSize: 16,
-    backgroundColor: '#fff',
-  },
-  gramsUnit: {
-    marginLeft: 8,
-    fontSize: 16,
-    color: '#666',
-    fontWeight: '600',
-  },
-  footer: {
-    padding: 16,
-    borderTopWidth: 1,
-    borderTopColor: '#eee',
-    backgroundColor: '#fff',
-  },
-  saveButton: {
-    backgroundColor: '#2563eb',
-    padding: 16,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  saveButtonDisabled: {
-    backgroundColor: '#94a3b8',
-  },
-  saveButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  loadingText: {
-    fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
-    marginTop: 32,
-  },
-  emptyText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
-    textAlign: 'center',
-    marginTop: 32,
-  },
-  emptySubtext: {
-    fontSize: 14,
-    color: '#666',
-    textAlign: 'center',
-    marginTop: 8,
-  },
-});

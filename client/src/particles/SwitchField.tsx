@@ -35,8 +35,8 @@ export const SwitchField = ({ label, subtitle, value, onValueChange, error }: Sw
         <Switch
           value={value}
           onValueChange={onValueChange}
-          trackColor={{ false: '#d1d5db', true: '#93c5fd' }}
-          thumbColor={value ? '#2563eb' : '#f4f3f4'}
+          trackColor={{ false: colors.borderLight, true: colors.info }}
+          thumbColor={value ? colors.primary : colors.borderLight}
         />
       </View>
       {error && <ErrorText>{error}</ErrorText>}

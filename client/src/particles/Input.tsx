@@ -33,7 +33,7 @@ export const Input = ({ label, required, error, style, ...props }: InputProps) =
       {label && <Label required={required}>{label}</Label>}
       <TextInput
         style={[styles.input, error && styles.inputError, style]}
-        placeholderTextColor="#999"
+        placeholderTextColor={colors.textTertiary}
         {...props}
       />
       {error && <ErrorText>{error}</ErrorText>}

@@ -317,7 +317,7 @@ const ProductConfirmScreen = ({ navigation, route }: Props) => {
               onChangeText={setAmount}
               keyboardType="numeric"
               placeholder="100"
-              placeholderTextColor="#999"
+              placeholderTextColor={colors.textTertiary}
             />
 
             <View style={styles.scaleButtons}>

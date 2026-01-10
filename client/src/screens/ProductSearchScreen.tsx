@@ -279,7 +279,7 @@ const ProductSearchScreen = ({ navigation }: Props) => {
           value={searchQuery}
           onChangeText={setSearchQuery}
           placeholder="Search products..."
-          placeholderTextColor="#999"
+          placeholderTextColor={colors.textTertiary}
           autoCorrect={false}
           autoCapitalize="none"
           returnKeyType="search"

@@ -1,4 +1,4 @@
-﻿import React, { useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { ProfileStackParamList } from '@app/navigationTypes';
 import { useProducts } from '@hooks/useProducts';
 import { useMeals } from '@hooks/useMeals';
+import { useTheme } from '@hooks/useTheme';
 import MealItemRow from '@components/MealItemRow';
 
 type Props = NativeStackScreenProps<ProfileStackParamList, 'MealDetails'>;
@@ -14,6 +15,131 @@ type Props = NativeStackScreenProps<ProfileStackParamList, 'MealDetails'>;
 const MealDetailsScreen = ({ navigation, route }: Props) => {
   const { products } = useProducts();
   const { meals } = useMeals(products);
+  const { colors } = useTheme();
+
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+      paddingTop: 16,
+    },
+    topBar: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 16,
+      marginBottom: 8,
+      gap: 12,
+    },
+    topBarBackButton: {
+      padding: 8,
+      borderRadius: 999,
+      backgroundColor: colors.cardBackground,
+    },
+    topBarTitle: {
+      fontSize: 20,
+      fontWeight: '700',
+      color: colors.text,
+    },
+    scrollView: {
+      flex: 1,
+    },
+    header: {
+      padding: 16,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    mealName: {
+      fontSize: 24,
+      fontWeight: '700',
+      color: colors.text,
+      marginBottom: 4,
+    },
+    mealDate: {
+      fontSize: 14,
+      color: colors.textSecondary,
+    },
+    totalCard: {
+      margin: 16,
+      padding: 20,
+      backgroundColor: colors.infoLight,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: colors.info,
+      alignItems: 'center',
+    },
+    totalLabel: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: colors.info,
+      marginBottom: 8,
+    },
+    totalValue: {
+      fontSize: 36,
+      fontWeight: '700',
+      color: colors.info,
+    },
+    itemsSection: {
+      padding: 16,
+    },
+    sectionTitle: {
+      fontSize: 18,
+      fontWeight: '600',
+      color: colors.text,
+      marginBottom: 12,
+    },
+    noItemsText: {
+      fontSize: 14,
+      color: colors.textSecondary,
+      textAlign: 'center',
+      paddingVertical: 24,
+    },
+    footer: {
+      padding: 16,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+      backgroundColor: colors.background,
+    },
+    editButton: {
+      backgroundColor: colors.primary,
+      padding: 16,
+      borderRadius: 8,
+      alignItems: 'center',
+    },
+    editButtonText: {
+      color: colors.buttonText,
+      fontSize: 16,
+      fontWeight: '600',
+    },
+    notFoundContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: 32,
+    },
+    notFoundText: {
+      fontSize: 20,
+      fontWeight: '600',
+      color: colors.text,
+      marginBottom: 8,
+    },
+    notFoundSubtext: {
+      fontSize: 14,
+      color: colors.textSecondary,
+      textAlign: 'center',
+      marginBottom: 24,
+    },
+    backButton: {
+      backgroundColor: colors.primary,
+      paddingHorizontal: 24,
+      paddingVertical: 12,
+      borderRadius: 8,
+    },
+    backButtonText: {
+      color: colors.buttonText,
+      fontSize: 16,
+      fontWeight: '600',
+    },
+  });
 
   const meal = useMemo(() => {
     return meals.find((m) => m.id === route.params.mealId);
@@ -54,7 +180,7 @@ const MealDetailsScreen = ({ navigation, route }: Props) => {
       <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
         <View style={styles.topBar}>
           <Pressable onPress={() => navigation.goBack()} style={styles.topBarBackButton}>
-            <Ionicons name="arrow-back" size={22} color="#111" />
+            <Ionicons name="arrow-back" size={22} color={colors.text} />
           </Pressable>
           <Text style={styles.topBarTitle}>Meal</Text>
         </View>
@@ -73,7 +199,7 @@ const MealDetailsScreen = ({ navigation, route }: Props) => {
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <View style={styles.topBar}>
         <Pressable onPress={() => navigation.goBack()} style={styles.topBarBackButton}>
-          <Ionicons name="arrow-back" size={22} color="#111" />
+          <Ionicons name="arrow-back" size={22} color={colors.text} />
         </Pressable>
         <Text style={styles.topBarTitle}>{meal.name}</Text>
       </View>
@@ -123,128 +249,4 @@ const MealDetailsScreen = ({ navigation, route }: Props) => {
 };
 
 export default MealDetailsScreen;
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    paddingTop: 16,
-  },
-  topBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    marginBottom: 8,
-    gap: 12,
-  },
-  topBarBackButton: {
-    padding: 8,
-    borderRadius: 999,
-    backgroundColor: '#f4f4f5',
-  },
-  topBarTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#111',
-  },
-  scrollView: {
-    flex: 1,
-  },
-  header: {
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-  },
-  mealName: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#333',
-    marginBottom: 4,
-  },
-  mealDate: {
-    fontSize: 14,
-    color: '#666',
-  },
-  totalCard: {
-    margin: 16,
-    padding: 20,
-    backgroundColor: '#f0f9ff',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#bfdbfe',
-    alignItems: 'center',
-  },
-  totalLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1e40af',
-    marginBottom: 8,
-  },
-  totalValue: {
-    fontSize: 36,
-    fontWeight: '700',
-    color: '#1e40af',
-  },
-  itemsSection: {
-    padding: 16,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 12,
-  },
-  noItemsText: {
-    fontSize: 14,
-    color: '#666',
-    textAlign: 'center',
-    paddingVertical: 24,
-  },
-  footer: {
-    padding: 16,
-    borderTopWidth: 1,
-    borderTopColor: '#eee',
-    backgroundColor: '#fff',
-  },
-  editButton: {
-    backgroundColor: '#2563eb',
-    padding: 16,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  editButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  notFoundContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 32,
-  },
-  notFoundText: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 8,
-  },
-  notFoundSubtext: {
-    fontSize: 14,
-    color: '#666',
-    textAlign: 'center',
-    marginBottom: 24,
-  },
-  backButton: {
-    backgroundColor: '#2563eb',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
-  },
-  backButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-});
 

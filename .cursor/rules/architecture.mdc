@@ -8,12 +8,16 @@ globs:
 # ARCHITECTURE.md
 
 ## 1. Architecture overview
-We build MVP as a **local offline React Native app (Expo)**.
+We build MVP as a **local offline React Native app (Expo)**, with an optional backend for future sync/statistics.
 Core principles:
 - **Offline-first**: no backend needed for MVP.
 - **Separation of concerns**: UI ≠ state ≠ storage ≠ pure business logic.
 - **Incremental complexity**: start simple (AsyncStorage), migrate to SQLite only if needed.
 - **AI as a layer** later, not part of core domain.
+
+Backend note:
+- A `backend/` service may be introduced later for sync, statistics, and AI calls.
+- Backend rules are defined separately and scoped to `backend/**`.
 
 ---
 
@@ -42,7 +46,7 @@ Core principles:
 
 ### Later (post-MVP)
 - **expo-sqlite** if storage grows.
-- Backend for AI (Node/Next/Supabase), never ship LLM keys in the app.
+- Backend for sync/stats/AI (FastAPI + Postgres planned). Never ship LLM keys in the app.
 
 ---
 

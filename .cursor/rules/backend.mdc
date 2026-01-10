@@ -1,0 +1,142 @@
+---
+description: "Backend rules (FastAPI + async SQLAlchemy + Alembic + Postgres)"
+alwaysApply: false
+globs:
+  - "backend/**/*.py"
+  - "backend/alembic/**/*.py"
+  - "backend/alembic.ini"
+  - "backend/docker-compose.yml"
+  - "backend/pyproject.toml"
+---
+
+# Backend Engineering Rules (CountOnMe)
+
+These rules apply only to the `backend/` service.
+
+## 1) Architecture & boundaries
+
+### Folder responsibilities (strict)
+- **`app/api/routers/`**: request/response wiring only.
+  - Parse inputs (Pydantic), call services, return DTOs.
+  - No raw SQL, no business rules, no cross-table logic here.
+- **`app/api/deps.py`**: dependencies (auth, DB session, pagination).
+- **`app/models/`**: SQLAlchemy ORM models only.
+  - No Pydantic schemas in models.
+  - Keep relationships explicit and minimal.
+- **`app/schemas/`**: Pydantic request/response models only.
+  - One file per domain area (product, portion, entry, stats, weight).
+- **`app/services/`**: business logic + calculations + query orchestration.
+  - Where you enforce domain rules (device scoping, default portion invariant, etc.).
+- **`app/db/`**: engine/session/base wiring only.
+
+### Data access rule
+- **Routers never run SQL**.
+- Services can query using SQLAlchemy Core/ORM.
+- Keep “aggregation queries” in `app/services/stats.py`.
+
+## 2) FastAPI conventions
+
+### Versioning & routing
+- All API routes live under `/v1`.
+- Use `APIRouter(prefix=\"/v1\", tags=[...])` per router.
+- Provide a `/health` route (may be unversioned).
+
+### Error model (consistency)
+- Raise `HTTPException` with consistent payloads.
+- Prefer explicit status codes:
+  - 400 validation/format
+  - 401 unauthenticated (missing/invalid token)
+  - 403 forbidden (rare; prefer 404 for cross-device IDs)
+  - 404 not found (including cross-device access)
+  - 409 conflict (e.g. unique date weight if enforced)
+
+### Request validation
+- Validate invariants in **services** (even if request schemas validate types).
+  - Example: portion belongs to product; product belongs to device.
+
+## 3) Auth model (anonymous device token)
+
+### Requirements
+- Every protected request must resolve a `device_id`.
+- Store only a **hash** of `device_token` (never store raw token).
+- Update `devices.last_seen_at` on successful auth.
+
+### Authorization boundary
+- Auth logic must be centralized in `app/services/auth.py` + `app/api/deps.py`.
+- Routers should depend on `device_id` via a dependency, not parse headers manually.
+
+## 4) SQLAlchemy (async) best practices
+
+### Session handling
+- Use a single `AsyncSession` dependency per request.
+- Do not create sessions inside services.
+- Avoid passing sessions across threads/background tasks.
+
+### Transaction boundaries
+- For multi-step updates (e.g. “set default portion” which clears previous default), wrap in a transaction:
+  - `async with session.begin(): ...`
+- Always keep invariants **transactional**.
+
+### Query style
+- Prefer SQLAlchemy 2.0 style: `select(...)`, `update(...)`.
+- Never use string SQL unless necessary; if used, keep it isolated and parameterized.
+
+### Soft deletes
+- Use `deleted_at` and filter it out by default in services.
+- Deleting endpoints set `deleted_at`, they do not hard delete.
+
+## 5) Domain rules (must enforce)
+
+### Device scoping
+- Every table row must be scoped by `device_id` either directly or through a parent relationship.
+- Cross-device access must not leak existence. Prefer **404** for foreign IDs.
+
+### Product portions
+- Exactly one `is_default=true` portion per product (enforced by code + DB constraint when possible).
+- When a portion becomes default, clear previous default in the same transaction.
+
+### Food entries
+- `amount > 0` always.
+- If `portion_id` is provided, it must belong to the `product_id` and the same device.
+- `date` is client-local day; do not “correct” it server-side.
+
+## 6) Migrations (Alembic) rules
+
+### How to change schema
+- Update ORM model(s) first.
+- Create migration via `alembic revision --autogenerate -m \"...\"`.
+- Always review the migration; autogenerate can be wrong for:
+  - renames (it may do drop+add)
+  - Postgres enums
+  - server defaults
+  - indexes/constraints
+
+### Safe patterns
+- Adding non-null columns must be staged:
+  1) add nullable
+  2) backfill
+  3) set NOT NULL
+- For renames, prefer `op.alter_column` / `ALTER TABLE ... RENAME COLUMN ...` to preserve data.
+- Enums: adding values requires explicit `ALTER TYPE ... ADD VALUE` (hand-written).
+
+## 7) Coding standards (Python)
+
+### Style
+- Prefer `ruff` for linting/formatting. Keep code ruff/black-like (one obvious way).
+- Use type hints everywhere (including return types for public functions).
+- No `print()`. Use `logging` (uvicorn logger) with structured fields where helpful.
+
+### Async correctness
+- Never block the event loop (no long CPU work inside request handlers).
+- Use async DB calls only; avoid sync engines/drivers.
+
+### Clean code
+- Functions do one thing; keep services small.
+- Use explicit names (`create_food_entry`, `list_products`, `get_day_stats`).
+- No magic numbers in code; define constants where needed.
+
+## 8) Testing (when added)
+- Unit test pure calculation functions.
+- Integration test routers using a test DB container (or transaction rollback fixtures).
+- Tests must cover device scoping (A cannot read B).
+

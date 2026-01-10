@@ -49,8 +49,8 @@ describe('storage repositories', () => {
       id: 'meal-1',
       name: 'Lunch',
       items: [
-        { productId: 'chicken', grams: 150 },
-        { productId: 'rice', grams: 200 },
+        { productId: 'chicken', amount: 150, unit: 'g' },
+        { productId: 'rice', amount: 200, unit: 'g' },
       ],
       totalCalories: 507.5,
       createdAt: '2025-01-01T12:00:00.000Z',

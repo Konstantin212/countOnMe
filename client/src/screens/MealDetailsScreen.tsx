@@ -9,6 +9,7 @@ import { useProducts } from '@hooks/useProducts';
 import { useMeals } from '@hooks/useMeals';
 import { useTheme } from '@hooks/useTheme';
 import MealItemRow from '@components/MealItemRow';
+import { convertUnit } from '@services/utils/units';
 
 type Props = NativeStackScreenProps<ProfileStackParamList, 'MealDetails'>;
 
@@ -153,12 +154,18 @@ const MealDetailsScreen = ({ navigation, route }: Props) => {
         const product = products.find((p) => p.id === item.productId);
         if (!product) return null;
 
-        const itemCalories = (product.caloriesPer100g * item.grams) / 100;
+        const baseAmount = product.portionSize ?? 100;
+        const baseUnit = (product.scaleUnit ?? 'g') as any;
+        const calPerBase = product.caloriesPerBase ?? product.caloriesPer100g;
+        const converted = convertUnit(item.amount, item.unit as any, baseUnit);
+        const itemCalories =
+          converted === null || baseAmount <= 0 || calPerBase <= 0 ? 0 : (calPerBase * converted) / baseAmount;
 
         return {
           productId: item.productId,
           name: product.name,
-          grams: item.grams,
+          amount: item.amount,
+          unit: item.unit,
           calories: Math.round(itemCalories),
         };
       })
@@ -225,7 +232,8 @@ const MealDetailsScreen = ({ navigation, route }: Props) => {
               <MealItemRow
                 key={item.productId}
                 name={item.name}
-                grams={item.grams}
+                amount={item.amount}
+                unit={item.unit}
                 calories={item.calories}
               />
             ))

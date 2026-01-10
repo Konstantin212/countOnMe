@@ -21,8 +21,8 @@ const createProducts = (): Product[] => [
 ];
 
 const createItems = (): MealItem[] => [
-  { productId: 'chicken', grams: 150 },
-  { productId: 'rice', grams: 200 },
+  { productId: 'chicken', amount: 150, unit: 'g' },
+  { productId: 'rice', amount: 200, unit: 'g' },
 ];
 
 describe('calcMealCalories', () => {
@@ -36,8 +36,8 @@ describe('calcMealCalories', () => {
   it('skips items that reference missing products', () => {
     const products = createProducts();
     const items: MealItem[] = [
-      { productId: 'unknown', grams: 100 },
-      { productId: 'rice', grams: 100 },
+      { productId: 'unknown', amount: 100, unit: 'g' },
+      { productId: 'rice', amount: 100, unit: 'g' },
     ];
 
     expect(calcMealCalories(items, products)).toBeCloseTo(130);
@@ -47,7 +47,7 @@ describe('calcMealCalories', () => {
     const products = createProducts();
 
     expect(calcMealCalories([], products)).toBe(0);
-    expect(calcMealCalories([{ productId: 'chicken', grams: 0 }], products)).toBe(0);
+    expect(calcMealCalories([{ productId: 'chicken', amount: 0, unit: 'g' }], products)).toBe(0);
     expect(calcMealCalories(createItems(), [])).toBe(0);
   });
 });

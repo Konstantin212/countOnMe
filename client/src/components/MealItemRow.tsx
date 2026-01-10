@@ -1,14 +1,15 @@
-﻿import React from 'react';
+import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useTheme } from '@hooks/useTheme';
 
 interface MealItemRowProps {
   name: string;
-  grams: number;
+  amount: number;
+  unit: string;
   calories: number;
 }
 
-const MealItemRow = ({ name, grams, calories }: MealItemRowProps) => {
+const MealItemRow = ({ name, amount, unit, calories }: MealItemRowProps) => {
   const { colors } = useTheme();
 
   const styles = StyleSheet.create({
@@ -33,7 +34,7 @@ const MealItemRow = ({ name, grams, calories }: MealItemRowProps) => {
     <View style={styles.container}>
       <Text style={styles.name}>{name}</Text>
       <Text style={styles.meta}>
-        {grams} g • {calories} kcal
+        {amount} {unit} • {calories} kcal
       </Text>
     </View>
   );

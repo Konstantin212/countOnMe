@@ -1,4 +1,9 @@
-﻿export type ISODateString = string;
+export type ISODateString = string;
+
+export type Unit = 'mg' | 'g' | 'kg' | 'ml' | 'l' | 'tsp' | 'tbsp' | 'cup';
+export type ScaleType = 'Liquid' | 'Solid' | 'Dry';
+
+export type MealTypeKey = 'breakfast' | 'lunch' | 'dinner' | 'snacks' | 'water';
 
 /**
  * Normalized product stored in AsyncStorage and referenced by meals via id.
@@ -7,6 +12,25 @@
 export type Product = {
   id: string;
   name: string;
+  category?: string;
+
+  /**
+   * Nutrition reference base, as defined in ProductForm.
+   * Example: portionSize=100, scaleUnit='g' => caloriesPerBase is per 100g.
+   */
+  portionSize?: number;
+  scaleType?: ScaleType;
+  scaleUnit?: Unit;
+  allowedUnits?: Unit[]; // derived from scaleType/scaleUnit; excludes the base scaleUnit
+  caloriesPerBase?: number;
+  proteinPerBase?: number;
+  carbsPerBase?: number;
+  fatPerBase?: number;
+
+  /**
+   * Legacy fields (pre AddMealFlow v2). Kept for migration/back-compat reads.
+   * Interpreted as per 100g when scale is mass-based.
+   */
   caloriesPer100g: number;
   proteinPer100g?: number;
   carbsPer100g?: number;
@@ -17,11 +41,12 @@ export type Product = {
 
 /**
  * Meal item keeps the relationship between a meal and a product.
- * The grams value stays raw so totals can always be recalculated.
+ * Amount + unit stays raw so totals can always be recalculated.
  */
 export type MealItem = {
   productId: string;
-  grams: number;
+  amount: number;
+  unit: Unit;
 };
 
 /**
@@ -31,6 +56,7 @@ export type MealItem = {
 export type Meal = {
   id: string;
   name: string;
+  mealType?: MealTypeKey;
   items: MealItem[];
   totalCalories: number;
   createdAt: ISODateString;

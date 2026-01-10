@@ -1,11 +1,24 @@
-﻿import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { v4 as uuid } from 'uuid';
 
-import { Product } from '@models/types';
+import { Product, ScaleType, Unit } from '@models/types';
+import { SCALE_UNITS } from '@services/constants/scaleConstants';
 import { loadProducts, saveProducts } from '@storage/storage';
 
 export type NewProductInput = {
   name: string;
+
+  // New (AddMealFlow v2) fields
+  category?: string;
+  portionSize?: number;
+  scaleType?: ScaleType;
+  scaleUnit?: Unit;
+  caloriesPerBase?: number;
+  proteinPerBase?: number;
+  carbsPerBase?: number;
+  fatPerBase?: number;
+
+  // Legacy fields (pre v2)
   caloriesPer100g: number;
   proteinPer100g?: number;
   carbsPer100g?: number;
@@ -44,11 +57,30 @@ const normalizeName = (name: string): string => {
   return trimmed?.length ? trimmed : 'Untitled product';
 };
 
+const deriveAllowedUnits = (scaleType?: ScaleType, scaleUnit?: Unit): Unit[] | undefined => {
+  if (!scaleType || !scaleUnit) {
+    return undefined;
+  }
+
+  const units = SCALE_UNITS[scaleType] as unknown as Unit[];
+  return units.filter((u) => u !== scaleUnit);
+};
+
 const createProductRecord = (input: NewProductInput): Product => {
   const timestamp = now();
   return {
     id: uuid(),
     name: normalizeName(input.name),
+    category: input.category?.trim() || undefined,
+    portionSize: input.portionSize,
+    scaleType: input.scaleType,
+    scaleUnit: input.scaleUnit,
+    allowedUnits: deriveAllowedUnits(input.scaleType, input.scaleUnit),
+    caloriesPerBase: input.caloriesPerBase,
+    proteinPerBase: sanitizeOptionalNumber(input.proteinPerBase),
+    carbsPerBase: sanitizeOptionalNumber(input.carbsPerBase),
+    fatPerBase: sanitizeOptionalNumber(input.fatPerBase),
+
     caloriesPer100g: sanitizeRequiredNumber(input.caloriesPer100g),
     proteinPer100g: sanitizeOptionalNumber(input.proteinPer100g),
     carbsPer100g: sanitizeOptionalNumber(input.carbsPer100g),
@@ -62,6 +94,31 @@ const patchProductRecord = (product: Product, patch: UpdateProductInput): Produc
   return {
     ...product,
     name: patch.name !== undefined ? normalizeName(patch.name) : product.name,
+    category: patch.category !== undefined ? patch.category?.trim() || undefined : product.category,
+    portionSize: patch.portionSize !== undefined ? patch.portionSize : product.portionSize,
+    scaleType: patch.scaleType !== undefined ? patch.scaleType : product.scaleType,
+    scaleUnit: patch.scaleUnit !== undefined ? patch.scaleUnit : product.scaleUnit,
+    allowedUnits:
+      patch.scaleType !== undefined || patch.scaleUnit !== undefined
+        ? deriveAllowedUnits(
+            (patch.scaleType ?? product.scaleType) as ScaleType | undefined,
+            (patch.scaleUnit ?? product.scaleUnit) as Unit | undefined,
+          )
+        : product.allowedUnits,
+    caloriesPerBase:
+      patch.caloriesPerBase !== undefined ? patch.caloriesPerBase : product.caloriesPerBase,
+    proteinPerBase:
+      patch.proteinPerBase !== undefined
+        ? sanitizeOptionalNumber(patch.proteinPerBase)
+        : product.proteinPerBase,
+    carbsPerBase:
+      patch.carbsPerBase !== undefined
+        ? sanitizeOptionalNumber(patch.carbsPerBase)
+        : product.carbsPerBase,
+    fatPerBase:
+      patch.fatPerBase !== undefined
+        ? sanitizeOptionalNumber(patch.fatPerBase)
+        : product.fatPerBase,
     caloriesPer100g:
       patch.caloriesPer100g !== undefined
         ? sanitizeRequiredNumber(patch.caloriesPer100g)

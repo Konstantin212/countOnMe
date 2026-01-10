@@ -3,11 +3,13 @@ import { Dimensions, Image, Pressable, ScrollView, StyleSheet, Text, View } from
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ProgressChart } from 'react-native-chart-kit';
 import { FAB, Portal, ProgressBar } from 'react-native-paper';
-import { useNavigation } from '@react-navigation/native';
+import { useIsFocused, useNavigation } from '@react-navigation/native';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTheme } from '@hooks/useTheme';
 import { MyDayStackParamList, RootTabParamList } from '@app/navigationTypes';
+import { MEAL_TYPE_KEYS, MEAL_TYPE_LABEL } from '@services/constants/mealTypes';
+import type { MealTypeKey } from '@models/types';
 
 const hexToRgba = (hex: string, alpha: number) => {
   const normalized = hex.replace('#', '');
@@ -21,6 +23,7 @@ const hexToRgba = (hex: string, alpha: number) => {
 const MyDayScreen = () => {
   const { colors } = useTheme();
   const navigation = useNavigation<NativeStackNavigationProp<MyDayStackParamList, 'MyDay'>>();
+  const isFocused = useIsFocused();
   const insets = useSafeAreaInsets();
   const screenWidth = Dimensions.get('window').width;
   const chartWidth = Math.max(screenWidth - 64, 200); // account for screen + card padding
@@ -52,43 +55,32 @@ const MyDayScreen = () => {
     colors: ringColors,
   };
 
-  const meals = [
-    {
-      key: 'breakfast',
-      label: 'Breakfast',
-      calories: 420,
-      progress: 0.7,
-      icon: require('../../assets/breakfast.png'),
-    },
-    {
-      key: 'lunch',
-      label: 'Lunch',
-      calories: 610,
-      progress: 0.55,
-      icon: require('../../assets/lunch.png'),
-    },
-    {
-      key: 'dinner',
-      label: 'Dinner',
-      calories: 350,
-      progress: 0.42,
-      icon: require('../../assets/dinner.png'),
-    },
-    {
-      key: 'snacks',
-      label: 'Snacks',
-      calories: 120,
-      progress: 0.25,
-      icon: require('../../assets/snacks.png'),
-    },
-    {
-      key: 'water',
-      label: 'Water',
-      calories: 100,
-      progress: 0.3,
-      icon: require('../../assets/water.png'),
-    },
-  ] as const;
+  const MEAL_TYPE_ICON: Record<MealTypeKey, number> = {
+    breakfast: require('../../assets/breakfast.png'),
+    lunch: require('../../assets/lunch.png'),
+    dinner: require('../../assets/dinner.png'),
+    snacks: require('../../assets/snacks.png'),
+    water: require('../../assets/water.png'),
+  };
+
+  const meals = MEAL_TYPE_KEYS.map((key) => {
+    // TODO: replace sample values with persisted per-mealType totals
+    const sampleByKey: Record<MealTypeKey, { calories: number; progress: number }> = {
+      breakfast: { calories: 420, progress: 0.7 },
+      lunch: { calories: 610, progress: 0.55 },
+      dinner: { calories: 350, progress: 0.42 },
+      snacks: { calories: 120, progress: 0.25 },
+      water: { calories: 100, progress: 0.3 },
+    };
+
+    return {
+      key,
+      label: MEAL_TYPE_LABEL[key],
+      calories: sampleByKey[key].calories,
+      progress: sampleByKey[key].progress,
+      icon: MEAL_TYPE_ICON[key],
+    };
+  });
 
   const totalCalories = meals.reduce((sum, meal) => sum + meal.calories, 0);
 
@@ -305,10 +297,10 @@ const MyDayScreen = () => {
           )}
           <FAB.Group
             open={fabOpen}
-            visible
+            visible={isFocused}
             icon={fabOpen ? 'close' : 'plus'}
             actions={[
-              { icon: 'food', label: 'Add meal', onPress: () => {} },
+              { icon: 'food', label: 'Add meal', onPress: () => navigation.navigate('AddMeal') },
               { icon: 'package-variant', label: 'Add product', onPress: () => {} },
               { icon: 'cup-water', label: 'Add water', onPress: () => {} },
               { icon: 'barcode-scan', label: 'Scan food', onPress: () => {} },

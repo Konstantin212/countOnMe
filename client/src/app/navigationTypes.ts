@@ -2,6 +2,9 @@ import { NavigatorScreenParams } from '@react-navigation/native';
 
 export type MyDayStackParamList = {
   MyDay: undefined;
+  AddMeal: undefined;
+  SelectProduct: undefined;
+  AddFood: { productId: string };
 };
 
 export type MyPathStackParamList = {

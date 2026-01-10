@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { enableScreens } from 'react-native-screens';
@@ -23,6 +23,10 @@ import MyDayScreen from '@screens/MyDayScreen';
 import MyPathScreen from '@screens/MyPathScreen';
 import ProfileScreen from '@screens/ProfileScreen';
 import { useTheme } from '@hooks/useTheme';
+import AddMealScreen from '@screens/AddMealFlow/components/AddMeal';
+import SelectProductScreen from '@screens/AddMealFlow/components/SelectProduct';
+import AddFoodScreen from '@screens/AddMealFlow/components/AddFood';
+import { DraftMealProvider } from '@screens/AddMealFlow/context';
 
 enableScreens();
 
@@ -102,11 +106,16 @@ const ProfileStackNavigator = () => {
 const MyDayStackNavigator = () => {
   const { colors } = useTheme();
   return (
-    <MyDayStack.Navigator
-      screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }}
-    >
-      <MyDayStack.Screen name="MyDay" component={MyDayScreen} options={{ headerShown: false }} />
-    </MyDayStack.Navigator>
+    <DraftMealProvider>
+      <MyDayStack.Navigator
+        screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }}
+      >
+        <MyDayStack.Screen name="MyDay" component={MyDayScreen} options={{ headerShown: false }} />
+        <MyDayStack.Screen name="AddMeal" component={AddMealScreen} />
+        <MyDayStack.Screen name="SelectProduct" component={SelectProductScreen} />
+        <MyDayStack.Screen name="AddFood" component={AddFoodScreen} />
+      </MyDayStack.Navigator>
+    </DraftMealProvider>
   );
 };
 

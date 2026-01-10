@@ -18,6 +18,7 @@ import { useMeals } from '@hooks/useMeals';
 import { useTheme } from '@hooks/useTheme';
 import { MealItem } from '@models/types';
 import { calcMealCalories } from '@services/utils/calories';
+import { convertUnit } from '@services/utils/units';
 
 type Props = NativeStackScreenProps<ProfileStackParamList, 'MealBuilder'>;
 
@@ -216,7 +217,11 @@ const MealBuilderScreen = ({ navigation, route }: Props) => {
         setMealName(meal.name);
         const itemsMap = new Map<string, number>();
         meal.items.forEach((item) => {
-          itemsMap.set(item.productId, item.grams);
+          // This builder screen currently only supports mass input in grams.
+          const grams = item.unit === 'g' ? item.amount : convertUnit(item.amount, item.unit, 'g');
+          if (grams !== null) {
+            itemsMap.set(item.productId, grams);
+          }
         });
         setSelectedProducts(itemsMap);
       }
@@ -236,7 +241,8 @@ const MealBuilderScreen = ({ navigation, route }: Props) => {
   const totalCalories = useMemo(() => {
     const items: MealItem[] = Array.from(selectedProducts.entries()).map(([productId, grams]) => ({
       productId,
-      grams,
+      amount: grams,
+      unit: 'g',
     }));
     return calcMealCalories(items, products);
   }, [selectedProducts, products]);
@@ -278,11 +284,12 @@ const MealBuilderScreen = ({ navigation, route }: Props) => {
       .filter(([_, grams]) => grams > 0)
       .map(([productId, grams]) => ({
         productId,
-        grams,
+        amount: grams,
+        unit: 'g',
       }));
 
     if (items.length === 0) {
-      Alert.alert('Error', 'Please select at least one product with grams > 0');
+      Alert.alert('Error', 'Please select at least one product with amount > 0');
       return;
     }
 

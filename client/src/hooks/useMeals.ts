@@ -1,12 +1,13 @@
-﻿import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { v4 as uuid } from 'uuid';
 
-import { Meal, MealItem, Product } from '@models/types';
+import { Meal, MealItem, MealTypeKey, Product, Unit } from '@models/types';
 import { loadMeals, saveMeals } from '@storage/storage';
 import { calcMealCalories } from '@services/utils/calories';
 
 export type NewMealInput = {
   name: string;
+  mealType?: MealTypeKey;
   items: MealItem[];
 };
 
@@ -38,19 +39,22 @@ const sanitizeItems = (items: MealItem[]): MealItem[] => {
   
   return items
     .filter((item) => {
-      // Keep only items with valid productId and positive grams
+      // Keep only items with valid productId, unit, and positive amount
       return (
         item &&
         typeof item.productId === 'string' &&
         item.productId.length > 0 &&
-        typeof item.grams === 'number' &&
-        !Number.isNaN(item.grams) &&
-        item.grams > 0
+        typeof item.amount === 'number' &&
+        !Number.isNaN(item.amount) &&
+        item.amount > 0 &&
+        typeof item.unit === 'string' &&
+        item.unit.length > 0
       );
     })
     .map((item) => ({
       productId: item.productId,
-      grams: Number(item.grams),
+      amount: Number(item.amount),
+      unit: item.unit as Unit,
     }));
 };
 
@@ -62,6 +66,7 @@ const createMealRecord = (input: NewMealInput, products: Product[]): Meal => {
   return {
     id: uuid(),
     name: normalizeName(input.name),
+    mealType: input.mealType,
     items: sanitizedItems,
     totalCalories,
     createdAt: timestamp,

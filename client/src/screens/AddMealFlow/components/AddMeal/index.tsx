@@ -1,13 +1,14 @@
-import React, { useMemo } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { SegmentedButtons } from 'react-native-paper';
+import { ActivityIndicator, SegmentedButtons } from 'react-native-paper';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import { useTheme } from '@hooks/useTheme';
 import { useProducts } from '@hooks/useProducts';
 import { useMeals } from '@hooks/useMeals';
+import { useFoodEntries } from '@hooks/useFoodEntries';
 import { calcMealCalories } from '@services/utils/calories';
 import { MEAL_TYPE_KEYS, MEAL_TYPE_LABEL } from '@services/constants/mealTypes';
 import { MyDayStackParamList } from '@app/navigationTypes';
@@ -19,13 +20,26 @@ const AddMealScreen = ({ navigation }: Props) => {
   const { colors } = useTheme();
   const { products } = useProducts();
   const { addMeal } = useMeals(products);
+  const { saveMealToBackend } = useFoodEntries();
   const { draft, setMealType, reset, removeItem } = useDraftMeal();
+  const [saving, setSaving] = useState(false);
 
   const currentItems = draft.itemsByMealType[draft.mealType] ?? [];
 
-  const totalCalories = useMemo(() => {
+  // Calories for current meal type only
+  const mealCalories = useMemo(() => {
     return calcMealCalories(currentItems, products);
   }, [currentItems, products]);
+
+  // Total calories across all meal types (day total)
+  const totalDayCalories = useMemo(() => {
+    let total = 0;
+    for (const mealType of MEAL_TYPE_KEYS) {
+      const items = draft.itemsByMealType[mealType] ?? [];
+      total += calcMealCalories(items, products);
+    }
+    return total;
+  }, [draft.itemsByMealType, products]);
 
   const hasAnyItems = useMemo(() => {
     return Object.values(draft.itemsByMealType).some((items) => items.length > 0);
@@ -51,7 +65,13 @@ const AddMealScreen = ({ navigation }: Props) => {
       padding: 16,
       gap: 12,
     },
+    sectionHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
     sectionTitle: { fontSize: 14, fontWeight: '700', color: colors.textSecondary },
+    mealCalories: { fontSize: 16, fontWeight: '700', color: colors.primary },
     addButton: {
       backgroundColor: colors.primary,
       paddingVertical: 14,
@@ -114,7 +134,12 @@ const AddMealScreen = ({ navigation }: Props) => {
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Products</Text>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Products</Text>
+            {currentItems.length > 0 && (
+              <Text style={styles.mealCalories}>{Math.round(mealCalories)} kcal</Text>
+            )}
+          </View>
           <Pressable
             style={styles.addButton}
             onPress={() => navigation.navigate('SelectProduct')}
@@ -145,29 +170,50 @@ const AddMealScreen = ({ navigation }: Props) => {
 
       <View style={styles.footer}>
         <View style={styles.totalRow}>
-          <Text style={styles.totalLabel}>Total</Text>
-          <Text style={styles.totalValue}>{Math.round(totalCalories)} kcal</Text>
+          <Text style={styles.totalLabel}>Day total</Text>
+          <Text style={styles.totalValue}>{Math.round(totalDayCalories)} kcal</Text>
         </View>
         <Pressable
-          style={[styles.saveButton, !hasAnyItems && styles.saveButtonDisabled]}
-          disabled={!hasAnyItems}
+          style={[styles.saveButton, (!hasAnyItems || saving) && styles.saveButtonDisabled]}
+          disabled={!hasAnyItems || saving}
           onPress={async () => {
-            // Save each meal type that has items as its own meal record.
-            for (const mealType of MEAL_TYPE_KEYS) {
-              const items = draft.itemsByMealType[mealType] ?? [];
-              if (items.length === 0) continue;
-              await addMeal({
-                name: MEAL_TYPE_LABEL[mealType],
-                mealType,
-                items,
-              });
+            setSaving(true);
+            try {
+              // Save each meal type that has items
+              for (const mealType of MEAL_TYPE_KEYS) {
+                const items = draft.itemsByMealType[mealType] ?? [];
+                if (items.length === 0) continue;
+
+                // Save to backend (creates food entries in database)
+                try {
+                  await saveMealToBackend(mealType, items, products);
+                } catch (err) {
+                  console.error('Failed to save to backend:', err);
+                  // Continue even if backend fails - will sync later
+                }
+
+                // Also save to local storage (for offline viewing)
+                await addMeal({
+                  name: MEAL_TYPE_LABEL[mealType],
+                  mealType,
+                  items,
+                });
+              }
+              reset();
+              navigation.replace('MyDay');
+            } catch (err) {
+              console.error('Failed to save meal:', err);
+              Alert.alert('Error', 'Failed to save meal. Please try again.');
+            } finally {
+              setSaving(false);
             }
-            reset();
-            navigation.replace('MyDay');
-            // TODO: later navigate to details/history
           }}
         >
-          <Text style={styles.saveButtonText}>Save</Text>
+          {saving ? (
+            <ActivityIndicator size="small" color={colors.buttonText} />
+          ) : (
+            <Text style={styles.saveButtonText}>Save</Text>
+          )}
         </Pressable>
       </View>
     </SafeAreaView>

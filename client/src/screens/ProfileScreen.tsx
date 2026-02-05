@@ -38,6 +38,13 @@ const ProfileScreen = ({ navigation }: Props) => {
 
   const menuItems = [
     {
+      id: 'goal',
+      title: 'My Goal',
+      subtitle: 'Set your calorie and macro targets',
+      icon: 'flag' as const,
+      onPress: () => navigation.navigate('GoalSetup'),
+    },
+    {
       id: 'products',
       title: 'My Products',
       subtitle: 'Manage your food database',

@@ -1,6 +1,6 @@
 import type { Unit } from '@models/types';
 
-type UnitGroup = 'mass' | 'volume';
+export type UnitGroup = 'mass' | 'volume';
 
 const MASS_TO_G: Record<Exclude<Unit, 'ml' | 'l' | 'tsp' | 'tbsp' | 'cup'>, number> = {
   mg: 0.001,
@@ -16,9 +16,36 @@ const VOLUME_TO_ML: Record<Exclude<Unit, 'mg' | 'g' | 'kg'>, number> = {
   cup: 240,
 };
 
-const getUnitGroup = (unit: Unit): UnitGroup => {
-  if (unit === 'mg' || unit === 'g' || unit === 'kg') return 'mass';
-  return 'volume';
+/**
+ * Maps each unit to its group (mass or volume).
+ */
+export const UNIT_GROUPS: Record<Unit, UnitGroup> = {
+  mg: 'mass',
+  g: 'mass',
+  kg: 'mass',
+  ml: 'volume',
+  l: 'volume',
+  tsp: 'volume',
+  tbsp: 'volume',
+  cup: 'volume',
+};
+
+/**
+ * Get the unit group for a given unit.
+ */
+export const getUnitGroup = (unit: Unit): UnitGroup => {
+  return UNIT_GROUPS[unit];
+};
+
+/**
+ * Get all units that are compatible (same group) with the given unit.
+ * Used to restrict unit selection in edit mode.
+ */
+export const getCompatibleUnits = (unit: Unit): Unit[] => {
+  const group = getUnitGroup(unit);
+  return (Object.entries(UNIT_GROUPS) as [Unit, UnitGroup][])
+    .filter(([_, g]) => g === group)
+    .map(([u]) => u);
 };
 
 /**

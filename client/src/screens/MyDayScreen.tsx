@@ -2,10 +2,13 @@ import React, { useEffect, useState } from 'react';
 import { Dimensions, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ProgressChart } from 'react-native-chart-kit';
-import { FAB, Portal, ProgressBar } from 'react-native-paper';
+import { ActivityIndicator, FAB, Portal, ProgressBar } from 'react-native-paper';
 import { useIsFocused, useNavigation } from '@react-navigation/native';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { Ionicons } from '@expo/vector-icons';
+import { useDayStats, getMealTypeTotals } from '@hooks/useDayStats';
+import { useGoal } from '@hooks/useGoal';
 import { useTheme } from '@hooks/useTheme';
 import { MyDayStackParamList, RootTabParamList } from '@app/navigationTypes';
 import { MEAL_TYPE_KEYS, MEAL_TYPE_LABEL } from '@services/constants/mealTypes';
@@ -33,6 +36,17 @@ const MyDayScreen = () => {
   const rowCardBg = colors.cardBackgroundLight;
   const rowCardBorder = colors.border;
 
+  // Fetch goal and today's stats
+  const { goal, loading: goalLoading } = useGoal();
+  const { stats, loading: statsLoading, refresh: refreshStats } = useDayStats();
+
+  // Refresh stats when screen comes into focus (after adding meals)
+  useEffect(() => {
+    if (isFocused) {
+      refreshStats();
+    }
+  }, [isFocused, refreshStats]);
+
   useEffect(() => {
     const blurSub = navigation.addListener('blur', () => setFabOpen(false));
     const focusSub = navigation.addListener('focus', () => setFabOpen(false));
@@ -47,11 +61,26 @@ const MyDayScreen = () => {
     };
   }, [navigation]);
 
+  // Default goals if user hasn't set one
+  const calorieGoal = goal?.dailyCaloriesKcal ?? 2000;
+  const proteinGoal = goal?.proteinGrams ?? 100;
+  const carbsGoal = goal?.carbsGrams ?? 250;
+  const fatGoal = goal?.fatGrams ?? 65;
+
+  // Today's consumption from stats
+  const consumed = stats?.totals ?? { calories: 0, protein: 0, carbs: 0, fat: 0 };
+
+  // Calculate progress (0-1, capped at 1)
+  const calorieProgress = Math.min(consumed.calories / calorieGoal, 1);
+  const proteinProgress = Math.min(consumed.protein / proteinGoal, 1);
+  const carbsProgress = Math.min(consumed.carbs / carbsGoal, 1);
+  const fatProgress = Math.min(consumed.fat / fatGoal, 1);
+
   const ringColors = [colors.macroProtein, colors.macroCarb, colors.macroFat];
 
   const macroProgress = {
     labels: ['Protein', 'Carbs', 'Fat'],
-    data: [0.72, 0.55, 0.38], // hardcoded sample progress
+    data: [proteinProgress, carbsProgress, fatProgress],
     colors: ringColors,
   };
 
@@ -63,26 +92,25 @@ const MyDayScreen = () => {
     water: require('../../assets/water.png'),
   };
 
-  const meals = MEAL_TYPE_KEYS.map((key) => {
-    // TODO: replace sample values with persisted per-mealType totals
-    const sampleByKey: Record<MealTypeKey, { calories: number; progress: number }> = {
-      breakfast: { calories: 420, progress: 0.7 },
-      lunch: { calories: 610, progress: 0.55 },
-      dinner: { calories: 350, progress: 0.42 },
-      snacks: { calories: 120, progress: 0.25 },
-      water: { calories: 100, progress: 0.3 },
-    };
+  // Calculate per-meal-type calories from stats
+  const meals = MEAL_TYPE_KEYS.filter((key) => key !== 'water').map((key) => {
+    const mealTotals = getMealTypeTotals(stats, key);
+    const calories = Math.round(mealTotals.calories);
+    // Progress is relative to a quarter of daily goal (rough estimate per meal)
+    const mealGoal = calorieGoal / 4;
+    const progress = Math.min(calories / mealGoal, 1);
 
     return {
       key,
       label: MEAL_TYPE_LABEL[key],
-      calories: sampleByKey[key].calories,
-      progress: sampleByKey[key].progress,
+      calories,
+      progress,
       icon: MEAL_TYPE_ICON[key],
     };
   });
 
-  const totalCalories = meals.reduce((sum, meal) => sum + meal.calories, 0);
+  const totalCalories = Math.round(consumed.calories);
+  const isLoading = goalLoading || statsLoading;
 
   const styles = StyleSheet.create({
     container: {
@@ -185,6 +213,11 @@ const MyDayScreen = () => {
       fontWeight: '600',
       color: colors.text,
     },
+    rowRight: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+    },
     rowSubtitle: {
       fontSize: 13,
       color: colors.textSecondary,
@@ -197,6 +230,32 @@ const MyDayScreen = () => {
     divider: {
       height: 1,
       backgroundColor: colors.borderLight,
+    },
+    macroLegend: {
+      flexDirection: 'row',
+      justifyContent: 'space-around',
+      marginTop: 8,
+      paddingTop: 12,
+      borderTopWidth: 1,
+      borderTopColor: colors.borderLight,
+    },
+    macroItem: {
+      alignItems: 'center',
+      gap: 4,
+    },
+    macroDot: {
+      width: 10,
+      height: 10,
+      borderRadius: 5,
+    },
+    macroLabel: {
+      fontSize: 12,
+      color: colors.textSecondary,
+    },
+    macroValue: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.text,
     },
     totalRow: {
       flexDirection: 'row',
@@ -216,6 +275,11 @@ const MyDayScreen = () => {
     },
   });
 
+  // Format number with thousands separator
+  const formatNumber = (num: number): string => {
+    return num.toLocaleString('en-US');
+  };
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <ScrollView
@@ -227,32 +291,59 @@ const MyDayScreen = () => {
             <Text style={styles.chartTitle}>Macro balance</Text>
             <Text style={styles.chartSub}>Today</Text>
           </View>
-          <ProgressChart
-            data={macroProgress}
-            width={chartWidth}
-            height={220}
-            strokeWidth={12}
-            radius={44}
-            withCustomBarColorFromData
-            chartConfig={{
-              backgroundGradientFrom: colors.cardBackground,
-              backgroundGradientTo: colors.cardBackground,
-              // This controls the *track* (unfilled) ring color:
-              // ProgressChart calls chartConfig.color(0.2, i) for the background ring.
-              color: (opacity = 1, index = 0) => hexToRgba(ringColors[index] ?? colors.text, opacity),
-              labelColor: () => colors.text,
-            }}
-          />
+          {isLoading ? (
+            <View style={{ height: 220, justifyContent: 'center', alignItems: 'center' }}>
+              <ActivityIndicator size="large" color={colors.primary} />
+            </View>
+          ) : (
+            <>
+              <ProgressChart
+                data={macroProgress}
+                width={chartWidth}
+                height={220}
+                strokeWidth={12}
+                radius={44}
+                withCustomBarColorFromData
+                chartConfig={{
+                  backgroundGradientFrom: colors.cardBackground,
+                  backgroundGradientTo: colors.cardBackground,
+                  // This controls the *track* (unfilled) ring color:
+                  // ProgressChart calls chartConfig.color(0.2, i) for the background ring.
+                  color: (opacity = 1, index = 0) => hexToRgba(ringColors[index] ?? colors.text, opacity),
+                  labelColor: () => colors.text,
+                }}
+              />
+              <View style={styles.macroLegend}>
+                <View style={styles.macroItem}>
+                  <View style={[styles.macroDot, { backgroundColor: colors.macroProtein }]} />
+                  <Text style={styles.macroLabel}>Protein</Text>
+                  <Text style={styles.macroValue}>{Math.round(consumed.protein)}/{proteinGoal}g</Text>
+                </View>
+                <View style={styles.macroItem}>
+                  <View style={[styles.macroDot, { backgroundColor: colors.macroCarb }]} />
+                  <Text style={styles.macroLabel}>Carbs</Text>
+                  <Text style={styles.macroValue}>{Math.round(consumed.carbs)}/{carbsGoal}g</Text>
+                </View>
+                <View style={styles.macroItem}>
+                  <View style={[styles.macroDot, { backgroundColor: colors.macroFat }]} />
+                  <Text style={styles.macroLabel}>Fat</Text>
+                  <Text style={styles.macroValue}>{Math.round(consumed.fat)}/{fatGoal}g</Text>
+                </View>
+              </View>
+            </>
+          )}
         </View>
 
         <View style={styles.summaryCard}>
           <View style={styles.summaryHeader}>
             <Text style={styles.summaryTitle}>Today</Text>
-            <Text style={styles.summarySubtitle}>1,480 / 2,200 kcal</Text>
+            <Text style={styles.summarySubtitle}>
+              {formatNumber(totalCalories)} / {formatNumber(calorieGoal)} kcal
+            </Text>
           </View>
           <ProgressBar
-            progress={0.67}
-            color={colors.success}
+            progress={calorieProgress}
+            color={calorieProgress >= 1 ? colors.warning : colors.success}
             style={{ height: 10, borderRadius: 8 }}
             theme={{ colors: { elevation: { level2: colors.borderLight } } }}
           />
@@ -263,6 +354,7 @@ const MyDayScreen = () => {
                   styles.rowCard,
                   pressed && { transform: [{ scale: 0.995 }], opacity: 0.9 },
                 ]}
+                onPress={() => navigation.navigate('MealTypeEntries', { mealType: meal.key })}
               >
                 <View style={styles.row}>
                   <Image source={meal.icon} style={styles.icon} />
@@ -275,7 +367,10 @@ const MyDayScreen = () => {
                       theme={{ colors: { elevation: { level2: colors.borderLight } } }}
                     />
                   </View>
-                  <Text style={styles.rowKcal}>{meal.calories} kcal</Text>
+                  <View style={styles.rowRight}>
+                    <Text style={styles.rowKcal}>{formatNumber(meal.calories)} kcal</Text>
+                    <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
+                  </View>
                 </View>
               </Pressable>
               {index < meals.length - 1 && <View style={styles.divider} />}
@@ -283,7 +378,7 @@ const MyDayScreen = () => {
           ))}
           <View style={styles.totalRow}>
             <Text style={styles.totalLabel}>Total today:</Text>
-            <Text style={styles.totalValue}>{totalCalories} kcal</Text>
+            <Text style={styles.totalValue}>{formatNumber(totalCalories)} kcal</Text>
           </View>
         </View>
 

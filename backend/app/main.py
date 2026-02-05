@@ -4,6 +4,7 @@ from fastapi import APIRouter, FastAPI
 
 from app.api.routers.devices import router as devices_router
 from app.api.routers.food_entries import router as food_entries_router
+from app.api.routers.goals import router as goals_router
 from app.api.routers.portions import router as portions_router
 from app.api.routers.products import router as products_router
 from app.api.routers.stats import router as stats_router
@@ -21,6 +22,7 @@ def create_app() -> FastAPI:
     v1.include_router(products_router)
     v1.include_router(portions_router)
     v1.include_router(food_entries_router)
+    v1.include_router(goals_router)
     v1.include_router(stats_router)
     v1.include_router(sync_router)
     v1.include_router(weights_router)

@@ -1,10 +1,12 @@
 import { NavigatorScreenParams } from '@react-navigation/native';
+import { GoalCalculateRequest, GoalCalculateResponse, MealTypeKey } from '@models/types';
 
 export type MyDayStackParamList = {
   MyDay: undefined;
   AddMeal: undefined;
   SelectProduct: undefined;
   AddFood: { productId: string };
+  MealTypeEntries: { mealType: MealTypeKey };
 };
 
 export type MyPathStackParamList = {
@@ -31,6 +33,14 @@ export type ProfileStackParamList = {
   MealsList: undefined;
   MealBuilder: { mealId?: string } | undefined;
   MealDetails: { mealId: string };
+  // Goal screens
+  GoalSetup: undefined;
+  GoalCalculated: undefined;
+  GoalCalculatedResult: {
+    calculation: GoalCalculateResponse;
+    inputs: GoalCalculateRequest;
+  };
+  GoalManual: undefined;
 };
 
 export type RootTabParamList = {

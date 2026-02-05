@@ -11,21 +11,26 @@ import {
   MyPathStackParamList,
   ProfileStackParamList,
 } from './navigationTypes';
+import GoalCalculatedResultScreen from '@screens/GoalCalculatedResultScreen';
+import GoalCalculatedScreen from '@screens/GoalCalculatedScreen';
+import GoalManualScreen from '@screens/GoalManualScreen';
+import GoalSetupScreen from '@screens/GoalSetupScreen';
 import MealBuilderScreen from '@screens/MealBuilderScreen';
 import MealDetailsScreen from '@screens/MealDetailsScreen';
 import MealsListScreen from '@screens/MealsListScreen';
-import ProductFormScreen from '@screens/ProductFormScreen';
-import ProductsListScreen from '@screens/ProductsListScreen';
-import ProductSearchScreen from '@screens/ProductSearchScreen';
-import ProductConfirmScreen from '@screens/ProductConfirmScreen';
-import ProductDetailsScreen from '@screens/ProductDetailsScreen';
 import MyDayScreen from '@screens/MyDayScreen';
 import MyPathScreen from '@screens/MyPathScreen';
+import ProductConfirmScreen from '@screens/ProductConfirmScreen';
+import ProductDetailsScreen from '@screens/ProductDetailsScreen';
+import ProductFormScreen from '@screens/ProductFormScreen';
+import ProductSearchScreen from '@screens/ProductSearchScreen';
+import ProductsListScreen from '@screens/ProductsListScreen';
 import ProfileScreen from '@screens/ProfileScreen';
 import { useTheme } from '@hooks/useTheme';
 import AddMealScreen from '@screens/AddMealFlow/components/AddMeal';
 import SelectProductScreen from '@screens/AddMealFlow/components/SelectProduct';
 import AddFoodScreen from '@screens/AddMealFlow/components/AddFood';
+import MealTypeEntriesScreen from '@screens/MealTypeEntriesScreen';
 import { DraftMealProvider } from '@screens/AddMealFlow/context';
 
 enableScreens();
@@ -99,6 +104,26 @@ const ProfileStackNavigator = () => {
         component={MealDetailsScreen}
         options={{ title: 'Meal Details' }}
       />
+      <ProfileStack.Screen
+        name="GoalSetup"
+        component={GoalSetupScreen}
+        options={{ title: 'My Goal' }}
+      />
+      <ProfileStack.Screen
+        name="GoalCalculated"
+        component={GoalCalculatedScreen}
+        options={{ title: 'Calculate Goal' }}
+      />
+      <ProfileStack.Screen
+        name="GoalCalculatedResult"
+        component={GoalCalculatedResultScreen}
+        options={{ title: 'Your Goal' }}
+      />
+      <ProfileStack.Screen
+        name="GoalManual"
+        component={GoalManualScreen}
+        options={{ title: 'Set Goal Manually' }}
+      />
     </ProfileStack.Navigator>
   );
 };
@@ -114,6 +139,7 @@ const MyDayStackNavigator = () => {
         <MyDayStack.Screen name="AddMeal" component={AddMealScreen} />
         <MyDayStack.Screen name="SelectProduct" component={SelectProductScreen} />
         <MyDayStack.Screen name="AddFood" component={AddFoodScreen} />
+        <MyDayStack.Screen name="MealTypeEntries" component={MealTypeEntriesScreen} />
       </MyDayStack.Navigator>
     </DraftMealProvider>
   );

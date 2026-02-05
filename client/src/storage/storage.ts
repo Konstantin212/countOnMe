@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import { Meal, MealItem, Product } from '@models/types';
+import { Meal, MealItem, Product, UserGoal } from '@models/types';
 import { ThemeMode } from '@theme/ThemeContext';
 
 const STORAGE_PREFIX = '@countOnMe';
@@ -15,6 +15,7 @@ const STORAGE_KEYS = {
   theme: `${STORAGE_PREFIX}/theme/${STORAGE_VERSION_V1}`,
   productFavourites: `${STORAGE_PREFIX}/products-favourites/${STORAGE_VERSION_V1}`,
   productRecents: `${STORAGE_PREFIX}/products-recents/${STORAGE_VERSION_V1}`,
+  goal: `${STORAGE_PREFIX}/goal/${STORAGE_VERSION_V1}`,
 } as const;
 
 const parseCollection = <T>(rawValue: string | null): T[] => {
@@ -177,6 +178,38 @@ export const saveThemePreference = async (mode: ThemeMode): Promise<void> => {
     await AsyncStorage.setItem(STORAGE_KEYS.theme, mode);
   } catch (error) {
     console.error('Failed to save theme preference', error);
+    throw error;
+  }
+};
+
+// Goal storage functions
+export const loadGoal = async (): Promise<UserGoal | null> => {
+  try {
+    const rawValue = await AsyncStorage.getItem(STORAGE_KEYS.goal);
+    if (!rawValue) {
+      return null;
+    }
+    return JSON.parse(rawValue) as UserGoal;
+  } catch (error) {
+    console.error('Failed to load goal', error);
+    return null;
+  }
+};
+
+export const saveGoal = async (goal: UserGoal): Promise<void> => {
+  try {
+    await AsyncStorage.setItem(STORAGE_KEYS.goal, JSON.stringify(goal));
+  } catch (error) {
+    console.error('Failed to save goal', error);
+    throw error;
+  }
+};
+
+export const clearGoal = async (): Promise<void> => {
+  try {
+    await AsyncStorage.removeItem(STORAGE_KEYS.goal);
+  } catch (error) {
+    console.error('Failed to clear goal', error);
     throw error;
   }
 };

@@ -1,9 +1,15 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo from '@react-native-community/netinfo';
 
+import {
+  createCalculatedGoal,
+  createManualGoal,
+  deleteGoal,
+  updateGoal,
+} from '@services/api/goals';
 import { createProduct, deleteProduct, updateProduct } from '@services/api/products';
 
-type Resource = 'products';
+type Resource = 'products' | 'goals';
 type Action = 'create' | 'update' | 'delete';
 
 export type SyncOp = {
@@ -95,6 +101,27 @@ const applyOp = async (op: SyncOp) => {
     }
     if (op.action === 'delete') {
       await deleteProduct(id);
+      return;
+    }
+  }
+
+  if (op.resource === 'goals') {
+    const { id, goalType, ...rest } = op.payload ?? {};
+    if (op.action === 'create') {
+      // Goals are created via API call directly in the hook, so this is mostly for offline sync
+      // We don't need to re-create here as the goal was already created via the API
+      return;
+    }
+    if (op.action === 'update') {
+      if (id) {
+        await updateGoal(id, rest);
+      }
+      return;
+    }
+    if (op.action === 'delete') {
+      if (id) {
+        await deleteGoal(id);
+      }
       return;
     }
   }

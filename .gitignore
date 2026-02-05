@@ -1,0 +1,87 @@
+# ============================================
+# Root .gitignore for CountOnMe monorepo
+# ============================================
+
+# ----------------------
+# Environment files
+# ----------------------
+.env
+.env.local
+.env*.local
+
+# ----------------------
+# OS files
+# ----------------------
+.DS_Store
+*.pem
+Thumbs.db
+
+# ----------------------
+# IDE
+# ----------------------
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# ----------------------
+# Client (React Native / Expo)
+# ----------------------
+
+# Dependencies
+node_modules/
+
+# Expo
+.expo/
+dist/
+web-build/
+expo-env.d.ts
+
+# Native
+.kotlin/
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# Metro
+.metro-health-check*
+
+# Debug
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# TypeScript
+*.tsbuildinfo
+
+# Generated native folders
+client/ios/
+client/android/
+
+# ----------------------
+# Backend (Python / FastAPI)
+# ----------------------
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+
+# Test / coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Build
+*.egg-info/
+
+# Alembic
+backend/alembic/versions/__pycache__/

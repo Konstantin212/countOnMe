@@ -1,11 +1,24 @@
 ---
 name: tdd-workflow
-description: Use this skill when writing new features, fixing bugs, or refactoring code. Enforces test-driven development with 80%+ coverage including unit, integration, and E2E tests.
+description: Use this skill when writing new features, fixing bugs, or refactoring code. Enforces test-driven development with 80%+ coverage using Vitest (client) and pytest (backend).
 ---
 
 # Test-Driven Development Workflow
 
 This skill ensures all code development follows TDD principles with comprehensive test coverage.
+
+## Tech Stack
+
+### Client Testing
+- **Vitest** - Fast unit test runner
+- **React Testing Library** - Component testing
+- **Detox** - E2E testing for React Native
+
+### Backend Testing
+- **pytest** - Test framework
+- **pytest-asyncio** - Async test support
+- **pytest-cov** - Coverage reporting
+- **httpx** - Async API testing
 
 ## When to Activate
 
@@ -14,6 +27,7 @@ This skill ensures all code development follows TDD principles with comprehensiv
 - Refactoring existing code
 - Adding API endpoints
 - Creating new components
+- Adding business logic (calorie calculations)
 
 ## Core Principles
 
@@ -21,7 +35,7 @@ This skill ensures all code development follows TDD principles with comprehensiv
 ALWAYS write tests first, then implement code to make tests pass.
 
 ### 2. Coverage Requirements
-- Minimum 80% coverage (unit + integration + E2E)
+- Minimum 80% coverage (unit + integration)
 - All edge cases covered
 - Error scenarios tested
 - Boundary conditions verified
@@ -31,20 +45,20 @@ ALWAYS write tests first, then implement code to make tests pass.
 #### Unit Tests
 - Individual functions and utilities
 - Component logic
-- Pure functions
-- Helpers and utilities
+- Service layer methods
+- Calorie calculations
 
 #### Integration Tests
 - API endpoints
 - Database operations
+- AsyncStorage operations
 - Service interactions
-- External API calls
 
-#### E2E Tests (Playwright)
+#### E2E Tests (Detox)
 - Critical user flows
-- Complete workflows
-- Browser automation
-- UI interactions
+- Product creation workflow
+- Meal logging workflow
+- Data persistence verification
 
 ## TDD Workflow Steps
 
@@ -53,265 +67,557 @@ ALWAYS write tests first, then implement code to make tests pass.
 As a [role], I want to [action], so that [benefit]
 
 Example:
-As a user, I want to search for markets semantically,
-so that I can find relevant markets even without exact keywords.
+As a user, I want to create a product with calories,
+so that I can track my daily calorie intake.
 ```
 
 ### Step 2: Generate Test Cases
 For each user journey, create comprehensive test cases:
 
 ```typescript
-describe('Semantic Search', () => {
-  it('returns relevant markets for query', async () => {
-    // Test implementation
+// client/src/services/utils/calories.test.ts
+import { describe, it, expect } from 'vitest'
+import { calculateCalories } from './calories'
+
+describe('calculateCalories', () => {
+  it('calculates calories for given grams', () => {
+    // Test basic calculation
   })
 
-  it('handles empty query gracefully', async () => {
+  it('returns 0 for 0 grams', () => {
     // Test edge case
   })
 
-  it('falls back to substring search when Redis unavailable', async () => {
-    // Test fallback behavior
+  it('throws for negative grams', () => {
+    // Test error case
   })
 
-  it('sorts results by similarity score', async () => {
-    // Test sorting logic
+  it('handles decimal values', () => {
+    // Test precision
   })
 })
 ```
 
 ### Step 3: Run Tests (They Should Fail)
 ```bash
+# Client
+cd client
 npm test
-# Tests should fail - we haven't implemented yet
+
+# Backend
+cd backend
+poetry run pytest
 ```
 
 ### Step 4: Implement Code
-Write minimal code to make tests pass:
-
-```typescript
-// Implementation guided by tests
-export async function searchMarkets(query: string) {
-  // Implementation here
-}
-```
+Write minimal code to make tests pass.
 
 ### Step 5: Run Tests Again
 ```bash
-npm test
 # Tests should now pass
+npm test
+poetry run pytest
 ```
 
 ### Step 6: Refactor
-Improve code quality while keeping tests green:
-- Remove duplication
-- Improve naming
-- Optimize performance
-- Enhance readability
+Improve code quality while keeping tests green.
 
 ### Step 7: Verify Coverage
 ```bash
-npm run test:coverage
-# Verify 80%+ coverage achieved
+# Client
+npm test -- --coverage
+
+# Backend
+poetry run pytest --cov=app --cov-report=term-missing
 ```
 
-## Testing Patterns
+## Client Testing Patterns (Vitest)
 
-### Unit Test Pattern (Jest/Vitest)
-```typescript
-import { render, screen, fireEvent } from '@testing-library/react'
-import { Button } from './Button'
-
-describe('Button Component', () => {
-  it('renders with correct text', () => {
-    render(<Button>Click me</Button>)
-    expect(screen.getByText('Click me')).toBeInTheDocument()
-  })
-
-  it('calls onClick when clicked', () => {
-    const handleClick = jest.fn()
-    render(<Button onClick={handleClick}>Click</Button>)
-
-    fireEvent.click(screen.getByRole('button'))
-
-    expect(handleClick).toHaveBeenCalledTimes(1)
-  })
-
-  it('is disabled when disabled prop is true', () => {
-    render(<Button disabled>Click</Button>)
-    expect(screen.getByRole('button')).toBeDisabled()
-  })
-})
+### Test File Structure
 ```
-
-### API Integration Test Pattern
-```typescript
-import { NextRequest } from 'next/server'
-import { GET } from './route'
-
-describe('GET /api/markets', () => {
-  it('returns markets successfully', async () => {
-    const request = new NextRequest('http://localhost/api/markets')
-    const response = await GET(request)
-    const data = await response.json()
-
-    expect(response.status).toBe(200)
-    expect(data.success).toBe(true)
-    expect(Array.isArray(data.data)).toBe(true)
-  })
-
-  it('validates query parameters', async () => {
-    const request = new NextRequest('http://localhost/api/markets?limit=invalid')
-    const response = await GET(request)
-
-    expect(response.status).toBe(400)
-  })
-
-  it('handles database errors gracefully', async () => {
-    // Mock database failure
-    const request = new NextRequest('http://localhost/api/markets')
-    // Test error handling
-  })
-})
-```
-
-### E2E Test Pattern (Playwright)
-```typescript
-import { test, expect } from '@playwright/test'
-
-test('user can search and filter markets', async ({ page }) => {
-  // Navigate to markets page
-  await page.goto('/')
-  await page.click('a[href="/markets"]')
-
-  // Verify page loaded
-  await expect(page.locator('h1')).toContainText('Markets')
-
-  // Search for markets
-  await page.fill('input[placeholder="Search markets"]', 'election')
-
-  // Wait for debounce and results
-  await page.waitForTimeout(600)
-
-  // Verify search results displayed
-  const results = page.locator('[data-testid="market-card"]')
-  await expect(results).toHaveCount(5, { timeout: 5000 })
-
-  // Verify results contain search term
-  const firstResult = results.first()
-  await expect(firstResult).toContainText('election', { ignoreCase: true })
-
-  // Filter by status
-  await page.click('button:has-text("Active")')
-
-  // Verify filtered results
-  await expect(results).toHaveCount(3)
-})
-
-test('user can create a new market', async ({ page }) => {
-  // Login first
-  await page.goto('/creator-dashboard')
-
-  // Fill market creation form
-  await page.fill('input[name="name"]', 'Test Market')
-  await page.fill('textarea[name="description"]', 'Test description')
-  await page.fill('input[name="endDate"]', '2025-12-31')
-
-  // Submit form
-  await page.click('button[type="submit"]')
-
-  // Verify success message
-  await expect(page.locator('text=Market created successfully')).toBeVisible()
-
-  // Verify redirect to market page
-  await expect(page).toHaveURL(/\/markets\/test-market/)
-})
-```
-
-## Test File Organization
-
-```
-src/
-├── components/
-│   ├── Button/
-│   │   ├── Button.tsx
-│   │   ├── Button.test.tsx          # Unit tests
-│   │   └── Button.stories.tsx       # Storybook
-│   └── MarketCard/
-│       ├── MarketCard.tsx
-│       └── MarketCard.test.tsx
-├── app/
+client/src/
+├── services/
+│   ├── utils/
+│   │   ├── calories.ts
+│   │   └── calories.test.ts     # Co-located test
 │   └── api/
-│       └── markets/
-│           ├── route.ts
-│           └── route.test.ts         # Integration tests
-└── e2e/
-    ├── markets.spec.ts               # E2E tests
-    ├── trading.spec.ts
-    └── auth.spec.ts
+│       ├── products.ts
+│       └── products.test.ts
+├── hooks/
+│   ├── useProducts.ts
+│   └── useProducts.test.ts
+└── components/
+    ├── ProductCard.tsx
+    └── ProductCard.test.tsx
 ```
 
-## Mocking External Services
+### Unit Test Example
 
-### Supabase Mock
 ```typescript
-jest.mock('@/lib/supabase', () => ({
-  supabase: {
-    from: jest.fn(() => ({
-      select: jest.fn(() => ({
-        eq: jest.fn(() => Promise.resolve({
-          data: [{ id: 1, name: 'Test Market' }],
-          error: null
-        }))
-      }))
-    }))
+// client/src/services/utils/calories.test.ts
+import { describe, it, expect } from 'vitest'
+import { calculateCalories, calculateMealTotal } from './calories'
+
+describe('calculateCalories', () => {
+  it('calculates calories for given grams', () => {
+    // Arrange
+    const caloriesPer100g = 165
+    const grams = 150
+
+    // Act
+    const result = calculateCalories(caloriesPer100g, grams)
+
+    // Assert
+    expect(result).toBe(247.5)
+  })
+
+  it('returns 0 for 0 grams', () => {
+    expect(calculateCalories(100, 0)).toBe(0)
+  })
+
+  it('handles decimal values', () => {
+    expect(calculateCalories(165, 33.5)).toBeCloseTo(55.275)
+  })
+
+  it('throws for negative grams', () => {
+    expect(() => calculateCalories(100, -50)).toThrow('Grams cannot be negative')
+  })
+})
+
+describe('calculateMealTotal', () => {
+  it('sums calories from multiple items', () => {
+    const items = [
+      { productId: '1', grams: 100, caloriesPer100g: 165 },
+      { productId: '2', grams: 200, caloriesPer100g: 130 },
+    ]
+
+    const total = calculateMealTotal(items)
+
+    expect(total).toBe(425) // 165 + 260
+  })
+
+  it('returns 0 for empty array', () => {
+    expect(calculateMealTotal([])).toBe(0)
+  })
+})
+```
+
+### Component Test Example
+
+```typescript
+// client/src/components/ProductCard.test.tsx
+import { describe, it, expect, vi } from 'vitest'
+import { render, screen, fireEvent } from '@testing-library/react-native'
+import { ProductCard } from './ProductCard'
+
+describe('ProductCard', () => {
+  const mockProduct = {
+    id: '123',
+    name: 'Chicken Breast',
+    caloriesPer100g: 165,
   }
-}))
+
+  it('displays product name', () => {
+    render(<ProductCard product={mockProduct} onPress={vi.fn()} />)
+    
+    expect(screen.getByText('Chicken Breast')).toBeTruthy()
+  })
+
+  it('displays calories per 100g', () => {
+    render(<ProductCard product={mockProduct} onPress={vi.fn()} />)
+    
+    expect(screen.getByText('165 kcal/100g')).toBeTruthy()
+  })
+
+  it('calls onPress when tapped', () => {
+    const onPress = vi.fn()
+    render(<ProductCard product={mockProduct} onPress={onPress} />)
+    
+    fireEvent.press(screen.getByTestId('product-card'))
+    
+    expect(onPress).toHaveBeenCalledWith('123')
+  })
+})
 ```
 
-### Redis Mock
+### Custom Hook Test Example
+
 ```typescript
-jest.mock('@/lib/redis', () => ({
-  searchMarketsByVector: jest.fn(() => Promise.resolve([
-    { slug: 'test-market', similarity_score: 0.95 }
-  ])),
-  checkRedisHealth: jest.fn(() => Promise.resolve({ connected: true }))
-}))
+// client/src/hooks/useProducts.test.ts
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { renderHook, waitFor, act } from '@testing-library/react-native'
+import { useProducts } from './useProducts'
+import * as storage from '@/storage/products'
+
+vi.mock('@/storage/products')
+
+describe('useProducts', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('loads products on mount', async () => {
+    const mockProducts = [
+      { id: '1', name: 'Product 1', caloriesPer100g: 100 },
+    ]
+    vi.mocked(storage.getProducts).mockResolvedValue(mockProducts)
+
+    const { result } = renderHook(() => useProducts())
+
+    await waitFor(() => {
+      expect(result.current.products).toEqual(mockProducts)
+    })
+  })
+
+  it('handles loading state', async () => {
+    vi.mocked(storage.getProducts).mockResolvedValue([])
+
+    const { result } = renderHook(() => useProducts())
+
+    expect(result.current.isLoading).toBe(true)
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false)
+    })
+  })
+
+  it('adds product and refreshes list', async () => {
+    vi.mocked(storage.getProducts).mockResolvedValue([])
+    vi.mocked(storage.saveProduct).mockResolvedValue(undefined)
+
+    const { result } = renderHook(() => useProducts())
+
+    await act(async () => {
+      await result.current.addProduct({
+        name: 'New Product',
+        caloriesPer100g: 150,
+      })
+    })
+
+    expect(storage.saveProduct).toHaveBeenCalled()
+  })
+})
 ```
 
-### OpenAI Mock
+### API Module Test Example
+
 ```typescript
-jest.mock('@/lib/openai', () => ({
-  generateEmbedding: jest.fn(() => Promise.resolve(
-    new Array(1536).fill(0.1) // Mock 1536-dim embedding
-  ))
-}))
+// client/src/services/api/products.test.ts
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { getProducts, createProduct } from './products'
+import * as http from './http'
+
+vi.mock('./http')
+
+describe('products API', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  describe('getProducts', () => {
+    it('fetches products from API', async () => {
+      const mockProducts = [{ id: '1', name: 'Test', kcal_100g: 100 }]
+      vi.mocked(http.apiFetch).mockResolvedValue(mockProducts)
+
+      const result = await getProducts()
+
+      expect(http.apiFetch).toHaveBeenCalledWith('/products')
+      expect(result).toEqual(mockProducts)
+    })
+  })
+
+  describe('createProduct', () => {
+    it('POSTs product to API', async () => {
+      const newProduct = { name: 'New', caloriesPer100g: 100 }
+      const created = { id: '1', ...newProduct }
+      vi.mocked(http.apiFetch).mockResolvedValue(created)
+
+      const result = await createProduct(newProduct)
+
+      expect(http.apiFetch).toHaveBeenCalledWith('/products', {
+        method: 'POST',
+        body: JSON.stringify(newProduct),
+      })
+      expect(result).toEqual(created)
+    })
+  })
+})
 ```
 
-## Test Coverage Verification
+## Backend Testing Patterns (pytest)
 
-### Run Coverage Report
-```bash
-npm run test:coverage
+### Test File Structure
+```
+backend/
+├── app/
+│   ├── api/
+│   ├── models/
+│   ├── services/
+│   └── schemas/
+└── tests/
+    ├── conftest.py           # Fixtures
+    ├── test_products.py
+    ├── test_portions.py
+    ├── test_food_entries.py
+    └── test_auth.py
 ```
 
-### Coverage Thresholds
-```json
-{
-  "jest": {
-    "coverageThresholds": {
-      "global": {
-        "branches": 80,
-        "functions": 80,
-        "lines": 80,
-        "statements": 80
-      }
-    }
-  }
-}
+### conftest.py (Fixtures)
+
+```python
+# backend/tests/conftest.py
+import pytest
+from uuid import uuid4
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from sqlalchemy.orm import sessionmaker
+
+from app.models.base import Base
+from app.models.device import Device
+
+DATABASE_URL = "sqlite+aiosqlite:///:memory:"
+
+
+@pytest.fixture
+async def engine():
+    engine = create_async_engine(DATABASE_URL, echo=False)
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    yield engine
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)
+
+
+@pytest.fixture
+async def session(engine):
+    async_session = sessionmaker(
+        engine, class_=AsyncSession, expire_on_commit=False
+    )
+    async with async_session() as session:
+        yield session
+
+
+@pytest.fixture
+async def device(session):
+    """Create a test device."""
+    device = Device(
+        id=uuid4(),
+        token_hash="$2b$12$test_hash",
+    )
+    session.add(device)
+    await session.commit()
+    return device
 ```
 
-## Common Testing Mistakes to Avoid
+### Service Layer Tests
+
+```python
+# backend/tests/test_product_service.py
+import pytest
+from uuid import uuid4
+from app.services.products import ProductService
+from app.schemas.product import ProductCreate
+
+
+@pytest.mark.asyncio
+async def test_create_product(session, device):
+    """Should create a product for device."""
+    service = ProductService(session)
+    data = ProductCreate(name="Chicken", kcal_100g=165)
+
+    product = await service.create(device.id, data)
+
+    assert product.name == "Chicken"
+    assert product.kcal_100g == 165
+    assert product.device_id == device.id
+    assert product.deleted_at is None
+
+
+@pytest.mark.asyncio
+async def test_list_only_own_device(session, device):
+    """Should only return products for requesting device."""
+    service = ProductService(session)
+    other_device_id = uuid4()
+    
+    # Create products for both devices
+    await service.create(device.id, ProductCreate(name="My Product", kcal_100g=100))
+    await service.create(other_device_id, ProductCreate(name="Other", kcal_100g=100))
+
+    products = await service.list(device.id)
+
+    assert len(products) == 1
+    assert products[0].name == "My Product"
+
+
+@pytest.mark.asyncio
+async def test_get_returns_none_for_other_device(session, device):
+    """Should return None for other device's products."""
+    service = ProductService(session)
+    other_device_id = uuid4()
+    
+    other_product = await service.create(
+        other_device_id, 
+        ProductCreate(name="Other", kcal_100g=100)
+    )
+
+    result = await service.get(device.id, other_product.id)
+
+    assert result is None
+
+
+@pytest.mark.asyncio
+async def test_soft_delete(session, device):
+    """Should soft delete, not hard delete."""
+    service = ProductService(session)
+    product = await service.create(
+        device.id,
+        ProductCreate(name="To Delete", kcal_100g=100)
+    )
+
+    success = await service.delete(device.id, product.id)
+
+    assert success is True
+    
+    # Should not appear in list
+    products = await service.list(device.id)
+    assert len(products) == 0
+    
+    # But should still exist in DB with deleted_at
+    await session.refresh(product)
+    assert product.deleted_at is not None
+```
+
+### API Router Tests
+
+```python
+# backend/tests/test_products_api.py
+import pytest
+from httpx import AsyncClient
+
+
+@pytest.mark.asyncio
+async def test_create_product(authenticated_client: AsyncClient):
+    """Should create product via POST /v1/products."""
+    payload = {"name": "Rice", "kcal_100g": 130}
+
+    response = await authenticated_client.post("/v1/products", json=payload)
+
+    assert response.status_code == 201
+    data = response.json()
+    assert data["name"] == "Rice"
+    assert data["kcal_100g"] == 130
+
+
+@pytest.mark.asyncio
+async def test_requires_auth(client: AsyncClient):
+    """Should return 401 without auth token."""
+    response = await client.post("/v1/products", json={"name": "Test", "kcal_100g": 100})
+
+    assert response.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_validation_error(authenticated_client: AsyncClient):
+    """Should return 422 for invalid data."""
+    payload = {"name": "", "kcal_100g": -50}
+
+    response = await authenticated_client.post("/v1/products", json=payload)
+
+    assert response.status_code == 422
+```
+
+## E2E Testing Patterns (Detox)
+
+### Test File Structure
+```
+client/e2e/
+├── jest.config.js
+├── firstTest.e2e.ts
+├── products.e2e.ts
+└── meals.e2e.ts
+```
+
+### E2E Test Example
+
+```typescript
+// client/e2e/products.e2e.ts
+import { device, element, by, expect } from 'detox'
+
+describe('Product Management', () => {
+  beforeAll(async () => {
+    await device.launchApp()
+  })
+
+  beforeEach(async () => {
+    await device.reloadReactNative()
+  })
+
+  it('should create a new product', async () => {
+    // Navigate to products
+    await element(by.id('tab-products')).tap()
+    
+    // Tap add button
+    await element(by.id('add-product-button')).tap()
+    
+    // Fill form
+    await element(by.id('product-name-input')).typeText('Chicken Breast')
+    await element(by.id('product-calories-input')).typeText('165')
+    
+    // Save
+    await element(by.id('save-product-button')).tap()
+    
+    // Verify product appears in list
+    await expect(element(by.text('Chicken Breast'))).toBeVisible()
+  })
+
+  it('should persist products after app restart', async () => {
+    // Create product
+    await element(by.id('tab-products')).tap()
+    await element(by.id('add-product-button')).tap()
+    await element(by.id('product-name-input')).typeText('Test Product')
+    await element(by.id('product-calories-input')).typeText('100')
+    await element(by.id('save-product-button')).tap()
+    
+    // Restart app
+    await device.reloadReactNative()
+    
+    // Verify product still exists
+    await element(by.id('tab-products')).tap()
+    await expect(element(by.text('Test Product'))).toBeVisible()
+  })
+})
+```
+
+## Coverage Thresholds
+
+### Vitest Configuration
+```typescript
+// client/vitest.config.ts
+export default defineConfig({
+  test: {
+    coverage: {
+      provider: 'v8',
+      thresholds: {
+        branches: 80,
+        functions: 80,
+        lines: 80,
+        statements: 80,
+      },
+    },
+  },
+})
+```
+
+### pytest Configuration
+```ini
+# backend/pyproject.toml
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+
+[tool.coverage.report]
+fail_under = 80
+```
+
+## Common Testing Mistakes
 
 ### ❌ WRONG: Testing Implementation Details
 ```typescript
@@ -319,81 +625,31 @@ npm run test:coverage
 expect(component.state.count).toBe(5)
 ```
 
-### ✅ CORRECT: Test User-Visible Behavior
+### ✅ CORRECT: Test Observable Behavior
 ```typescript
 // Test what users see
-expect(screen.getByText('Count: 5')).toBeInTheDocument()
-```
-
-### ❌ WRONG: Brittle Selectors
-```typescript
-// Breaks easily
-await page.click('.css-class-xyz')
-```
-
-### ✅ CORRECT: Semantic Selectors
-```typescript
-// Resilient to changes
-await page.click('button:has-text("Submit")')
-await page.click('[data-testid="submit-button"]')
+expect(screen.getByText('Count: 5')).toBeTruthy()
 ```
 
 ### ❌ WRONG: No Test Isolation
 ```typescript
 // Tests depend on each other
-test('creates user', () => { /* ... */ })
-test('updates same user', () => { /* depends on previous test */ })
+test('creates product', () => { /* ... */ })
+test('updates same product', () => { /* depends on previous test */ })
 ```
 
 ### ✅ CORRECT: Independent Tests
 ```typescript
-// Each test sets up its own data
-test('creates user', () => {
-  const user = createTestUser()
+test('creates product', () => {
+  const product = createTestProduct()
   // Test logic
 })
 
-test('updates user', () => {
-  const user = createTestUser()
+test('updates product', () => {
+  const product = createTestProduct()  // Fresh data
   // Update logic
 })
 ```
-
-## Continuous Testing
-
-### Watch Mode During Development
-```bash
-npm test -- --watch
-# Tests run automatically on file changes
-```
-
-### Pre-Commit Hook
-```bash
-# Runs before every commit
-npm test && npm run lint
-```
-
-### CI/CD Integration
-```yaml
-# GitHub Actions
-- name: Run Tests
-  run: npm test -- --coverage
-- name: Upload Coverage
-  uses: codecov/codecov-action@v3
-```
-
-## Best Practices
-
-1. **Write Tests First** - Always TDD
-2. **One Assert Per Test** - Focus on single behavior
-3. **Descriptive Test Names** - Explain what's tested
-4. **Arrange-Act-Assert** - Clear test structure
-5. **Mock External Dependencies** - Isolate unit tests
-6. **Test Edge Cases** - Null, undefined, empty, large
-7. **Test Error Paths** - Not just happy paths
-8. **Keep Tests Fast** - Unit tests < 50ms each
-9. **Clean Up After Tests** - No side effects
-10. **Review Coverage Reports** - Identify gaps
 
 ## Success Metrics
 

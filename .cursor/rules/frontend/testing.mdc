@@ -2,14 +2,39 @@
 alwaysApply: true
 ---
 
-# TypeScript/JavaScript Testing
+# TypeScript/React Native Testing
 
-> This file extends [common/testing.md](../common/testing.md) with TypeScript/JavaScript specific content.
+> This file extends [common/testing.md](../common/testing.md) with React Native specific content.
+
+## Unit Testing
+
+Use **Vitest** as the unit testing framework for components, hooks, and utilities.
+
+```bash
+# Run tests
+cd client
+npm test
+
+# Run with coverage
+npm test -- --coverage
+
+# Watch mode
+npm test -- --watch
+```
 
 ## E2E Testing
 
-Use **Playwright** as the E2E testing framework for critical user flows.
+Use **Detox** as the E2E testing framework for React Native mobile apps.
+
+```bash
+# Build for E2E
+detox build --configuration android.emu.debug
+
+# Run E2E tests
+detox test --configuration android.emu.debug
+```
 
 ## Agent Support
 
-- **e2e-runner** - Playwright E2E testing specialist
+- **tdd-guide** - Test-driven development specialist (Vitest + pytest)
+- **e2e-runner** - Detox E2E testing specialist for React Native

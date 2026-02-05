@@ -1,11 +1,30 @@
 ---
 name: coding-standards
-description: Universal coding standards, best practices, and patterns for TypeScript, JavaScript, React, and Node.js development.
+description: Universal coding standards, best practices, and patterns for CountOnMe - TypeScript, React Native, and Python development.
 ---
 
 # Coding Standards & Best Practices
 
-Universal coding standards applicable across all projects.
+Universal coding standards applicable across the CountOnMe project.
+
+## Tech Stack
+
+### Client (Mobile)
+- Expo 54 / React Native 0.81
+- React 19.1 + TypeScript 5.9
+- React Navigation (bottom tabs, native stack)
+- React Native Paper (UI components)
+- React Hook Form + Zod (forms/validation)
+- AsyncStorage (local persistence)
+- Vitest (testing)
+
+### Backend (API)
+- Python 3.11+ / FastAPI 0.115
+- SQLAlchemy 2.0 (async ORM)
+- PostgreSQL (database)
+- Alembic (migrations)
+- pytest + pytest-asyncio (testing)
+- Ruff (linting)
 
 ## Code Quality Principles
 
@@ -33,75 +52,91 @@ Universal coding standards applicable across all projects.
 - Add complexity only when required
 - Start simple, refactor when needed
 
-## TypeScript/JavaScript Standards
+## TypeScript Standards (Client)
 
 ### Variable Naming
 
 ```typescript
 // ✅ GOOD: Descriptive names
-const marketSearchQuery = 'election'
-const isUserAuthenticated = true
-const totalRevenue = 1000
+const productSearchQuery = 'chicken'
+const isUserLoggedIn = true
+const totalCalories = 1200
 
 // ❌ BAD: Unclear names
-const q = 'election'
+const q = 'chicken'
 const flag = true
-const x = 1000
+const x = 1200
 ```
 
 ### Function Naming
 
 ```typescript
 // ✅ GOOD: Verb-noun pattern
-async function fetchMarketData(marketId: string) { }
-function calculateSimilarity(a: number[], b: number[]) { }
-function isValidEmail(email: string): boolean { }
+async function fetchProducts(deviceId: string) { }
+function calculateCalories(kcalPer100g: number, grams: number) { }
+function isValidProduct(product: unknown): product is Product { }
 
 // ❌ BAD: Unclear or noun-only
-async function market(id: string) { }
-function similarity(a, b) { }
-function email(e) { }
+async function products(id: string) { }
+function calories(a, b) { }
+function product(p) { }
 ```
 
 ### Immutability Pattern (CRITICAL)
 
 ```typescript
 // ✅ ALWAYS use spread operator
-const updatedUser = {
-  ...user,
+const updatedProduct = {
+  ...product,
   name: 'New Name'
 }
 
-const updatedArray = [...items, newItem]
+const updatedMeals = [...meals, newMeal]
 
 // ❌ NEVER mutate directly
-user.name = 'New Name'  // BAD
-items.push(newItem)     // BAD
+product.name = 'New Name'  // BAD
+meals.push(newMeal)        // BAD
+```
+
+### Type Safety
+
+```typescript
+// ✅ GOOD: Proper types
+interface Product {
+  id: string
+  name: string
+  caloriesPer100g: number
+  createdAt: Date
+}
+
+function getProduct(id: string): Promise<Product> {
+  // Implementation
+}
+
+// ❌ BAD: Using 'any'
+function getProduct(id: any): Promise<any> {
+  // Implementation
+}
 ```
 
 ### Error Handling
 
 ```typescript
 // ✅ GOOD: Comprehensive error handling
-async function fetchData(url: string) {
+async function fetchProducts(): Promise<Product[]> {
   try {
-    const response = await fetch(url)
-
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`)
-    }
-
-    return await response.json()
+    const response = await apiFetch<Product[]>('/products')
+    return response
   } catch (error) {
-    console.error('Fetch failed:', error)
-    throw new Error('Failed to fetch data')
+    console.error('Failed to fetch products:', error)
+    throw new Error('Failed to fetch products')
   }
 }
 
 // ❌ BAD: No error handling
-async function fetchData(url) {
-  const response = await fetch(url)
-  return response.json()
+async function fetchProducts() {
+  const response = await apiFetch('/products')
+  return response
 }
 ```
 
@@ -109,72 +144,144 @@ async function fetchData(url) {
 
 ```typescript
 // ✅ GOOD: Parallel execution when possible
-const [users, markets, stats] = await Promise.all([
-  fetchUsers(),
-  fetchMarkets(),
+const [products, meals, stats] = await Promise.all([
+  fetchProducts(),
+  fetchMeals(),
   fetchStats()
 ])
 
 // ❌ BAD: Sequential when unnecessary
-const users = await fetchUsers()
-const markets = await fetchMarkets()
+const products = await fetchProducts()
+const meals = await fetchMeals()
 const stats = await fetchStats()
 ```
 
-### Type Safety
+## Python Standards (Backend)
 
-```typescript
-// ✅ GOOD: Proper types
-interface Market {
-  id: string
-  name: string
-  status: 'active' | 'resolved' | 'closed'
-  created_at: Date
-}
+### Type Hints
 
-function getMarket(id: string): Promise<Market> {
-  // Implementation
-}
+```python
+# ✅ GOOD: Type hints on all functions
+async def get_product(
+    product_id: UUID,
+    device_id: UUID,
+    session: AsyncSession
+) -> Product | None:
+    """Get a product by ID, scoped to device."""
+    stmt = select(Product).where(
+        Product.id == product_id,
+        Product.device_id == device_id
+    )
+    result = await session.execute(stmt)
+    return result.scalar_one_or_none()
 
-// ❌ BAD: Using 'any'
-function getMarket(id: any): Promise<any> {
-  // Implementation
-}
+# ❌ BAD: No type hints
+async def get_product(product_id, device_id, session):
+    stmt = select(Product).where(
+        Product.id == product_id,
+        Product.device_id == device_id
+    )
+    result = await session.execute(stmt)
+    return result.scalar_one_or_none()
 ```
 
-## React Best Practices
+### Docstrings
+
+```python
+# ✅ GOOD: Clear docstrings for public functions
+async def create_product(
+    device_id: UUID,
+    data: ProductCreate,
+    session: AsyncSession
+) -> Product:
+    """
+    Create a new product for a device.
+    
+    Args:
+        device_id: ID of the owning device
+        data: Product creation data (name, kcal_100g)
+        session: Database session
+    
+    Returns:
+        Created product with generated ID
+    
+    Raises:
+        ValueError: If kcal_100g is negative
+    """
+    product = Product(device_id=device_id, **data.model_dump())
+    session.add(product)
+    await session.commit()
+    return product
+```
+
+### Error Handling
+
+```python
+# ✅ GOOD: Specific exceptions
+try:
+    result = await fetch_data()
+except HTTPError as e:
+    logger.error(f"HTTP error: {e}")
+    raise HTTPException(status_code=502, detail="External service error")
+except ValidationError as e:
+    logger.warning(f"Validation failed: {e}")
+    raise HTTPException(status_code=400, detail="Invalid data")
+
+# ❌ BAD: Bare except
+try:
+    result = await fetch_data()
+except:
+    return None
+```
+
+### No Mutable Default Arguments
+
+```python
+# ❌ BAD: Mutable default argument
+def process_items(items: list = []):
+    items.append("new")
+    return items
+
+# ✅ GOOD: Use None default
+def process_items(items: list | None = None) -> list:
+    if items is None:
+        items = []
+    items.append("new")
+    return items
+```
+
+## React Native Best Practices
 
 ### Component Structure
 
 ```typescript
 // ✅ GOOD: Functional component with types
-interface ButtonProps {
-  children: React.ReactNode
-  onClick: () => void
+interface ProductCardProps {
+  product: Product
+  onPress: (id: string) => void
   disabled?: boolean
-  variant?: 'primary' | 'secondary'
 }
 
-export function Button({
-  children,
-  onClick,
-  disabled = false,
-  variant = 'primary'
-}: ButtonProps) {
+export function ProductCard({
+  product,
+  onPress,
+  disabled = false
+}: ProductCardProps) {
   return (
-    <button
-      onClick={onClick}
+    <Pressable
+      testID="product-card"
+      onPress={() => onPress(product.id)}
       disabled={disabled}
-      className={`btn btn-${variant}`}
     >
-      {children}
-    </button>
+      <Text>{product.name}</Text>
+      <Text>{product.caloriesPer100g} kcal/100g</Text>
+    </Pressable>
   )
 }
 
 // ❌ BAD: No types, unclear structure
-export function Button(props) {
-  return <button onClick={props.onClick}>{props.children}</button>
+export function ProductCard(props) {
+  return <Pressable onPress={() => props.onPress(props.product.id)}>...</Pressable>
 }
 ```
 
@@ -197,140 +304,188 @@ export function useDebounce<T>(value: T, delay: number): T {
 }
 
 // Usage
-const debouncedQuery = useDebounce(searchQuery, 500)
+const debouncedQuery = useDebounce(searchQuery, 300)
 ```
 
 ### State Management
 
 ```typescript
 // ✅ GOOD: Proper state updates
-const [count, setCount] = useState(0)
+const [products, setProducts] = useState<Product[]>([])
 
 // Functional update for state based on previous state
-setCount(prev => prev + 1)
+const addProduct = (product: Product) => {
+  setProducts(prev => [...prev, product])
+}
 
 // ❌ BAD: Direct state reference
-setCount(count + 1)  // Can be stale in async scenarios
+const addProduct = (product: Product) => {
+  setProducts([...products, product])  // Can be stale in async scenarios
+}
+```
+
+### useEffect Dependencies
+
+```typescript
+// ✅ GOOD: All dependencies included
+useEffect(() => {
+  loadProducts(filter)
+}, [filter, loadProducts])
+
+// ❌ BAD: Missing dependency
+useEffect(() => {
+  loadProducts(filter)
+}, [])  // Missing 'filter' dependency
 ```
 
 ### Conditional Rendering
 
 ```typescript
 // ✅ GOOD: Clear conditional rendering
-{isLoading && <Spinner />}
+{isLoading && <ActivityIndicator />}
 {error && <ErrorMessage error={error} />}
-{data && <DataDisplay data={data} />}
+{data && <ProductList data={data} />}
 
 // ❌ BAD: Ternary hell
-{isLoading ? <Spinner /> : error ? <ErrorMessage error={error} /> : data ? <DataDisplay data={data} /> : null}
+{isLoading ? <ActivityIndicator /> : error ? <ErrorMessage error={error} /> : data ? <ProductList data={data} /> : null}
 ```
 
 ## API Design Standards
 
-### REST API Conventions
+### FastAPI Conventions
 
-```
-GET    /api/markets              # List all markets
-GET    /api/markets/:id          # Get specific market
-POST   /api/markets              # Create new market
-PUT    /api/markets/:id          # Update market (full)
-PATCH  /api/markets/:id          # Update market (partial)
-DELETE /api/markets/:id          # Delete market
+```python
+# Router structure
+GET    /v1/products              # List all products
+GET    /v1/products/{id}         # Get specific product
+POST   /v1/products              # Create new product
+PUT    /v1/products/{id}         # Update product
+DELETE /v1/products/{id}         # Soft delete product
 
 # Query parameters for filtering
-GET /api/markets?status=active&limit=10&offset=0
+GET /v1/food-entries?date=2025-02-05&limit=50
 ```
 
 ### Response Format
 
-```typescript
-// ✅ GOOD: Consistent response structure
-interface ApiResponse<T> {
-  success: boolean
-  data?: T
-  error?: string
-  meta?: {
-    total: number
-    page: number
-    limit: number
-  }
-}
+```python
+# ✅ GOOD: Consistent response schemas
+from pydantic import BaseModel
 
-// Success response
-return NextResponse.json({
-  success: true,
-  data: markets,
-  meta: { total: 100, page: 1, limit: 10 }
-})
+class ProductRead(BaseModel):
+    id: UUID
+    name: str
+    kcal_100g: int
+    created_at: datetime
+    
+    model_config = ConfigDict(from_attributes=True)
 
-// Error response
-return NextResponse.json({
-  success: false,
-  error: 'Invalid request'
-}, { status: 400 })
+# Error responses use HTTPException
+raise HTTPException(status_code=404, detail="Product not found")
+raise HTTPException(status_code=400, detail="Invalid data")
 ```
 
-### Input Validation
+### Input Validation (Zod - Client)
 
 ```typescript
 import { z } from 'zod'
 
 // ✅ GOOD: Schema validation
-const CreateMarketSchema = z.object({
-  name: z.string().min(1).max(200),
-  description: z.string().min(1).max(2000),
-  endDate: z.string().datetime(),
-  categories: z.array(z.string()).min(1)
+const ProductSchema = z.object({
+  name: z.string().min(1).max(100),
+  caloriesPer100g: z.number().int().min(0).max(1000),
 })
 
-export async function POST(request: Request) {
-  const body = await request.json()
+export type ProductInput = z.infer<typeof ProductSchema>
 
-  try {
-    const validated = CreateMarketSchema.parse(body)
-    // Proceed with validated data
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return NextResponse.json({
-        success: false,
-        error: 'Validation failed',
-        details: error.errors
-      }, { status: 400 })
-    }
-  }
+// Usage in form
+const result = ProductSchema.safeParse(formData)
+if (!result.success) {
+  setErrors(result.error.flatten().fieldErrors)
+  return
 }
+```
+
+### Input Validation (Pydantic - Backend)
+
+```python
+from pydantic import BaseModel, Field
+
+class ProductCreate(BaseModel):
+    """Schema for creating a product."""
+    
+    name: str = Field(..., min_length=1, max_length=100)
+    kcal_100g: int = Field(..., ge=0, le=1000)
 ```
 
 ## File Organization
 
-### Project Structure
+### Client Structure
 
 ```
-src/
-├── app/                    # Next.js App Router
-│   ├── api/               # API routes
-│   ├── markets/           # Market pages
-│   └── (auth)/           # Auth pages (route groups)
-├── components/            # React components
-│   ├── ui/               # Generic UI components
-│   ├── forms/            # Form components
-│   └── layouts/          # Layout components
-├── hooks/                # Custom React hooks
-├── lib/                  # Utilities and configs
-│   ├── api/             # API clients
-│   ├── utils/           # Helper functions
-│   └── constants/       # Constants
-├── types/                # TypeScript types
-└── styles/              # Global styles
+client/src/
+├── app/                    # Navigation setup
+├── components/             # Shared UI components
+│   ├── ProductCard.tsx
+│   └── MealCard.tsx
+├── hooks/                  # Custom React hooks
+│   ├── useProducts.ts
+│   └── useAsyncStorage.ts
+├── models/                 # TypeScript types
+│   ├── Product.ts
+│   └── Meal.ts
+├── particles/              # Atomic UI primitives
+│   ├── Input.tsx
+│   └── Button.tsx
+├── screens/                # Screen components
+│   ├── Products/
+│   └── MyDay/
+├── services/               # API & business logic
+│   ├── api/
+│   │   ├── http.ts        # HTTP wrapper
+│   │   └── products.ts    # Products API
+│   ├── utils/
+│   │   └── calories.ts
+│   └── validation/
+│       └── schemas.ts
+├── storage/                # AsyncStorage modules
+│   ├── products.ts
+│   └── device.ts          # Device identity
+└── theme/                  # Styling
+```
+
+### Backend Structure
+
+```
+backend/app/
+├── api/
+│   ├── deps.py            # Dependency injection
+│   └── routers/
+│       ├── auth.py
+│       └── products.py
+├── db/
+│   ├── engine.py
+│   └── session.py
+├── models/
+│   ├── base.py
+│   └── product.py
+├── schemas/
+│   ├── product.py
+│   └── auth.py
+├── services/
+│   ├── auth.py
+│   └── products.py
+├── settings.py
+└── main.py
 ```
 
 ### File Naming
 
 ```
-components/Button.tsx          # PascalCase for components
-hooks/useAuth.ts              # camelCase with 'use' prefix
-lib/formatDate.ts             # camelCase for utilities
-types/market.types.ts         # camelCase with .types suffix
+components/ProductCard.tsx    # PascalCase for components
+hooks/useProducts.ts          # camelCase with 'use' prefix
+services/api/products.ts      # camelCase for modules
+models/Product.ts             # PascalCase for types
 ```
 
 ## Comments & Documentation
@@ -342,90 +497,72 @@ types/market.types.ts         # camelCase with .types suffix
 // Use exponential backoff to avoid overwhelming the API during outages
 const delay = Math.min(1000 * Math.pow(2, retryCount), 30000)
 
-// Deliberately using mutation here for performance with large arrays
-items.push(newItem)
+// Device scoping is critical for data privacy - never skip this check
+if (product.deviceId !== currentDeviceId) {
+  throw new Error('Access denied')
+}
 
 // ❌ BAD: Stating the obvious
 // Increment counter by 1
 count++
 
-// Set name to user's name
-name = user.name
+// Set name to product's name
+name = product.name
 ```
 
-### JSDoc for Public APIs
+### TSDoc for Public APIs
 
 ```typescript
 /**
- * Searches markets using semantic similarity.
+ * Calculates total calories for a given amount of food.
  *
- * @param query - Natural language search query
- * @param limit - Maximum number of results (default: 10)
- * @returns Array of markets sorted by similarity score
- * @throws {Error} If OpenAI API fails or Redis unavailable
+ * @param caloriesPer100g - Calories in 100 grams of the food
+ * @param grams - Amount of food in grams
+ * @returns Total calories for the given amount
+ * @throws Error if grams is negative
  *
  * @example
  * ```typescript
- * const results = await searchMarkets('election', 5)
- * console.log(results[0].name) // "Trump vs Biden"
+ * const calories = calculateCalories(165, 150)
+ * // Returns 247.5 (chicken breast, 150g)
  * ```
  */
-export async function searchMarkets(
-  query: string,
-  limit: number = 10
-): Promise<Market[]> {
-  // Implementation
+export function calculateCalories(caloriesPer100g: number, grams: number): number {
+  if (grams < 0) throw new Error('Grams cannot be negative')
+  return (caloriesPer100g * grams) / 100
 }
 ```
 
 ## Performance Best Practices
 
-### Memoization
+### Memoization (React Native)
 
 ```typescript
 import { useMemo, useCallback } from 'react'
 
 // ✅ GOOD: Memoize expensive computations
-const sortedMarkets = useMemo(() => {
-  return markets.sort((a, b) => b.volume - a.volume)
-}, [markets])
+const sortedProducts = useMemo(() => {
+  return products.sort((a, b) => a.name.localeCompare(b.name))
+}, [products])
 
-// ✅ GOOD: Memoize callbacks
-const handleSearch = useCallback((query: string) => {
-  setSearchQuery(query)
-}, [])
+// ✅ GOOD: Memoize callbacks passed to children
+const handleProductPress = useCallback((id: string) => {
+  navigation.navigate('ProductDetail', { id })
+}, [navigation])
 ```
 
-### Lazy Loading
+### Database Queries (Backend)
 
-```typescript
-import { lazy, Suspense } from 'react'
+```python
+# ✅ GOOD: Select only needed columns, use limit
+stmt = (
+    select(Product.id, Product.name, Product.kcal_100g)
+    .where(Product.device_id == device_id)
+    .limit(50)
+)
 
-// ✅ GOOD: Lazy load heavy components
-const HeavyChart = lazy(() => import('./HeavyChart'))
-
-export function Dashboard() {
-  return (
-    <Suspense fallback={<Spinner />}>
-      <HeavyChart />
-    </Suspense>
-  )
-}
-```
-
-### Database Queries
-
-```typescript
-// ✅ GOOD: Select only needed columns
-const { data } = await supabase
-  .from('markets')
-  .select('id, name, status')
-  .limit(10)
-
-// ❌ BAD: Select everything
-const { data } = await supabase
-  .from('markets')
-  .select('*')
+# ❌ BAD: Select everything without limit
+stmt = select(Product)
 ```
 
 ## Testing Standards
@@ -433,61 +570,74 @@ const { data } = await supabase
 ### Test Structure (AAA Pattern)
 
 ```typescript
-test('calculates similarity correctly', () => {
+// Client (Vitest)
+it('calculates calories correctly', () => {
   // Arrange
-  const vector1 = [1, 0, 0]
-  const vector2 = [0, 1, 0]
+  const caloriesPer100g = 165
+  const grams = 150
 
   // Act
-  const similarity = calculateCosineSimilarity(vector1, vector2)
+  const result = calculateCalories(caloriesPer100g, grams)
 
   // Assert
-  expect(similarity).toBe(0)
+  expect(result).toBe(247.5)
 })
+```
+
+```python
+# Backend (pytest)
+@pytest.mark.asyncio
+async def test_create_product(session, device):
+    # Arrange
+    service = ProductService(session)
+    data = ProductCreate(name="Test", kcal_100g=100)
+
+    # Act
+    product = await service.create(device.id, data)
+
+    # Assert
+    assert product.name == "Test"
+    assert product.device_id == device.id
 ```
 
 ### Test Naming
 
 ```typescript
 // ✅ GOOD: Descriptive test names
-test('returns empty array when no markets match query', () => { })
-test('throws error when OpenAI API key is missing', () => { })
-test('falls back to substring search when Redis unavailable', () => { })
+it('returns empty array when no products match query', () => { })
+it('throws error when calories is negative', () => { })
+it('persists product to AsyncStorage after creation', () => { })
 
 // ❌ BAD: Vague test names
-test('works', () => { })
-test('test search', () => { })
+it('works', () => { })
+it('test search', () => { })
 ```
 
 ## Code Smell Detection
 
-Watch for these anti-patterns:
-
-### 1. Long Functions
+### Long Functions (> 50 lines)
 ```typescript
-// ❌ BAD: Function > 50 lines
-function processMarketData() {
+// ❌ BAD: Split into smaller functions
+function processProductData() {
   // 100 lines of code
 }
 
-// ✅ GOOD: Split into smaller functions
-function processMarketData() {
+// ✅ GOOD
+function processProductData() {
   const validated = validateData()
   const transformed = transformData(validated)
   return saveData(transformed)
 }
 ```
 
-### 2. Deep Nesting
+### Deep Nesting (> 3 levels)
 ```typescript
-// ❌ BAD: 5+ levels of nesting
+// ❌ BAD
 if (user) {
-  if (user.isAdmin) {
-    if (market) {
-      if (market.isActive) {
-        if (hasPermission) {
-          // Do something
-        }
+  if (product) {
+    if (product.isActive) {
+      if (hasPermission) {
+        // Do something
       }
     }
   }
@@ -495,21 +645,20 @@ if (user) {
 
 // ✅ GOOD: Early returns
 if (!user) return
-if (!user.isAdmin) return
-if (!market) return
-if (!market.isActive) return
+if (!product) return
+if (!product.isActive) return
 if (!hasPermission) return
 
 // Do something
 ```
 
-### 3. Magic Numbers
+### Magic Numbers
 ```typescript
-// ❌ BAD: Unexplained numbers
+// ❌ BAD
 if (retryCount > 3) { }
 setTimeout(callback, 500)
 
-// ✅ GOOD: Named constants
+// ✅ GOOD
 const MAX_RETRIES = 3
 const DEBOUNCE_DELAY_MS = 500
 

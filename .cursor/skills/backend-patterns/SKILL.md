@@ -1,587 +1,727 @@
 ---
 name: backend-patterns
-description: Backend architecture patterns, API design, database optimization, and server-side best practices for Node.js, Express, and Next.js API routes.
+description: Backend architecture patterns, API design, database optimization, and server-side best practices for Python, FastAPI, and SQLAlchemy.
 ---
 
 # Backend Development Patterns
 
-Backend architecture patterns and best practices for scalable server-side applications.
+Backend architecture patterns and best practices for CountOnMe's FastAPI backend.
+
+## Tech Stack
+
+- **Framework**: FastAPI 0.115 + Uvicorn
+- **ORM**: SQLAlchemy 2.0 (async)
+- **Database**: PostgreSQL (via Docker Compose locally)
+- **Migrations**: Alembic
+- **Auth**: Anonymous device authentication (bcrypt token hashing)
+- **Config**: Pydantic Settings
+- **Testing**: pytest + pytest-asyncio
+- **Linting**: Ruff
 
 ## API Design Patterns
 
 ### RESTful API Structure
 
-```typescript
-// ✅ Resource-based URLs
-GET    /api/markets                 # List resources
-GET    /api/markets/:id             # Get single resource
-POST   /api/markets                 # Create resource
-PUT    /api/markets/:id             # Replace resource
-PATCH  /api/markets/:id             # Update resource
-DELETE /api/markets/:id             # Delete resource
+```python
+# ✅ Resource-based URLs
+# GET    /v1/products              # List resources
+# GET    /v1/products/{id}         # Get single resource
+# POST   /v1/products              # Create resource
+# PUT    /v1/products/{id}         # Update resource
+# DELETE /v1/products/{id}         # Soft delete resource
 
-// ✅ Query parameters for filtering, sorting, pagination
-GET /api/markets?status=active&sort=volume&limit=20&offset=0
+# Query parameters for filtering, pagination
+# GET /v1/products?limit=20&offset=0
+# GET /v1/food-entries?date=2025-02-05
 ```
 
-### Repository Pattern
+### Router Pattern (FastAPI)
 
-```typescript
-// Abstract data access logic
-interface MarketRepository {
-  findAll(filters?: MarketFilters): Promise<Market[]>
-  findById(id: string): Promise<Market | null>
-  create(data: CreateMarketDto): Promise<Market>
-  update(id: string, data: UpdateMarketDto): Promise<Market>
-  delete(id: string): Promise<void>
-}
+```python
+# backend/app/api/routers/products.py
+from uuid import UUID
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.ext.asyncio import AsyncSession
 
-class SupabaseMarketRepository implements MarketRepository {
-  async findAll(filters?: MarketFilters): Promise<Market[]> {
-    let query = supabase.from('markets').select('*')
+from app.api.deps import get_session, get_current_device_id
+from app.schemas.product import ProductCreate, ProductUpdate, ProductRead
+from app.services.products import ProductService
 
-    if (filters?.status) {
-      query = query.eq('status', filters.status)
-    }
+router = APIRouter(prefix="/v1/products", tags=["products"])
 
-    if (filters?.limit) {
-      query = query.limit(filters.limit)
-    }
 
-    const { data, error } = await query
+@router.get("", response_model=list[ProductRead])
+async def list_products(
+    device_id: UUID = Depends(get_current_device_id),
+    session: AsyncSession = Depends(get_session),
+    limit: int = 50,
+    offset: int = 0,
+):
+    """List all products for the current device."""
+    service = ProductService(session)
+    return await service.list(device_id, limit=limit, offset=offset)
 
-    if (error) throw new Error(error.message)
-    return data
-  }
 
-  // Other methods...
-}
+@router.get("/{product_id}", response_model=ProductRead)
+async def get_product(
+    product_id: UUID,
+    device_id: UUID = Depends(get_current_device_id),
+    session: AsyncSession = Depends(get_session),
+):
+    """Get a single product by ID."""
+    service = ProductService(session)
+    product = await service.get(device_id, product_id)
+    
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+    
+    return product
+
+
+@router.post("", response_model=ProductRead, status_code=status.HTTP_201_CREATED)
+async def create_product(
+    data: ProductCreate,
+    device_id: UUID = Depends(get_current_device_id),
+    session: AsyncSession = Depends(get_session),
+):
+    """Create a new product."""
+    service = ProductService(session)
+    return await service.create(device_id, data)
+
+
+@router.put("/{product_id}", response_model=ProductRead)
+async def update_product(
+    product_id: UUID,
+    data: ProductUpdate,
+    device_id: UUID = Depends(get_current_device_id),
+    session: AsyncSession = Depends(get_session),
+):
+    """Update an existing product."""
+    service = ProductService(session)
+    product = await service.update(device_id, product_id, data)
+    
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+    
+    return product
+
+
+@router.delete("/{product_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_product(
+    product_id: UUID,
+    device_id: UUID = Depends(get_current_device_id),
+    session: AsyncSession = Depends(get_session),
+):
+    """Soft delete a product."""
+    service = ProductService(session)
+    success = await service.delete(device_id, product_id)
+    
+    if not success:
+        raise HTTPException(status_code=404, detail="Product not found")
 ```
 
 ### Service Layer Pattern
 
-```typescript
-// Business logic separated from data access
-class MarketService {
-  constructor(private marketRepo: MarketRepository) {}
+```python
+# backend/app/services/products.py
+from uuid import UUID
+from datetime import datetime, UTC
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
-  async searchMarkets(query: string, limit: number = 10): Promise<Market[]> {
-    // Business logic
-    const embedding = await generateEmbedding(query)
-    const results = await this.vectorSearch(embedding, limit)
+from app.models.product import Product
+from app.schemas.product import ProductCreate, ProductUpdate
 
-    // Fetch full data
-    const markets = await this.marketRepo.findByIds(results.map(r => r.id))
 
-    // Sort by similarity
-    return markets.sort((a, b) => {
-      const scoreA = results.find(r => r.id === a.id)?.score || 0
-      const scoreB = results.find(r => r.id === b.id)?.score || 0
-      return scoreA - scoreB
-    })
-  }
-
-  private async vectorSearch(embedding: number[], limit: number) {
-    // Vector search implementation
-  }
-}
+class ProductService:
+    """Business logic for product operations."""
+    
+    def __init__(self, session: AsyncSession):
+        self.session = session
+    
+    async def list(
+        self,
+        device_id: UUID,
+        limit: int = 50,
+        offset: int = 0
+    ) -> list[Product]:
+        """List products for a device (excludes soft-deleted)."""
+        stmt = (
+            select(Product)
+            .where(
+                Product.device_id == device_id,
+                Product.deleted_at.is_(None)
+            )
+            .order_by(Product.name)
+            .limit(limit)
+            .offset(offset)
+        )
+        result = await self.session.execute(stmt)
+        return list(result.scalars().all())
+    
+    async def get(self, device_id: UUID, product_id: UUID) -> Product | None:
+        """Get a single product (device-scoped)."""
+        stmt = select(Product).where(
+            Product.id == product_id,
+            Product.device_id == device_id,
+            Product.deleted_at.is_(None)
+        )
+        result = await self.session.execute(stmt)
+        return result.scalar_one_or_none()
+    
+    async def create(self, device_id: UUID, data: ProductCreate) -> Product:
+        """Create a new product for a device."""
+        product = Product(
+            device_id=device_id,
+            **data.model_dump()
+        )
+        self.session.add(product)
+        await self.session.commit()
+        await self.session.refresh(product)
+        return product
+    
+    async def update(
+        self,
+        device_id: UUID,
+        product_id: UUID,
+        data: ProductUpdate
+    ) -> Product | None:
+        """Update an existing product."""
+        product = await self.get(device_id, product_id)
+        
+        if not product:
+            return None
+        
+        for key, value in data.model_dump(exclude_unset=True).items():
+            setattr(product, key, value)
+        
+        product.updated_at = datetime.now(UTC)
+        await self.session.commit()
+        await self.session.refresh(product)
+        return product
+    
+    async def delete(self, device_id: UUID, product_id: UUID) -> bool:
+        """Soft delete a product."""
+        product = await self.get(device_id, product_id)
+        
+        if not product:
+            return False
+        
+        product.deleted_at = datetime.now(UTC)
+        await self.session.commit()
+        return True
 ```
 
-### Middleware Pattern
+### Dependency Injection Pattern
 
-```typescript
-// Request/response processing pipeline
-export function withAuth(handler: NextApiHandler): NextApiHandler {
-  return async (req, res) => {
-    const token = req.headers.authorization?.replace('Bearer ', '')
+```python
+# backend/app/api/deps.py
+from uuid import UUID
+from typing import AsyncGenerator
+from fastapi import Depends, HTTPException, status
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from sqlalchemy.ext.asyncio import AsyncSession
 
-    if (!token) {
-      return res.status(401).json({ error: 'Unauthorized' })
-    }
+from app.db.session import async_session_factory
+from app.services.auth import AuthService
 
-    try {
-      const user = await verifyToken(token)
-      req.user = user
-      return handler(req, res)
-    } catch (error) {
-      return res.status(401).json({ error: 'Invalid token' })
-    }
-  }
-}
+security = HTTPBearer()
 
-// Usage
-export default withAuth(async (req, res) => {
-  // Handler has access to req.user
-})
+
+async def get_session() -> AsyncGenerator[AsyncSession, None]:
+    """Yield a database session for request."""
+    async with async_session_factory() as session:
+        try:
+            yield session
+        finally:
+            await session.close()
+
+
+async def get_current_device_id(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    session: AsyncSession = Depends(get_session),
+) -> UUID:
+    """Extract and verify device ID from bearer token."""
+    token = credentials.credentials
+    
+    auth_service = AuthService(session)
+    device = await auth_service.verify_token(token)
+    
+    if not device:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired token"
+        )
+    
+    return device.id
 ```
 
 ## Database Patterns
 
-### Query Optimization
+### SQLAlchemy Model Pattern
 
-```typescript
-// ✅ GOOD: Select only needed columns
-const { data } = await supabase
-  .from('markets')
-  .select('id, name, status, volume')
-  .eq('status', 'active')
-  .order('volume', { ascending: false })
-  .limit(10)
+```python
+# backend/app/models/product.py
+from uuid import UUID, uuid4
+from datetime import datetime, UTC
+from sqlalchemy import String, Integer, ForeignKey, DateTime
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-// ❌ BAD: Select everything
-const { data } = await supabase
-  .from('markets')
-  .select('*')
+from app.models.base import Base
+
+
+class Product(Base):
+    """Product model with calorie information."""
+    
+    __tablename__ = "products"
+    
+    id: Mapped[UUID] = mapped_column(
+        primary_key=True,
+        default=uuid4
+    )
+    device_id: Mapped[UUID] = mapped_column(
+        ForeignKey("devices.id"),
+        index=True
+    )
+    name: Mapped[str] = mapped_column(String(100))
+    kcal_100g: Mapped[int] = mapped_column(Integer)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(UTC)
+    )
+    updated_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True
+    )
+    deleted_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True
+    )
+    
+    # Relationships
+    portions: Mapped[list["Portion"]] = relationship(
+        back_populates="product",
+        lazy="selectin"
+    )
+```
+
+### Soft Delete Pattern
+
+```python
+# backend/app/models/base.py
+from datetime import datetime
+from sqlalchemy import DateTime
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+
+
+class Base(DeclarativeBase):
+    """Base model with soft delete support."""
+    pass
+
+
+class SoftDeleteMixin:
+    """Mixin for soft delete functionality."""
+    
+    deleted_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+        default=None
+    )
+    
+    @property
+    def is_deleted(self) -> bool:
+        return self.deleted_at is not None
+
+
+# Always filter by deleted_at in queries
+# ✅ CORRECT: Include soft delete filter
+stmt = select(Product).where(
+    Product.device_id == device_id,
+    Product.deleted_at.is_(None)  # CRITICAL
+)
+
+# ❌ WRONG: Missing soft delete filter
+stmt = select(Product).where(Product.device_id == device_id)
+```
+
+### Device Scoping Pattern (CRITICAL)
+
+```python
+# EVERY query MUST filter by device_id to prevent data leaks
+
+# ✅ CORRECT: Device-scoped query
+async def get_products(device_id: UUID, session: AsyncSession) -> list[Product]:
+    stmt = select(Product).where(
+        Product.device_id == device_id,
+        Product.deleted_at.is_(None)
+    )
+    result = await session.execute(stmt)
+    return list(result.scalars().all())
+
+
+# ❌ WRONG: Missing device scope (SECURITY VULNERABILITY)
+async def get_products(session: AsyncSession) -> list[Product]:
+    stmt = select(Product)  # DANGER: Returns all devices' products!
+    result = await session.execute(stmt)
+    return list(result.scalars().all())
 ```
 
 ### N+1 Query Prevention
 
-```typescript
-// ❌ BAD: N+1 query problem
-const markets = await getMarkets()
-for (const market of markets) {
-  market.creator = await getUser(market.creator_id)  // N queries
-}
+```python
+# ❌ BAD: N+1 query problem
+async def get_products_with_portions(device_id: UUID, session: AsyncSession):
+    stmt = select(Product).where(Product.device_id == device_id)
+    result = await session.execute(stmt)
+    products = result.scalars().all()
+    
+    for product in products:
+        # This triggers N additional queries!
+        portions = await get_portions(product.id)
 
-// ✅ GOOD: Batch fetch
-const markets = await getMarkets()
-const creatorIds = markets.map(m => m.creator_id)
-const creators = await getUsers(creatorIds)  // 1 query
-const creatorMap = new Map(creators.map(c => [c.id, c]))
+# ✅ GOOD: Eager loading with selectinload
+from sqlalchemy.orm import selectinload
 
-markets.forEach(market => {
-  market.creator = creatorMap.get(market.creator_id)
-})
+async def get_products_with_portions(device_id: UUID, session: AsyncSession):
+    stmt = (
+        select(Product)
+        .where(
+            Product.device_id == device_id,
+            Product.deleted_at.is_(None)
+        )
+        .options(selectinload(Product.portions))  # Loads portions in one query
+    )
+    result = await session.execute(stmt)
+    return list(result.scalars().all())
 ```
 
 ### Transaction Pattern
 
-```typescript
-async function createMarketWithPosition(
-  marketData: CreateMarketDto,
-  positionData: CreatePositionDto
-) {
-  // Use Supabase transaction
-  const { data, error } = await supabase.rpc('create_market_with_position', {
-    market_data: marketData,
-    position_data: positionData
-  })
-
-  if (error) throw new Error('Transaction failed')
-  return data
-}
-
-// SQL function in Supabase
-CREATE OR REPLACE FUNCTION create_market_with_position(
-  market_data jsonb,
-  position_data jsonb
-)
-RETURNS jsonb
-LANGUAGE plpgsql
-AS $$
-BEGIN
-  -- Start transaction automatically
-  INSERT INTO markets VALUES (market_data);
-  INSERT INTO positions VALUES (position_data);
-  RETURN jsonb_build_object('success', true);
-EXCEPTION
-  WHEN OTHERS THEN
-    -- Rollback happens automatically
-    RETURN jsonb_build_object('success', false, 'error', SQLERRM);
-END;
-$$;
+```python
+async def create_product_with_default_portion(
+    device_id: UUID,
+    product_data: ProductCreate,
+    session: AsyncSession
+) -> Product:
+    """Create product and default portion in single transaction."""
+    try:
+        # Create product
+        product = Product(device_id=device_id, **product_data.model_dump())
+        session.add(product)
+        await session.flush()  # Get product.id without committing
+        
+        # Create default portion
+        default_portion = Portion(
+            product_id=product.id,
+            name="100g",
+            grams=100,
+            is_default=True
+        )
+        session.add(default_portion)
+        
+        # Commit both
+        await session.commit()
+        await session.refresh(product)
+        return product
+        
+    except Exception:
+        await session.rollback()
+        raise
 ```
 
-## Caching Strategies
+## Pydantic Schema Patterns
 
-### Redis Caching Layer
+### Request/Response Schemas
 
-```typescript
-class CachedMarketRepository implements MarketRepository {
-  constructor(
-    private baseRepo: MarketRepository,
-    private redis: RedisClient
-  ) {}
+```python
+# backend/app/schemas/product.py
+from uuid import UUID
+from datetime import datetime
+from pydantic import BaseModel, Field, ConfigDict
 
-  async findById(id: string): Promise<Market | null> {
-    // Check cache first
-    const cached = await this.redis.get(`market:${id}`)
 
-    if (cached) {
-      return JSON.parse(cached)
-    }
+class ProductCreate(BaseModel):
+    """Schema for creating a product."""
+    
+    name: str = Field(
+        ...,
+        min_length=1,
+        max_length=100,
+        description="Product name"
+    )
+    kcal_100g: int = Field(
+        ...,
+        ge=0,
+        le=1000,
+        description="Calories per 100 grams"
+    )
+    
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "name": "Chicken Breast",
+                "kcal_100g": 165
+            }
+        }
+    )
 
-    // Cache miss - fetch from database
-    const market = await this.baseRepo.findById(id)
 
-    if (market) {
-      // Cache for 5 minutes
-      await this.redis.setex(`market:${id}`, 300, JSON.stringify(market))
-    }
+class ProductUpdate(BaseModel):
+    """Schema for updating a product."""
+    
+    name: str | None = Field(None, min_length=1, max_length=100)
+    kcal_100g: int | None = Field(None, ge=0, le=1000)
 
-    return market
-  }
 
-  async invalidateCache(id: string): Promise<void> {
-    await this.redis.del(`market:${id}`)
-  }
-}
+class ProductRead(BaseModel):
+    """Schema for reading a product."""
+    
+    id: UUID
+    name: str
+    kcal_100g: int
+    created_at: datetime
+    updated_at: datetime | None
+    
+    model_config = ConfigDict(from_attributes=True)
 ```
 
-### Cache-Aside Pattern
+## Authentication Patterns
 
-```typescript
-async function getMarketWithCache(id: string): Promise<Market> {
-  const cacheKey = `market:${id}`
+### Anonymous Device Auth
 
-  // Try cache
-  const cached = await redis.get(cacheKey)
-  if (cached) return JSON.parse(cached)
+```python
+# backend/app/services/auth.py
+from uuid import UUID, uuid4
+import secrets
+from passlib.hash import bcrypt
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
-  // Cache miss - fetch from DB
-  const market = await db.markets.findUnique({ where: { id } })
+from app.models.device import Device
 
-  if (!market) throw new Error('Market not found')
 
-  // Update cache
-  await redis.setex(cacheKey, 300, JSON.stringify(market))
+class AuthService:
+    """Authentication service for anonymous device auth."""
+    
+    def __init__(self, session: AsyncSession):
+        self.session = session
+    
+    async def register_device(self, device_id: UUID) -> str:
+        """Register a new device and return bearer token."""
+        # Generate secure token
+        token = secrets.token_urlsafe(32)
+        token_hash = bcrypt.hash(token)
+        
+        # Create device
+        device = Device(
+            id=device_id,
+            token_hash=token_hash
+        )
+        self.session.add(device)
+        await self.session.commit()
+        
+        return token
+    
+    async def verify_token(self, token: str) -> Device | None:
+        """Verify bearer token and return device if valid."""
+        # Get all devices (not ideal, but tokens aren't indexed)
+        stmt = select(Device).where(Device.deleted_at.is_(None))
+        result = await self.session.execute(stmt)
+        devices = result.scalars().all()
+        
+        # Check each device's token hash
+        for device in devices:
+            if bcrypt.verify(token, device.token_hash):
+                return device
+        
+        return None
+```
 
-  return market
-}
+### Auth Router
+
+```python
+# backend/app/api/routers/auth.py
+from uuid import UUID
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.api.deps import get_session
+from app.schemas.auth import RegisterRequest, RegisterResponse
+from app.services.auth import AuthService
+
+router = APIRouter(prefix="/v1/auth", tags=["auth"])
+
+
+@router.post("/register", response_model=RegisterResponse)
+async def register_device(
+    data: RegisterRequest,
+    session: AsyncSession = Depends(get_session),
+):
+    """Register a device and receive a bearer token."""
+    auth_service = AuthService(session)
+    
+    try:
+        token = await auth_service.register_device(data.device_id)
+        return RegisterResponse(token=token)
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Device already registered"
+        )
 ```
 
 ## Error Handling Patterns
 
-### Centralized Error Handler
+### Exception Handlers
 
-```typescript
-class ApiError extends Error {
-  constructor(
-    public statusCode: number,
-    public message: string,
-    public isOperational = true
-  ) {
-    super(message)
-    Object.setPrototypeOf(this, ApiError.prototype)
-  }
-}
+```python
+# backend/app/main.py
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
+from pydantic import ValidationError
 
-export function errorHandler(error: unknown, req: Request): Response {
-  if (error instanceof ApiError) {
-    return NextResponse.json({
-      success: false,
-      error: error.message
-    }, { status: error.statusCode })
-  }
+app = FastAPI(title="CountOnMe API", version="1.0.0")
 
-  if (error instanceof z.ZodError) {
-    return NextResponse.json({
-      success: false,
-      error: 'Validation failed',
-      details: error.errors
-    }, { status: 400 })
-  }
 
-  // Log unexpected errors
-  console.error('Unexpected error:', error)
+@app.exception_handler(ValidationError)
+async def validation_exception_handler(request: Request, exc: ValidationError):
+    return JSONResponse(
+        status_code=422,
+        content={
+            "detail": "Validation error",
+            "errors": exc.errors()
+        }
+    )
 
-  return NextResponse.json({
-    success: false,
-    error: 'Internal server error'
-  }, { status: 500 })
-}
 
-// Usage
-export async function GET(request: Request) {
-  try {
-    const data = await fetchData()
-    return NextResponse.json({ success: true, data })
-  } catch (error) {
-    return errorHandler(error, request)
-  }
-}
+@app.exception_handler(Exception)
+async def generic_exception_handler(request: Request, exc: Exception):
+    # Log the error (don't expose details to client)
+    import logging
+    logging.error(f"Unhandled error: {exc}", exc_info=True)
+    
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal server error"}
+    )
 ```
 
-### Retry with Exponential Backoff
+## Configuration Pattern
 
-```typescript
-async function fetchWithRetry<T>(
-  fn: () => Promise<T>,
-  maxRetries = 3
-): Promise<T> {
-  let lastError: Error
+```python
+# backend/app/settings.py
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
-  for (let i = 0; i < maxRetries; i++) {
-    try {
-      return await fn()
-    } catch (error) {
-      lastError = error as Error
 
-      if (i < maxRetries - 1) {
-        // Exponential backoff: 1s, 2s, 4s
-        const delay = Math.pow(2, i) * 1000
-        await new Promise(resolve => setTimeout(resolve, delay))
-      }
-    }
-  }
+class Settings(BaseSettings):
+    """Application settings from environment variables."""
+    
+    # Database
+    database_url: str
+    
+    # Server
+    debug: bool = False
+    
+    # CORS (for mobile client)
+    cors_origins: list[str] = ["*"]
+    
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8"
+    )
 
-  throw lastError!
-}
 
-// Usage
-const data = await fetchWithRetry(() => fetchFromAPI())
+settings = Settings()
 ```
 
-## Authentication & Authorization
+## Alembic Migration Pattern
 
-### JWT Token Validation
+```python
+# alembic/versions/001_create_devices.py
+"""Create devices table
 
-```typescript
-import jwt from 'jsonwebtoken'
+Revision ID: 001
+"""
+from alembic import op
+import sqlalchemy as sa
+from sqlalchemy.dialects import postgresql
 
-interface JWTPayload {
-  userId: string
-  email: string
-  role: 'admin' | 'user'
-}
+revision = '001'
+down_revision = None
 
-export function verifyToken(token: string): JWTPayload {
-  try {
-    const payload = jwt.verify(token, process.env.JWT_SECRET!) as JWTPayload
-    return payload
-  } catch (error) {
-    throw new ApiError(401, 'Invalid token')
-  }
-}
 
-export async function requireAuth(request: Request) {
-  const token = request.headers.get('authorization')?.replace('Bearer ', '')
+def upgrade() -> None:
+    op.create_table(
+        'devices',
+        sa.Column('id', postgresql.UUID(as_uuid=True), primary_key=True),
+        sa.Column('token_hash', sa.String(128), nullable=False),
+        sa.Column('last_seen_at', sa.DateTime(timezone=True), nullable=True),
+        sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.func.now()),
+        sa.Column('deleted_at', sa.DateTime(timezone=True), nullable=True),
+    )
 
-  if (!token) {
-    throw new ApiError(401, 'Missing authorization token')
-  }
 
-  return verifyToken(token)
-}
-
-// Usage in API route
-export async function GET(request: Request) {
-  const user = await requireAuth(request)
-
-  const data = await getDataForUser(user.userId)
-
-  return NextResponse.json({ success: true, data })
-}
+def downgrade() -> None:
+    op.drop_table('devices')
 ```
 
-### Role-Based Access Control
+## Testing Patterns
 
-```typescript
-type Permission = 'read' | 'write' | 'delete' | 'admin'
+### Service Tests
 
-interface User {
-  id: string
-  role: 'admin' | 'moderator' | 'user'
-}
+```python
+# backend/tests/test_product_service.py
+import pytest
+from uuid import uuid4
+from app.services.products import ProductService
+from app.schemas.product import ProductCreate
 
-const rolePermissions: Record<User['role'], Permission[]> = {
-  admin: ['read', 'write', 'delete', 'admin'],
-  moderator: ['read', 'write', 'delete'],
-  user: ['read', 'write']
-}
 
-export function hasPermission(user: User, permission: Permission): boolean {
-  return rolePermissions[user.role].includes(permission)
-}
+@pytest.mark.asyncio
+async def test_create_product(session, device):
+    """Should create a product for device."""
+    service = ProductService(session)
+    data = ProductCreate(name="Chicken", kcal_100g=165)
+    
+    product = await service.create(device.id, data)
+    
+    assert product.name == "Chicken"
+    assert product.kcal_100g == 165
+    assert product.device_id == device.id
 
-export function requirePermission(permission: Permission) {
-  return (handler: (request: Request, user: User) => Promise<Response>) => {
-    return async (request: Request) => {
-      const user = await requireAuth(request)
 
-      if (!hasPermission(user, permission)) {
-        throw new ApiError(403, 'Insufficient permissions')
-      }
+@pytest.mark.asyncio
+async def test_list_excludes_deleted(session, device):
+    """Should not return soft-deleted products."""
+    service = ProductService(session)
+    
+    # Create and delete a product
+    product = await service.create(
+        device.id,
+        ProductCreate(name="Deleted", kcal_100g=100)
+    )
+    await service.delete(device.id, product.id)
+    
+    # List should be empty
+    products = await service.list(device.id)
+    assert len(products) == 0
 
-      return handler(request, user)
-    }
-  }
-}
 
-// Usage - HOF wraps the handler
-export const DELETE = requirePermission('delete')(
-  async (request: Request, user: User) => {
-    // Handler receives authenticated user with verified permission
-    return new Response('Deleted', { status: 200 })
-  }
-)
+@pytest.mark.asyncio
+async def test_get_returns_none_for_other_device(session, device):
+    """Should return None for products from other devices."""
+    service = ProductService(session)
+    other_device_id = uuid4()
+    
+    # Create product for other device
+    product = await service.create(
+        other_device_id,
+        ProductCreate(name="Other", kcal_100g=100)
+    )
+    
+    # Try to get from our device
+    result = await service.get(device.id, product.id)
+    assert result is None
 ```
 
-## Rate Limiting
-
-### Simple In-Memory Rate Limiter
-
-```typescript
-class RateLimiter {
-  private requests = new Map<string, number[]>()
-
-  async checkLimit(
-    identifier: string,
-    maxRequests: number,
-    windowMs: number
-  ): Promise<boolean> {
-    const now = Date.now()
-    const requests = this.requests.get(identifier) || []
-
-    // Remove old requests outside window
-    const recentRequests = requests.filter(time => now - time < windowMs)
-
-    if (recentRequests.length >= maxRequests) {
-      return false  // Rate limit exceeded
-    }
-
-    // Add current request
-    recentRequests.push(now)
-    this.requests.set(identifier, recentRequests)
-
-    return true
-  }
-}
-
-const limiter = new RateLimiter()
-
-export async function GET(request: Request) {
-  const ip = request.headers.get('x-forwarded-for') || 'unknown'
-
-  const allowed = await limiter.checkLimit(ip, 100, 60000)  // 100 req/min
-
-  if (!allowed) {
-    return NextResponse.json({
-      error: 'Rate limit exceeded'
-    }, { status: 429 })
-  }
-
-  // Continue with request
-}
-```
-
-## Background Jobs & Queues
-
-### Simple Queue Pattern
-
-```typescript
-class JobQueue<T> {
-  private queue: T[] = []
-  private processing = false
-
-  async add(job: T): Promise<void> {
-    this.queue.push(job)
-
-    if (!this.processing) {
-      this.process()
-    }
-  }
-
-  private async process(): Promise<void> {
-    this.processing = true
-
-    while (this.queue.length > 0) {
-      const job = this.queue.shift()!
-
-      try {
-        await this.execute(job)
-      } catch (error) {
-        console.error('Job failed:', error)
-      }
-    }
-
-    this.processing = false
-  }
-
-  private async execute(job: T): Promise<void> {
-    // Job execution logic
-  }
-}
-
-// Usage for indexing markets
-interface IndexJob {
-  marketId: string
-}
-
-const indexQueue = new JobQueue<IndexJob>()
-
-export async function POST(request: Request) {
-  const { marketId } = await request.json()
-
-  // Add to queue instead of blocking
-  await indexQueue.add({ marketId })
-
-  return NextResponse.json({ success: true, message: 'Job queued' })
-}
-```
-
-## Logging & Monitoring
-
-### Structured Logging
-
-```typescript
-interface LogContext {
-  userId?: string
-  requestId?: string
-  method?: string
-  path?: string
-  [key: string]: unknown
-}
-
-class Logger {
-  log(level: 'info' | 'warn' | 'error', message: string, context?: LogContext) {
-    const entry = {
-      timestamp: new Date().toISOString(),
-      level,
-      message,
-      ...context
-    }
-
-    console.log(JSON.stringify(entry))
-  }
-
-  info(message: string, context?: LogContext) {
-    this.log('info', message, context)
-  }
-
-  warn(message: string, context?: LogContext) {
-    this.log('warn', message, context)
-  }
-
-  error(message: string, error: Error, context?: LogContext) {
-    this.log('error', message, {
-      ...context,
-      error: error.message,
-      stack: error.stack
-    })
-  }
-}
-
-const logger = new Logger()
-
-// Usage
-export async function GET(request: Request) {
-  const requestId = crypto.randomUUID()
-
-  logger.info('Fetching markets', {
-    requestId,
-    method: 'GET',
-    path: '/api/markets'
-  })
-
-  try {
-    const markets = await fetchMarkets()
-    return NextResponse.json({ success: true, data: markets })
-  } catch (error) {
-    logger.error('Failed to fetch markets', error as Error, { requestId })
-    return NextResponse.json({ error: 'Internal error' }, { status: 500 })
-  }
-}
-```
-
-**Remember**: Backend patterns enable scalable, maintainable server-side applications. Choose patterns that fit your complexity level.
+**Remember**: Backend patterns enable scalable, maintainable server-side applications. Always enforce device scoping and soft deletes.

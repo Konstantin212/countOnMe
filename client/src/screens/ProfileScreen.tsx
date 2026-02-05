@@ -5,6 +5,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 
 import { ProfileStackParamList } from '@app/navigationTypes';
+import { useSyncStatus } from '@hooks/useSyncStatus';
 import { useTheme } from '@hooks/useTheme';
 import { ThemeMode } from '@theme/ThemeContext';
 
@@ -12,10 +13,7 @@ type Props = NativeStackScreenProps<ProfileStackParamList, 'ProfileMenu'>;
 
 const ProfileScreen = ({ navigation }: Props) => {
   const { colors, themeMode, setThemeMode, theme } = useTheme();
-
-  // Debug logging
-  console.log('ProfileScreen - Current theme mode:', themeMode);
-  console.log('ProfileScreen - Resolved theme:', theme);
+  const sync = useSyncStatus();
 
   const themeOptions: { id: ThemeMode; title: string; subtitle: string; icon: any }[] = [
     {
@@ -106,6 +104,52 @@ const ProfileScreen = ({ navigation }: Props) => {
       marginBottom: 12,
       marginHorizontal: 8,
       lineHeight: 18,
+    },
+    syncCard: {
+      padding: 16,
+      backgroundColor: colors.cardBackground,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
+      marginBottom: 8,
+    },
+    syncRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      marginBottom: 6,
+    },
+    syncLabel: {
+      fontSize: 13,
+      color: colors.textSecondary,
+    },
+    syncValue: {
+      fontSize: 13,
+      color: colors.text,
+      fontWeight: '600',
+      maxWidth: '65%',
+      textAlign: 'right',
+    },
+    syncError: {
+      marginTop: 8,
+      fontSize: 12,
+      color: colors.error,
+      lineHeight: 16,
+    },
+    syncButton: {
+      marginTop: 12,
+      alignSelf: 'flex-start',
+      paddingVertical: 10,
+      paddingHorizontal: 14,
+      borderRadius: 10,
+      backgroundColor: colors.primary,
+    },
+    syncButtonDisabled: {
+      backgroundColor: colors.disabled,
+    },
+    syncButtonText: {
+      color: colors.buttonText,
+      fontWeight: '700',
+      fontSize: 14,
     },
     themeOption: {
       flexDirection: 'row',
@@ -202,8 +246,8 @@ const ProfileScreen = ({ navigation }: Props) => {
           </Text>
           {themeMode === 'system' && theme === 'light' && (
             <Text style={styles.themeWarning}>
-              ⚠️ If your phone is in dark mode but the app shows light, manually select "Dark"
-              below. Some Android devices don't report system theme correctly.
+              If your phone is in dark mode but the app shows light, manually select "Dark" below.
+              Some Android devices don't report system theme correctly.
             </Text>
           )}
           {themeOptions.map((option) => (
@@ -236,6 +280,52 @@ const ProfileScreen = ({ navigation }: Props) => {
               )}
             </Pressable>
           ))}
+        </View>
+
+        {/* Sync */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Sync</Text>
+          <View style={styles.syncCard}>
+            <View style={styles.syncRow}>
+              <Text style={styles.syncLabel}>Backend</Text>
+              <Text style={styles.syncValue}>{sync.baseUrl}</Text>
+            </View>
+            <View style={styles.syncRow}>
+              <Text style={styles.syncLabel}>Device</Text>
+              <Text style={styles.syncValue}>{sync.deviceId ? sync.deviceId.slice(0, 8) : '-'}</Text>
+            </View>
+            <View style={styles.syncRow}>
+              <Text style={styles.syncLabel}>Token</Text>
+              <Text style={styles.syncValue}>{sync.hasToken ? 'Saved' : 'Missing (will register)'}</Text>
+            </View>
+            <View style={styles.syncRow}>
+              <Text style={styles.syncLabel}>Status</Text>
+              <Text style={styles.syncValue}>{sync.isOnline ? 'Online' : 'Offline'}</Text>
+            </View>
+            <View style={styles.syncRow}>
+              <Text style={styles.syncLabel}>Queue</Text>
+              <Text style={styles.syncValue}>{sync.queueSize}</Text>
+            </View>
+            <View style={styles.syncRow}>
+              <Text style={styles.syncLabel}>Last sync</Text>
+              <Text style={styles.syncValue}>
+                {sync.lastSyncAt ? new Date(sync.lastSyncAt).toLocaleString() : '-'}
+              </Text>
+            </View>
+            {sync.lastError && <Text style={styles.syncError}>Last error: {sync.lastError}</Text>}
+            <Pressable
+              style={[
+                styles.syncButton,
+                (sync.flushing || !sync.isOnline) && styles.syncButtonDisabled,
+              ]}
+              disabled={sync.flushing || !sync.isOnline}
+              onPress={sync.flushNow}
+            >
+              <Text style={styles.syncButtonText}>
+                {sync.flushing ? 'Syncing…' : 'Sync now'}
+              </Text>
+            </Pressable>
+          </View>
         </View>
 
         {/* My Data */}

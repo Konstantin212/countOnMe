@@ -4,6 +4,7 @@ import { v4 as uuid } from 'uuid';
 import { Product, ScaleType, Unit } from '@models/types';
 import { SCALE_UNITS } from '@services/constants/scaleConstants';
 import { loadProducts, saveProducts } from '@storage/storage';
+import { enqueue } from '@storage/syncQueue';
 
 export type NewProductInput = {
   name: string;
@@ -197,6 +198,12 @@ export const useProducts = (): UseProductsResult => {
     async (input: NewProductInput) => {
       const newProduct = createProductRecord(input);
       await applyChanges((prev) => [...prev, newProduct]);
+      await enqueue({
+        id: `products.create:${newProduct.id}`,
+        resource: 'products',
+        action: 'create',
+        payload: { id: newProduct.id, name: newProduct.name },
+      });
       return newProduct;
     },
     [applyChanges],
@@ -204,7 +211,6 @@ export const useProducts = (): UseProductsResult => {
 
   const updateProduct = useCallback(
     async (id: string, patch: UpdateProductInput) => {
-      let updatedProduct: Product | null = null;
       await applyChanges((prev) => {
         let changed = false;
         const next = prev.map((product) => {
@@ -212,13 +218,21 @@ export const useProducts = (): UseProductsResult => {
             return product;
           }
           changed = true;
-          updatedProduct = patchProductRecord(product, patch);
-          return updatedProduct;
+          return patchProductRecord(product, patch);
         });
 
         return changed ? next : prev;
       });
 
+      const updatedProduct = productsRef.current.find((p) => p.id === id) ?? null;
+      if (updatedProduct) {
+        await enqueue({
+          id: `products.update:${updatedProduct.id}:${updatedProduct.updatedAt}`,
+          resource: 'products',
+          action: 'update',
+          payload: { id: updatedProduct.id, name: updatedProduct.name },
+        });
+      }
       return updatedProduct;
     },
     [applyChanges],
@@ -226,26 +240,28 @@ export const useProducts = (): UseProductsResult => {
 
   const deleteProduct = useCallback(
     async (id: string) => {
-      console.log('deleteProduct called with id:', id);
       let removed = false;
-      
+
       await applyChanges((prev) => {
-        console.log('Current products count:', prev.length);
         const next = prev.filter((product) => {
           if (product.id === id) {
-            console.log('Found product to delete:', product.name);
             removed = true;
             return false;
           }
           return true;
         });
-        console.log('New products count:', next.length);
-        console.log('Product was removed:', removed);
 
         return removed ? next : prev;
       });
 
-      console.log('deleteProduct returning:', removed);
+      if (removed) {
+        await enqueue({
+          id: `products.delete:${id}:${now()}`,
+          resource: 'products',
+          action: 'delete',
+          payload: { id },
+        });
+      }
       return removed;
     },
     [applyChanges],

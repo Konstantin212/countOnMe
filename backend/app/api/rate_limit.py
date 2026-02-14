@@ -2,7 +2,6 @@
 
 Uses a sliding-window counter per client IP. No external dependencies.
 """
-from __future__ import annotations
 
 import time
 from collections import defaultdict

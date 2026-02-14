@@ -117,7 +117,7 @@ architect → planner → [user approval] →
   backend-developer (if backend/) ∥ fe-developer (if client/) →
   verifier →
   backend-reviewer (if backend/) ∥ fe-reviewer (if client/) →
-  security-reviewer (if auth/input/API) → doc-writer
+  security-reviewer (if auth/input/API) -> tdd-guide → doc-writer
 ```
 
 #### Flow 2: Bug Fix
@@ -125,7 +125,7 @@ architect → planner → [user approval] →
 [analyze root cause] →
   backend-developer (if backend/) / fe-developer (if client/) →
     (internally: write failing test → fix → verify) →
-  verifier →
+  verifier → tdd-guide ->
   backend-reviewer ∥ fe-reviewer (based on changed files)
 ```
 
@@ -133,7 +133,7 @@ architect → planner → [user approval] →
 ```
 verifier (baseline) → planner → [user approval] →
   backend-developer ∥ fe-developer (implement changes) →
-  refactor-cleaner → verifier →
+  refactor-cleaner → verifier → tdd-guide ->
   backend-reviewer ∥ fe-reviewer
 ```
 
@@ -151,7 +151,7 @@ architect → [ADR in docs/architecture/] → planner → [user approval]
 #### Flow 6: Small Fix (Single File, Skip Architect)
 ```
 planner (lightweight) → fe-developer or backend-developer →
-  verifier → fe-reviewer or backend-reviewer
+  verifier → tdd-guide -> fe-reviewer or backend-reviewer
 ```
 
 ### Subagent Delegation

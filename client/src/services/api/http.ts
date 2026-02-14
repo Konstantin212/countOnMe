@@ -25,16 +25,40 @@ type ApiFetchOptions = {
   query?: Record<string, string | number | boolean | undefined>;
 };
 
+/** Singleton promise — prevents concurrent device registrations. */
+let pendingRegistration: Promise<string> | null = null;
+
+/**
+ * Force-register: clears stale token, registers, stores new one.
+ * Concurrent callers share the same in-flight promise.
+ */
+const acquireDeviceToken = async (): Promise<string> => {
+  if (pendingRegistration) {
+    return pendingRegistration;
+  }
+
+  pendingRegistration = (async () => {
+    await clearDeviceToken();
+    const deviceId = await getOrCreateDeviceId();
+    const { device_token } = await registerDevice(deviceId);
+    await setDeviceToken(device_token);
+    return device_token;
+  })();
+
+  try {
+    return await pendingRegistration;
+  } finally {
+    pendingRegistration = null;
+  }
+};
+
+/** Returns cached token or acquires a new one. */
 const ensureDeviceToken = async (): Promise<string> => {
   const existing = await getDeviceToken();
   if (existing) {
     return existing;
   }
-
-  const deviceId = await getOrCreateDeviceId();
-  const { device_token } = await registerDevice(deviceId);
-  await setDeviceToken(device_token);
-  return device_token;
+  return acquireDeviceToken();
 };
 
 const parseErrorDetails = async (res: Response): Promise<unknown> => {
@@ -73,8 +97,7 @@ export const apiFetch = async <T>(
   // 401 = token expired/missing → re-register and retry once.
   // 403 = actively revoked → do NOT auto-reissue (force user awareness).
   if (res.status === 401) {
-    await clearDeviceToken();
-    const refreshed = await ensureDeviceToken();
+    const refreshed = await acquireDeviceToken();
     res = await doFetch(refreshed);
   }
 

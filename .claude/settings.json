@@ -50,6 +50,7 @@
         "matcher": "Write",
         "hooks": [
           {
+            "type": "command",
             "command": "node .claude/hooks/block-random-md.js"
           }
         ]
@@ -58,6 +59,7 @@
         "matcher": "Bash",
         "hooks": [
           {
+            "type": "command",
             "command": "node .claude/hooks/git-push-warn.js"
           }
         ]
@@ -66,6 +68,7 @@
         "matcher": "Edit|Write",
         "hooks": [
           {
+            "type": "command",
             "command": "node .claude/hooks/suggest-compact.js"
           }
         ]
@@ -76,6 +79,7 @@
         "matcher": "Edit|Write",
         "hooks": [
           {
+            "type": "command",
             "command": "node .claude/hooks/post-edit-typecheck.js",
             "timeout": 60
           }
@@ -85,6 +89,7 @@
         "matcher": "Edit|Write",
         "hooks": [
           {
+            "type": "command",
             "command": "node .claude/hooks/post-edit-lint-python.js",
             "timeout": 30
           }
@@ -94,6 +99,7 @@
         "matcher": "Edit|Write",
         "hooks": [
           {
+            "type": "command",
             "command": "node .claude/hooks/post-edit-console-warn.js"
           }
         ]
@@ -102,6 +108,7 @@
         "matcher": "Edit|Write",
         "hooks": [
           {
+            "type": "command",
             "command": "node .claude/hooks/post-edit-format.js",
             "timeout": 15
           }
@@ -112,6 +119,7 @@
       {
         "hooks": [
           {
+            "type": "command",
             "command": "node .claude/hooks/check-console-log.js",
             "timeout": 30
           }

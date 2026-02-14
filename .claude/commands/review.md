@@ -54,3 +54,4 @@ Determine which files have changed and route to the correct reviewer:
 - Agent: `.claude/agents/backend-reviewer.md` — For `backend/` changes
 - Agent: `.claude/agents/fe-reviewer.md` — For `client/` changes
 - Agent: `.claude/agents/code-reviewer.md` — Generic fallback
+- Agent: `.claude/agents/security-reviewer.md` — Security review

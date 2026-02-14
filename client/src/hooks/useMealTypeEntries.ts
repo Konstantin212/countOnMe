@@ -73,6 +73,8 @@ export const useMealTypeEntries = (
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { products } = useProducts();
+  const productsRef = useRef(products);
+  productsRef.current = products;
   const isMountedRef = useRef(true);
 
   useEffect(() => {
@@ -172,8 +174,8 @@ export const useMealTypeEntries = (
       // Filter by meal type
       const filtered = response.filter((e) => e.meal_type === mealType);
 
-      // Build product map for quick lookup
-      const productsMap = new Map(products.map((p) => [p.id, p]));
+      // Build product map for quick lookup (use ref for stable identity)
+      const productsMap = new Map(productsRef.current.map((p) => [p.id, p]));
 
       // Enrich entries with product details
       const enrichedPromises = filtered.map((e) => enrichEntry(e, productsMap));
@@ -196,9 +198,21 @@ export const useMealTypeEntries = (
         setLoading(false);
       }
     }
-  }, [day, mealType, products, enrichEntry]);
+  }, [day, mealType, enrichEntry]);
 
-  // Initial fetch and refresh when dependencies change
+  // Initial fetch and re-fetch when products become available
+  const hadProductsRef = useRef(false);
+  useEffect(() => {
+    const hasProducts = productsRef.current.length > 0;
+    const isFirstLoad = hasProducts && !hadProductsRef.current;
+
+    if (isFirstLoad) {
+      hadProductsRef.current = true;
+      refresh();
+    }
+  }, [products, refresh]);
+
+  // Initial fetch on mount / when day or mealType change
   useEffect(() => {
     refresh();
   }, [refresh]);
@@ -217,8 +231,10 @@ export const useMealTypeEntries = (
           prev.map((entry) => {
             if (entry.id !== entryId) return entry;
 
-            // Recalculate with new amount/unit
-            const product = products.find((p) => p.id === entry.productId);
+            // Recalculate with new amount/unit (use ref for consistency)
+            const product = productsRef.current.find(
+              (p) => p.id === entry.productId,
+            );
             if (!product) return { ...entry, amount, unit };
 
             const baseAmount = product.portionSize ?? 100;
@@ -273,7 +289,7 @@ export const useMealTypeEntries = (
         return false;
       }
     },
-    [products],
+    [],
   );
 
   /**

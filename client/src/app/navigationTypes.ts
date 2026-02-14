@@ -5,13 +5,15 @@ import {
   MealTypeKey,
 } from "@models/types";
 
+export type ProductFormParams = { productId?: string } | undefined;
+
 export type MyDayStackParamList = {
   MyDay: undefined;
   AddMeal: undefined;
   SelectProduct: undefined;
   AddFood: { productId: string };
   MealTypeEntries: { mealType: MealTypeKey };
-  ProductForm: { productId?: string } | undefined;
+  ProductForm: ProductFormParams;
 };
 
 export type MyPathStackParamList = {
@@ -22,7 +24,7 @@ export type ProfileStackParamList = {
   ProfileMenu: undefined;
   ProductsList: undefined;
   ProductDetails: { productId: string };
-  ProductForm: { productId?: string } | undefined;
+  ProductForm: ProductFormParams;
   ProductSearch: undefined;
   ProductConfirm: {
     externalProduct: {

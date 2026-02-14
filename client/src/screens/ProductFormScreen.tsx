@@ -1,12 +1,19 @@
 import React, { useEffect, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+  Alert,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 
-import { ProfileStackParamList } from "@app/navigationTypes";
+import { ProductFormParams } from "@app/navigationTypes";
 import { useProducts } from "@hooks/useProducts";
 import { useTheme } from "@hooks/useTheme";
 import {
@@ -24,7 +31,10 @@ import {
   SectionTitle,
 } from "@particles/index";
 
-type Props = NativeStackScreenProps<ProfileStackParamList, "ProductForm">;
+type Props = NativeStackScreenProps<
+  { ProductForm: ProductFormParams },
+  "ProductForm"
+>;
 
 const ProductFormScreen = ({ navigation, route }: Props) => {
   const isEditing = Boolean(route.params?.productId);
@@ -105,8 +115,9 @@ const ProductFormScreen = ({ navigation, route }: Props) => {
         await addProduct(productData);
       }
       navigation.goBack();
-    } catch (error) {
-      console.error("Save product error:", error);
+    } catch (err) {
+      console.error("Failed to save product:", err);
+      Alert.alert("Error", "Failed to save product. Please try again.");
     } finally {
       setSaving(false);
     }

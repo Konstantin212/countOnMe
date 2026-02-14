@@ -1,0 +1,122 @@
+{
+  "permissions": {
+    "allow": [
+      "Read",
+      "Edit",
+      "Write",
+      "Glob",
+      "Grep",
+      "Bash(git status*)",
+      "Bash(git diff*)",
+      "Bash(git log*)",
+      "Bash(git add*)",
+      "Bash(git commit*)",
+      "Bash(git branch*)",
+      "Bash(git checkout*)",
+      "Bash(git stash*)",
+      "Bash(git ls-tree*)",
+      "Bash(cd client && npm*)",
+      "Bash(cd client && npx*)",
+      "Bash(cd backend && ruff*)",
+      "Bash(cd backend && pytest*)",
+      "Bash(cd backend && poetry*)",
+      "Bash(node -c*)",
+      "Bash(node -e*)",
+      "Bash(ls*)",
+      "Bash(mkdir*)",
+      "mcp__github__get_me",
+      "mcp__github__get_file_contents",
+      "mcp__github__list_issues",
+      "mcp__github__search_issues",
+      "mcp__github__search_code",
+      "mcp__github__list_pull_requests",
+      "mcp__github__search_pull_requests",
+      "mcp__github__create_pull_request",
+      "mcp__github__pull_request_read",
+      "mcp__github__issue_read",
+      "WebFetch",
+      "WebSearch"
+    ],
+    "deny": [
+      "Bash(rm -rf*)",
+      "Bash(git push --force*)",
+      "Bash(git push -f*)",
+      "Bash(git reset --hard*)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "command": "node .claude/hooks/block-random-md.js"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "command": "node .claude/hooks/git-push-warn.js"
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "command": "node .claude/hooks/suggest-compact.js"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "command": "node .claude/hooks/post-edit-typecheck.js",
+            "timeout": 60
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "command": "node .claude/hooks/post-edit-lint-python.js",
+            "timeout": 30
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "command": "node .claude/hooks/post-edit-console-warn.js"
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "command": "node .claude/hooks/post-edit-format.js",
+            "timeout": 15
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "command": "node .claude/hooks/check-console-log.js",
+            "timeout": 30
+          }
+        ]
+      }
+    ]
+  }
+}

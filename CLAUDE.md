@@ -11,6 +11,121 @@
 
 ---
 
+## Autonomous Workflow — Agent-Based Orchestration
+
+Claude MUST follow these workflows automatically without being asked. Specialized agents live in `.claude/agents/` and slash commands in `.claude/commands/`.
+
+### Available Agents
+
+| Agent | Model | When to Use |
+|-------|-------|-------------|
+| `planner` | opus | Planning features, architectural changes (3+ files) |
+| `verifier` | haiku | Running type check + lint + tests after changes |
+| `tdd-guide` | sonnet | Implementing new logic with Red-Green-Refactor |
+| `code-reviewer` | sonnet | Reviewing code quality, security, patterns |
+| `build-fixer` | sonnet | Fixing build/type/lint errors incrementally |
+| `refactor-cleaner` | sonnet | Finding and removing dead code |
+| `security-reviewer` | sonnet | Security vulnerability scanning |
+| `doc-writer` | haiku | Generating/updating feature docs in docs/ |
+
+### Available Commands
+
+| Command | Description |
+|---------|-------------|
+| `/plan` | Plan a feature before coding |
+| `/verify` | Run full verification suite |
+| `/tdd` | Implement with TDD workflow |
+| `/review` | Review recent code changes |
+| `/build-fix` | Fix build/type errors |
+| `/refactor-clean` | Find and remove dead code |
+| `/security` | Security audit |
+| `/orchestrate` | Run multi-agent workflow (feature/bugfix/refactor) |
+| `/doc` | Generate/update feature documentation |
+| `/checkpoint` | Create named git checkpoint with SHA |
+| `/lint-fix` | Auto-fix linting issues |
+| `/format` | Auto-format code |
+
+### When to Invoke Agents Automatically
+
+#### Plan Before Code (Mandatory for Non-Trivial Tasks)
+
+For any task touching 3+ files or adding a new feature:
+1. Use **planner** agent to analyze and create a phased plan
+2. Present plan and WAIT for user approval before writing code
+3. Implement phase by phase
+4. Use **verifier** agent after each phase
+
+Skip planning only for: single-line fixes, typo corrections, simple renames.
+
+#### Verify After Every Change
+
+After writing or editing code, ALWAYS run the **verifier** agent:
+- **Client changes**: `cd client && npx tsc --noEmit` (type check), then `npm test` if tests exist
+- **Backend changes**: `cd backend && ruff check app/` (lint), then `pytest` if tests exist
+- **Both**: Run both verification chains in parallel
+- If verification fails, use **build-fixer** agent to resolve errors
+
+#### TDD Cycle (Mandatory for New Logic)
+
+When implementing new functions, hooks, or services, use the **tdd-guide** agent:
+1. **RED** — Write a failing test first
+2. **GREEN** — Write minimal code to pass
+3. **REFACTOR** — Improve while tests stay green
+4. Never write implementation before tests for business logic
+
+#### Build Error Resolution
+
+When a build or type check fails, use the **build-fixer** agent:
+1. Parse and group errors by file
+2. Fix one error at a time, starting with imports/types
+3. Re-run check after each fix
+4. Stop and ask user if a fix introduces MORE errors than it resolves
+5. Stop and ask user if the same error persists after 3 attempts
+
+#### Feature Workflow (Multi-Agent Orchestration)
+
+For new features, follow this chain automatically:
+1. **planner** → Create phased plan, get approval
+2. **tdd-guide** → Implement each phase with tests first
+3. **verifier** → Run full verification suite
+4. **code-reviewer** → Check quality and patterns
+5. **security-reviewer** → Scan for vulnerabilities (if auth/input/API involved)
+6. **doc-writer** → Update or create documentation in docs/
+
+### Subagent Delegation
+
+Use parallel Task agents for independent operations:
+- **Explore agent**: Codebase search across 3+ files or uncertain locations
+- Launch independent agents in parallel (e.g., type-check client + lint backend simultaneously)
+- Use `model: "haiku"` for simple searches and lightweight tasks to save context
+
+### Context Window Management
+
+- Be concise in tool outputs — avoid dumping entire files when a section suffices
+- When context is getting large, prefer targeted reads (offset/limit) over full file reads
+- For files >400 lines, read only the relevant section
+- Proactively suggest `/compact` if conversation is getting long
+
+### Hooks (Automatic Quality Gates)
+
+Hook scripts live in `.claude/hooks/` and fire automatically:
+
+**PostToolUse** (after Edit/Write):
+- `post-edit-typecheck.js` — Runs `tsc --noEmit` after `.ts/.tsx` edits, reports errors in edited file
+- `post-edit-lint-python.js` — Runs `ruff check` after `.py` edits, reports errors
+- `post-edit-console-warn.js` — Warns if `console.log` introduced in `.ts/.tsx`
+- `post-edit-format.js` — Runs `prettier --write` after `.ts/.tsx/.js/.jsx` edits
+
+**PreToolUse** (before tool execution):
+- `block-random-md.js` — Blocks `.md` creation outside `docs/`, `README.md`, `CLAUDE.md`, `.claude/`
+- `git-push-warn.js` — Escalates `git push` to user, blocks `--force` push
+- `suggest-compact.js` — Suggests `/compact` after 50+ tool calls
+
+**Stop** (after each response):
+- `check-console-log.js` — Scans recently modified `.ts/.tsx` files for `console.log`
+
+---
+
 ## Tech Stack
 
 ### Client (mobile)
@@ -33,6 +148,21 @@
 
 ### Database
 - PostgreSQL (via Docker Compose locally)
+
+### Quick Commands
+- **Client type check**: `cd client && npm run type-check`
+- **Client tests**: `cd client && npm test`
+- **Client tests (watch)**: `cd client && npm run test:watch`
+- **Client tests (coverage)**: `cd client && npm run test:coverage`
+- **Client lint**: `cd client && npm run lint`
+- **Client lint fix**: `cd client && npm run lint:fix`
+- **Client format**: `cd client && npm run format`
+- **Client verify**: `cd client && npm run verify`
+- **Backend lint**: `cd backend && ruff check app/`
+- **Backend lint fix**: `cd backend && ruff check app/ --fix`
+- **Backend tests**: `cd backend && pytest --cov=app --cov-report=term-missing`
+- **Backend format**: `cd backend && ruff format app/`
+- **Full verify**: Run client verify + backend lint + backend tests
 
 ---
 
@@ -258,16 +388,29 @@ Always create new objects, NEVER mutate existing ones. Immutable data prevents h
 ### Git Workflow
 - Commit format: `<type>: <description>` (types: feat, fix, refactor, docs, test, chore, perf, ci)
 - Feature workflow: Plan first → TDD approach → Code review → Commit
+- NEVER commit without running verification first
+- NEVER push without explicit user request
 
 ### Testing
 - Minimum test coverage: 80%
 - TDD workflow: Write test (RED) → Run (FAIL) → Implement (GREEN) → Run (PASS) → Refactor (IMPROVE) → Verify coverage
 - Frontend: Vitest — `cd client && npm test`
-- Backend: Pytest — `pytest --cov=src --cov-report=term-missing`
+- Backend: Pytest — `cd backend && pytest --cov=app --cov-report=term-missing`
 - Use `pytest.mark` for categorization (unit, integration)
 - Test device scoping (A cannot read B's data)
 
+### Refactoring & Dead Code Cleanup
+
+When refactoring or cleaning up code:
+1. Run full test suite first — establish green baseline
+2. Delete one item at a time
+3. Re-run tests after each deletion
+4. If tests fail, revert immediately with `git checkout -- <file>`
+5. Never refactor and clean in the same pass — separate concerns
+
 ### Code Quality Checklist
+
+Before marking any task complete, verify:
 - [ ] Code is readable and well-named
 - [ ] Functions are small (<50 lines)
 - [ ] Files are focused (<800 lines)
@@ -278,3 +421,5 @@ Always create new objects, NEVER mutate existing ones. Immutable data prevents h
 - [ ] Types are explicit (no `any` without justification)
 - [ ] No console.logs in production code
 - [ ] No unused imports or variables
+- [ ] Type check passes (`tsc --noEmit` / `ruff check`)
+- [ ] Existing tests still pass

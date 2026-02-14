@@ -1,12 +1,15 @@
 {
   "permissions": {
-    "defaultMode": "acceptEdits",
     "allow": [
       "Edit",
       "Write",
-      "mcp__github__get_me"
+      "mcp__github__get_me",
+      "WebFetch(domain:api.github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "mcp__github__get_file_contents"
     ],
     "deny": [],
-    "ask": []
+    "ask": [],
+    "defaultMode": "acceptEdits"
   }
 }

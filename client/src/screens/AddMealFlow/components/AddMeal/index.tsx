@@ -1,24 +1,38 @@
-import React, { useMemo, useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import { ActivityIndicator, SegmentedButtons } from 'react-native-paper';
-import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import React, { useCallback, useMemo, useState } from "react";
+import {
+  Alert,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
+import { ActivityIndicator, SegmentedButtons } from "react-native-paper";
+import { NativeStackScreenProps } from "@react-navigation/native-stack";
+import { useFocusEffect } from "@react-navigation/native";
 
-import { useTheme } from '@hooks/useTheme';
-import { useProducts } from '@hooks/useProducts';
-import { useMeals } from '@hooks/useMeals';
-import { useFoodEntries } from '@hooks/useFoodEntries';
-import { calcMealCalories } from '@services/utils/calories';
-import { MEAL_TYPE_KEYS, MEAL_TYPE_LABEL } from '@services/constants/mealTypes';
-import { MyDayStackParamList } from '@app/navigationTypes';
-import { useDraftMeal } from '../../context';
+import { useTheme } from "@hooks/useTheme";
+import { useProducts } from "@hooks/useProducts";
+import { useMeals } from "@hooks/useMeals";
+import { useFoodEntries } from "@hooks/useFoodEntries";
+import { calcMealCalories } from "@services/utils/calories";
+import { MEAL_TYPE_KEYS, MEAL_TYPE_LABEL } from "@services/constants/mealTypes";
+import { MyDayStackParamList } from "@app/navigationTypes";
+import { useDraftMeal } from "../../context";
 
-type Props = NativeStackScreenProps<MyDayStackParamList, 'AddMeal'>;
+type Props = NativeStackScreenProps<MyDayStackParamList, "AddMeal">;
 
 const AddMealScreen = ({ navigation }: Props) => {
   const { colors } = useTheme();
-  const { products } = useProducts();
+  const { products, refresh: refreshProducts } = useProducts();
+
+  useFocusEffect(
+    useCallback(() => {
+      refreshProducts();
+    }, [refreshProducts]),
+  );
   const { addMeal } = useMeals(products);
   const { saveMealToBackend } = useFoodEntries();
   const { draft, setMealType, reset, removeItem } = useDraftMeal();
@@ -42,20 +56,26 @@ const AddMealScreen = ({ navigation }: Props) => {
   }, [draft.itemsByMealType, products]);
 
   const hasAnyItems = useMemo(() => {
-    return Object.values(draft.itemsByMealType).some((items) => items.length > 0);
+    return Object.values(draft.itemsByMealType).some(
+      (items) => items.length > 0,
+    );
   }, [draft.itemsByMealType]);
 
   const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background, paddingTop: 16 },
     header: {
-      flexDirection: 'row',
-      alignItems: 'center',
+      flexDirection: "row",
+      alignItems: "center",
       paddingHorizontal: 16,
       marginBottom: 12,
       gap: 12,
     },
-    backButton: { padding: 8, borderRadius: 999, backgroundColor: colors.cardBackground },
-    title: { fontSize: 20, fontWeight: '700', color: colors.text, flex: 1 },
+    backButton: {
+      padding: 8,
+      borderRadius: 999,
+      backgroundColor: colors.cardBackground,
+    },
+    title: { fontSize: 20, fontWeight: "700", color: colors.text, flex: 1 },
     scroll: { paddingHorizontal: 16, paddingBottom: 24, gap: 16 },
     card: {
       backgroundColor: colors.cardBackground,
@@ -66,31 +86,39 @@ const AddMealScreen = ({ navigation }: Props) => {
       gap: 12,
     },
     sectionHeader: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
     },
-    sectionTitle: { fontSize: 14, fontWeight: '700', color: colors.textSecondary },
-    mealCalories: { fontSize: 16, fontWeight: '700', color: colors.primary },
+    sectionTitle: {
+      fontSize: 14,
+      fontWeight: "700",
+      color: colors.textSecondary,
+    },
+    mealCalories: { fontSize: 16, fontWeight: "700", color: colors.primary },
     addButton: {
       backgroundColor: colors.primary,
       paddingVertical: 14,
       borderRadius: 12,
-      alignItems: 'center',
+      alignItems: "center",
     },
-    addButtonText: { color: colors.buttonText, fontSize: 16, fontWeight: '700' },
+    addButtonText: {
+      color: colors.buttonText,
+      fontSize: 16,
+      fontWeight: "700",
+    },
     itemRow: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
       paddingVertical: 10,
       borderBottomWidth: 1,
       borderBottomColor: colors.border,
       gap: 12,
     },
-    itemName: { flex: 1, color: colors.text, fontSize: 15, fontWeight: '600' },
+    itemName: { flex: 1, color: colors.text, fontSize: 15, fontWeight: "600" },
     itemMeta: { color: colors.textSecondary, fontSize: 13 },
-    removeText: { color: colors.error, fontWeight: '700' },
+    removeText: { color: colors.error, fontWeight: "700" },
     footer: {
       padding: 16,
       borderTopWidth: 1,
@@ -98,35 +126,55 @@ const AddMealScreen = ({ navigation }: Props) => {
       backgroundColor: colors.background,
       gap: 12,
     },
-    totalRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-    totalLabel: { color: colors.textSecondary, fontSize: 14, fontWeight: '700' },
-    totalValue: { color: colors.text, fontSize: 20, fontWeight: '800' },
+    totalRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+    },
+    totalLabel: {
+      color: colors.textSecondary,
+      fontSize: 14,
+      fontWeight: "700",
+    },
+    totalValue: { color: colors.text, fontSize: 20, fontWeight: "800" },
     saveButton: {
       backgroundColor: colors.primary,
       paddingVertical: 14,
       borderRadius: 12,
-      alignItems: 'center',
+      alignItems: "center",
     },
     saveButtonDisabled: { backgroundColor: colors.disabled },
-    saveButtonText: { color: colors.buttonText, fontSize: 16, fontWeight: '700' },
+    saveButtonText: {
+      color: colors.buttonText,
+      fontSize: 16,
+      fontWeight: "700",
+    },
   });
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+    <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
       <View style={styles.header}>
-        <Pressable onPress={() => navigation.goBack()} style={styles.backButton}>
+        <Pressable
+          onPress={() => navigation.goBack()}
+          style={styles.backButton}
+        >
           <Ionicons name="arrow-back" size={22} color={colors.text} />
         </Pressable>
         <Text style={styles.title}>Add meal</Text>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        contentContainerStyle={styles.scroll}
+        keyboardShouldPersistTaps="handled"
+      >
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>Meal type</Text>
           <SegmentedButtons
             value={draft.mealType}
             onValueChange={(value) => setMealType(value as any)}
-            buttons={MEAL_TYPE_KEYS.filter((k) => k !== 'snacks' && k !== 'water').map((k) => ({
+            buttons={MEAL_TYPE_KEYS.filter(
+              (k) => k !== "snacks" && k !== "water",
+            ).map((k) => ({
               value: k,
               label: MEAL_TYPE_LABEL[k],
             }))}
@@ -137,12 +185,14 @@ const AddMealScreen = ({ navigation }: Props) => {
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Products</Text>
             {currentItems.length > 0 && (
-              <Text style={styles.mealCalories}>{Math.round(mealCalories)} kcal</Text>
+              <Text style={styles.mealCalories}>
+                {Math.round(mealCalories)} kcal
+              </Text>
             )}
           </View>
           <Pressable
             style={styles.addButton}
-            onPress={() => navigation.navigate('SelectProduct')}
+            onPress={() => navigation.navigate("SelectProduct")}
           >
             <Text style={styles.addButtonText}>Add product</Text>
           </Pressable>
@@ -154,7 +204,9 @@ const AddMealScreen = ({ navigation }: Props) => {
               const p = products.find((x) => x.id === item.productId);
               return (
                 <View key={item.productId} style={styles.itemRow}>
-                  <Text style={styles.itemName}>{p?.name ?? 'Unknown product'}</Text>
+                  <Text style={styles.itemName}>
+                    {p?.name ?? "Unknown product"}
+                  </Text>
                   <Text style={styles.itemMeta}>
                     {item.amount} {item.unit}
                   </Text>
@@ -171,10 +223,15 @@ const AddMealScreen = ({ navigation }: Props) => {
       <View style={styles.footer}>
         <View style={styles.totalRow}>
           <Text style={styles.totalLabel}>Day total</Text>
-          <Text style={styles.totalValue}>{Math.round(totalDayCalories)} kcal</Text>
+          <Text style={styles.totalValue}>
+            {Math.round(totalDayCalories)} kcal
+          </Text>
         </View>
         <Pressable
-          style={[styles.saveButton, (!hasAnyItems || saving) && styles.saveButtonDisabled]}
+          style={[
+            styles.saveButton,
+            (!hasAnyItems || saving) && styles.saveButtonDisabled,
+          ]}
           disabled={!hasAnyItems || saving}
           onPress={async () => {
             setSaving(true);
@@ -188,7 +245,7 @@ const AddMealScreen = ({ navigation }: Props) => {
                 try {
                   await saveMealToBackend(mealType, items, products);
                 } catch (err) {
-                  console.error('Failed to save to backend:', err);
+                  console.error("Failed to save to backend:", err);
                   // Continue even if backend fails - will sync later
                 }
 
@@ -200,10 +257,10 @@ const AddMealScreen = ({ navigation }: Props) => {
                 });
               }
               reset();
-              navigation.replace('MyDay');
+              navigation.replace("MyDay");
             } catch (err) {
-              console.error('Failed to save meal:', err);
-              Alert.alert('Error', 'Failed to save meal. Please try again.');
+              console.error("Failed to save meal:", err);
+              Alert.alert("Error", "Failed to save meal. Please try again.");
             } finally {
               setSaving(false);
             }
@@ -221,4 +278,3 @@ const AddMealScreen = ({ navigation }: Props) => {
 };
 
 export default AddMealScreen;
-

@@ -57,6 +57,22 @@ You are a code review specialist for the CountOnMe project. Review code for qual
 4. **Immutability** — No state mutations, new objects always
 5. **Import aliases** — Use `@hooks`, `@services`, etc. for cross-folder imports
 
+## Routing
+
+For deeper, domain-specific reviews, this agent routes to specialists:
+- **Backend changes** (`backend/`) → Use `backend-reviewer` agent
+- **Frontend changes** (`client/`) → Use `fe-reviewer` agent
+- **Both changed** → Run both reviewers in parallel
+
+This generic reviewer is for quick checks or when scope is mixed. For comprehensive reviews, always prefer the specialists.
+
+## Skill References
+
+For detailed patterns and code examples, see:
+- skill: `coding-standarts` — Universal TypeScript/Python standards
+- skill: `security-review` — Device scoping, auth, input validation
+- skill: `react-native-patterns` — React Native component and hook patterns
+
 ## Report Format
 
 ```markdown

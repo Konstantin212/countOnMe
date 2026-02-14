@@ -19,10 +19,15 @@ Claude MUST follow these workflows automatically without being asked. Specialize
 
 | Agent | Model | When to Use |
 |-------|-------|-------------|
+| `architect` | opus | System design, trade-offs, ADRs (5+ files or new domain) |
 | `planner` | opus | Planning features, architectural changes (3+ files) |
+| `fe-developer` | sonnet | Implementing client/ code (TypeScript, React Native, Expo) |
+| `backend-developer` | sonnet | Implementing backend/ code (Python, FastAPI, SQLAlchemy) |
 | `verifier` | haiku | Running type check + lint + tests after changes |
 | `tdd-guide` | sonnet | Implementing new logic with Red-Green-Refactor |
-| `code-reviewer` | sonnet | Reviewing code quality, security, patterns |
+| `fe-reviewer` | sonnet | Deep frontend code review (TypeScript, React Native patterns) |
+| `backend-reviewer` | sonnet | Deep backend code review (Python, FastAPI, device scoping) |
+| `code-reviewer` | sonnet | Generic review — routes to fe-reviewer / backend-reviewer |
 | `build-fixer` | sonnet | Fixing build/type/lint errors incrementally |
 | `refactor-cleaner` | sonnet | Finding and removing dead code |
 | `security-reviewer` | sonnet | Security vulnerability scanning |
@@ -32,10 +37,15 @@ Claude MUST follow these workflows automatically without being asked. Specialize
 
 | Command | Description |
 |---------|-------------|
+| `/architect` | Create architectural design with trade-offs |
 | `/plan` | Plan a feature before coding |
+| `/develop-frontend` | Implement client code from an approved plan |
+| `/develop-backend` | Implement backend code from an approved plan |
 | `/verify` | Run full verification suite |
 | `/tdd` | Implement with TDD workflow |
-| `/review` | Review recent code changes |
+| `/review` | Review recent code changes (smart-routes to specialists) |
+| `/review-frontend` | Review client/ changes (fe-reviewer) |
+| `/review-backend` | Review backend/ changes (backend-reviewer) |
 | `/build-fix` | Fix build/type errors |
 | `/refactor-clean` | Find and remove dead code |
 | `/security` | Security audit |
@@ -47,13 +57,28 @@ Claude MUST follow these workflows automatically without being asked. Specialize
 
 ### When to Invoke Agents Automatically
 
+#### Automatic Agent Selection Rules
+
+Claude MUST select the correct agents based on what changed:
+
+- **Architecture** (5+ files or new domain) → `architect` first, then `planner`
+- **Planning** (3+ files) → `planner` first, get approval
+- **Implementation**: Backend tasks → `backend-developer`; Client tasks → `fe-developer`; Both → run in parallel
+- **Verification**: After ANY code edit → `verifier` always
+- **Review after code**: Backend changes → `backend-reviewer`; Client changes → `fe-reviewer`; Both → run in parallel
+- **Security**: Auth, input, API, or token changes → `security-reviewer` always
+- **Build errors** → `build-fixer` agent
+
+> **CRITICAL RULE**: Claude MUST NOT write code directly for tasks involving 3+ files. Always delegate to the appropriate developer agent (`fe-developer` or `backend-developer`). Raw implementation without agent involvement is prohibited for non-trivial tasks.
+
 #### Plan Before Code (Mandatory for Non-Trivial Tasks)
 
 For any task touching 3+ files or adding a new feature:
-1. Use **planner** agent to analyze and create a phased plan
-2. Present plan and WAIT for user approval before writing code
-3. Implement phase by phase
-4. Use **verifier** agent after each phase
+1. Use **architect** agent for system design (if 5+ files or new domain)
+2. Use **planner** agent to create a phased plan
+3. Present plan and WAIT for user approval before writing code
+4. Delegate implementation to **fe-developer** and/or **backend-developer**
+5. Use **verifier** agent after each phase
 
 Skip planning only for: single-line fixes, typo corrections, simple renames.
 
@@ -67,11 +92,13 @@ After writing or editing code, ALWAYS run the **verifier** agent:
 
 #### TDD Cycle (Mandatory for New Logic)
 
-When implementing new functions, hooks, or services, use the **tdd-guide** agent:
+When implementing new functions, hooks, or services, the **developer agents** follow TDD internally:
 1. **RED** — Write a failing test first
 2. **GREEN** — Write minimal code to pass
 3. **REFACTOR** — Improve while tests stay green
 4. Never write implementation before tests for business logic
+
+Use **tdd-guide** agent when TDD methodology guidance is needed.
 
 #### Build Error Resolution
 
@@ -82,15 +109,50 @@ When a build or type check fails, use the **build-fixer** agent:
 4. Stop and ask user if a fix introduces MORE errors than it resolves
 5. Stop and ask user if the same error persists after 3 attempts
 
-#### Feature Workflow (Multi-Agent Orchestration)
+### Defined Agent Flows
 
-For new features, follow this chain automatically:
-1. **planner** → Create phased plan, get approval
-2. **tdd-guide** → Implement each phase with tests first
-3. **verifier** → Run full verification suite
-4. **code-reviewer** → Check quality and patterns
-5. **security-reviewer** → Scan for vulnerabilities (if auth/input/API involved)
-6. **doc-writer** → Update or create documentation in docs/
+#### Flow 1: New Feature (Full)
+```
+architect → planner → [user approval] →
+  backend-developer (if backend/) ∥ fe-developer (if client/) →
+  verifier →
+  backend-reviewer (if backend/) ∥ fe-reviewer (if client/) →
+  security-reviewer (if auth/input/API) → doc-writer
+```
+
+#### Flow 2: Bug Fix
+```
+[analyze root cause] →
+  backend-developer (if backend/) / fe-developer (if client/) →
+    (internally: write failing test → fix → verify) →
+  verifier →
+  backend-reviewer ∥ fe-reviewer (based on changed files)
+```
+
+#### Flow 3: Refactor
+```
+verifier (baseline) → planner → [user approval] →
+  backend-developer ∥ fe-developer (implement changes) →
+  refactor-cleaner → verifier →
+  backend-reviewer ∥ fe-reviewer
+```
+
+#### Flow 4: Code Review Only
+```
+backend-reviewer (if backend/) ∥ fe-reviewer (if client/) →
+  security-reviewer (if sensitive changes)
+```
+
+#### Flow 5: Architecture Decision
+```
+architect → [ADR in docs/architecture/] → planner → [user approval]
+```
+
+#### Flow 6: Small Fix (Single File, Skip Architect)
+```
+planner (lightweight) → fe-developer or backend-developer →
+  verifier → fe-reviewer or backend-reviewer
+```
 
 ### Subagent Delegation
 

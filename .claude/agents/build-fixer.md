@@ -49,6 +49,11 @@ cd backend && pytest                    # Test failures
 5. Keep changes minimal — only modify what's needed to resolve the error
 6. Track progress — report error count before and after each fix round
 
+## Skill References
+
+For detailed patterns, see:
+- skill: `coding-standarts` — TypeScript and Python standards for fixing common issues
+
 ## Report Format
 
 ```

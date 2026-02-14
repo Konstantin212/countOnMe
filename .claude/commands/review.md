@@ -2,11 +2,22 @@
 description: Review recent code changes for quality, security, and patterns
 ---
 
-Review the recent code changes for quality, security, and adherence to CountOnMe project patterns.
+Review the recent code changes using the appropriate specialized reviewer(s).
 
 **Scope:** $ARGUMENTS
 
-## Review Checklist
+## Smart Routing
+
+Determine which files have changed and route to the correct reviewer:
+
+1. **Check changed files**: Run `git diff --name-only HEAD~1` (or `git diff --name-only` for unstaged changes)
+2. **Route by directory**:
+   - Files in `backend/` → Use **backend-reviewer** agent (deep Python/FastAPI/SQLAlchemy review)
+   - Files in `client/` → Use **fe-reviewer** agent (deep TypeScript/React Native review)
+   - Both directories changed → Run **both reviewers in parallel**
+   - Neither → Fall back to generic review checklist below
+
+## Review Checklist (Fallback for Mixed/Other Files)
 
 ### Correctness & Logic
 - Does the code do what it's supposed to?
@@ -32,7 +43,14 @@ Review the recent code changes for quality, security, and adherence to CountOnMe
 
 ## Instructions
 
-1. Read the changed files
-2. Run through each checklist item
-3. Report findings using severity levels: Critical / Important / Suggestion
-4. Provide specific fix suggestions for each issue
+1. Identify changed files and determine scope (backend, frontend, or both)
+2. Delegate to the appropriate specialist reviewer(s)
+3. If both changed, run both reviews in parallel
+4. Report combined findings with severity levels: Critical / Important / Suggestion
+5. Provide a unified verdict: APPROVE / REQUEST CHANGES / BLOCK
+
+## Related
+
+- Agent: `.claude/agents/backend-reviewer.md` — For `backend/` changes
+- Agent: `.claude/agents/fe-reviewer.md` — For `client/` changes
+- Agent: `.claude/agents/code-reviewer.md` — Generic fallback

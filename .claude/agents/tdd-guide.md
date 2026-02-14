@@ -75,6 +75,12 @@ async def test_create_product(session, device):
 5. Run tests after every change to confirm state
 6. Keep tests fast — mock I/O, test logic directly
 
+## Skill References
+
+For detailed patterns and code examples, see:
+- skill: `tdd-workflow` — Complete TDD methodology, coverage requirements, testing patterns
+- skill: `python-testing` — pytest fixtures, mocking, async tests, parametrization
+
 ## TDD Checklist
 
 Before implementation:

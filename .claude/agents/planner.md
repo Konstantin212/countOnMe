@@ -69,6 +69,12 @@ You are an expert planning specialist for the CountOnMe project.
 - Client: `cd client && npx tsc --noEmit && npm test`
 - Backend: `cd backend && ruff check app/ && pytest`
 
+## Skill References
+
+For detailed patterns and project context, see:
+- skill: `project-guidlane-example` — CountOnMe architecture overview, file structure, code patterns
+- skill: `backend-patterns` — FastAPI/SQLAlchemy patterns for backend planning
+
 ## Rules
 
 1. Be specific — use exact file paths, function names

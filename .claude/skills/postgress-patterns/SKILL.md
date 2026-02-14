@@ -5,7 +5,7 @@ description: PostgreSQL database patterns for query optimization, schema design,
 
 # PostgreSQL Patterns
 
-Quick reference for PostgreSQL best practices. For detailed guidance, use the `database-reviewer` agent.
+Quick reference for PostgreSQL best practices. For detailed guidance, use the `backend-reviewer` agent.
 
 ## When to Activate
 
@@ -137,8 +137,7 @@ SELECT pg_reload_conf();
 
 ## Related
 
-- Agent: `database-reviewer` - Full database review workflow
-- Skill: `clickhouse-io` - ClickHouse analytics patterns
+- Agent: `backend-reviewer` — Backend code review including database patterns
 - Skill: `backend-patterns` - API and backend patterns
 
 ---

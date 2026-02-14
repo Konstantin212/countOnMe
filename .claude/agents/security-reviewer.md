@@ -57,6 +57,12 @@ cd backend && pip-audit
 grep -r "api[_-]\?key\|password\|secret\|token" --include="*.ts" --include="*.tsx" --include="*.py" .
 ```
 
+## Skill References
+
+For detailed patterns and code examples, see:
+- skill: `security-review` — Comprehensive security checklist, token management, device scoping
+- skill: `backend-patterns` — FastAPI auth patterns, service-layer security
+
 ## Report Format
 
 ```markdown

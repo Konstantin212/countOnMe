@@ -1,16 +1,19 @@
-import React, { useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { useForm, Controller } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
+import React, { useEffect, useState } from "react";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
+import { NativeStackScreenProps } from "@react-navigation/native-stack";
+import { useForm, Controller } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 
-import { ProfileStackParamList } from '@app/navigationTypes';
-import { useProducts } from '@hooks/useProducts';
-import { useTheme } from '@hooks/useTheme';
-import { productFormSchema, ProductFormData } from '@services/schemas/productFormSchema';
-import { SCALE_TYPES, SCALE_UNITS } from '@services/constants/scaleConstants';
+import { ProfileStackParamList } from "@app/navigationTypes";
+import { useProducts } from "@hooks/useProducts";
+import { useTheme } from "@hooks/useTheme";
+import {
+  productFormSchema,
+  ProductFormData,
+} from "@services/schemas/productFormSchema";
+import { SCALE_TYPES, SCALE_UNITS } from "@services/constants/scaleConstants";
 import {
   FormField,
   Input,
@@ -19,9 +22,9 @@ import {
   SwitchField,
   Button,
   SectionTitle,
-} from '@particles/index';
+} from "@particles/index";
 
-type Props = NativeStackScreenProps<ProfileStackParamList, 'ProductForm'>;
+type Props = NativeStackScreenProps<ProfileStackParamList, "ProductForm">;
 
 const ProductFormScreen = ({ navigation, route }: Props) => {
   const isEditing = Boolean(route.params?.productId);
@@ -37,13 +40,13 @@ const ProductFormScreen = ({ navigation, route }: Props) => {
     formState: { errors, isSubmitted },
   } = useForm<ProductFormData>({
     resolver: zodResolver(productFormSchema),
-    mode: 'onSubmit',
+    mode: "onSubmit",
     defaultValues: {
-      name: '',
-      category: '',
+      name: "",
+      category: "",
       portionSize: undefined,
-      scaleType: 'Solid',
-      scaleUnit: 'g',
+      scaleType: "Solid",
+      scaleUnit: "g",
       calories: undefined,
       includeNutrients: false,
       fat: undefined,
@@ -52,26 +55,26 @@ const ProductFormScreen = ({ navigation, route }: Props) => {
     },
   });
 
-  const scaleType = watch('scaleType');
-  const includeNutrients = watch('includeNutrients');
+  const scaleType = watch("scaleType");
+  const includeNutrients = watch("includeNutrients");
 
   // Load product data if editing
   useEffect(() => {
     if (isEditing && route.params?.productId) {
       const product = products.find((p) => p.id === route.params?.productId);
       if (product) {
-        setValue('name', product.name);
-        setValue('calories', product.caloriesPer100g);
-        
+        setValue("name", product.name);
+        setValue("calories", product.caloriesPer100g);
+
         const hasNutrients = Boolean(
-          product.proteinPer100g || product.carbsPer100g || product.fatPer100g
+          product.proteinPer100g || product.carbsPer100g || product.fatPer100g,
         );
-        
+
         if (hasNutrients) {
-          setValue('includeNutrients', true);
-          setValue('protein', product.proteinPer100g);
-          setValue('carbs', product.carbsPer100g);
-          setValue('fat', product.fatPer100g);
+          setValue("includeNutrients", true);
+          setValue("protein", product.proteinPer100g);
+          setValue("carbs", product.carbsPer100g);
+          setValue("fat", product.fatPer100g);
         }
       }
     }
@@ -81,7 +84,7 @@ const ProductFormScreen = ({ navigation, route }: Props) => {
   useEffect(() => {
     if (scaleType) {
       const availableUnits = SCALE_UNITS[scaleType];
-      setValue('scaleUnit', availableUnits[0]);
+      setValue("scaleUnit", availableUnits[0]);
     }
   }, [scaleType, setValue]);
 
@@ -98,13 +101,12 @@ const ProductFormScreen = ({ navigation, route }: Props) => {
 
       if (isEditing && route.params?.productId) {
         await updateProduct(route.params.productId, productData);
-        navigation.goBack();
       } else {
         await addProduct(productData);
-        navigation.navigate('ProductsList');
       }
+      navigation.goBack();
     } catch (error) {
-      console.error('Save product error:', error);
+      console.error("Save product error:", error);
     } finally {
       setSaving(false);
     }
@@ -121,8 +123,8 @@ const ProductFormScreen = ({ navigation, route }: Props) => {
       paddingTop: 16,
     },
     header: {
-      flexDirection: 'row',
-      alignItems: 'center',
+      flexDirection: "row",
+      alignItems: "center",
       marginBottom: 12,
     },
     backButton: {
@@ -133,7 +135,7 @@ const ProductFormScreen = ({ navigation, route }: Props) => {
     },
     title: {
       fontSize: 22,
-      fontWeight: '700',
+      fontWeight: "700",
       color: colors.text,
     },
     scrollView: {
@@ -151,9 +153,12 @@ const ProductFormScreen = ({ navigation, route }: Props) => {
   });
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+    <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
       <View style={styles.header}>
-        <Pressable onPress={() => navigation.goBack()} style={styles.backButton}>
+        <Pressable
+          onPress={() => navigation.goBack()}
+          style={styles.backButton}
+        >
           <Ionicons name="arrow-back" size={22} color={colors.text} />
         </Pressable>
         <Text style={styles.title}>Product</Text>
@@ -353,8 +358,12 @@ const ProductFormScreen = ({ navigation, route }: Props) => {
 
       {/* Save Button */}
       <View style={styles.footer}>
-        <Button onPress={handleSubmit(onSubmit)} disabled={isSaveDisabled} loading={saving}>
-          {isEditing ? 'Update Product' : 'Save Product'}
+        <Button
+          onPress={handleSubmit(onSubmit)}
+          disabled={isSaveDisabled}
+          loading={saving}
+        >
+          {isEditing ? "Update Product" : "Save Product"}
         </Button>
       </View>
     </SafeAreaView>

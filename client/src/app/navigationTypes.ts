@@ -1,5 +1,9 @@
-import { NavigatorScreenParams } from '@react-navigation/native';
-import { GoalCalculateRequest, GoalCalculateResponse, MealTypeKey } from '@models/types';
+import { NavigatorScreenParams } from "@react-navigation/native";
+import {
+  GoalCalculateRequest,
+  GoalCalculateResponse,
+  MealTypeKey,
+} from "@models/types";
 
 export type MyDayStackParamList = {
   MyDay: undefined;
@@ -7,6 +11,7 @@ export type MyDayStackParamList = {
   SelectProduct: undefined;
   AddFood: { productId: string };
   MealTypeEntries: { mealType: MealTypeKey };
+  ProductForm: { productId?: string } | undefined;
 };
 
 export type MyPathStackParamList = {
@@ -48,4 +53,3 @@ export type RootTabParamList = {
   MyPathTab: NavigatorScreenParams<MyPathStackParamList>;
   ProfileTab: NavigatorScreenParams<ProfileStackParamList>;
 };
-

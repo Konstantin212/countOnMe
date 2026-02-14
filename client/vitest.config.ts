@@ -24,4 +24,8 @@ export default defineConfig({
       "@theme": path.resolve(__dirname, "src/theme"),
     },
   },
+  esbuild: {
+    jsx: "automatic",
+    jsxImportSource: "react",
+  },
 });

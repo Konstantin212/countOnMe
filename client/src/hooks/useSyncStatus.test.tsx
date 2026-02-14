@@ -39,7 +39,13 @@ describe("useSyncStatus", () => {
     mockGetQueue.mockResolvedValue([]);
     mockGetLastSyncAt.mockResolvedValue(null);
     mockGetLastSyncError.mockResolvedValue(null);
-    mockFlush.mockResolvedValue();
+    mockFlush.mockResolvedValue({
+      attempted: 0,
+      succeeded: 0,
+      remaining: 0,
+      skipped: 0,
+      offline: false,
+    });
 
     // Mock NetInfo listener
     mockNetInfo.addEventListener.mockReturnValue(() => {});
@@ -115,8 +121,22 @@ describe("useSyncStatus", () => {
 
   it("returns queue size", async () => {
     mockGetQueue.mockResolvedValue([
-      { id: "1", resource: "products", action: "create", payload: {} },
-      { id: "2", resource: "meals", action: "update", payload: {} },
+      {
+        id: "1",
+        resource: "products",
+        action: "create",
+        payload: {},
+        createdAt: Date.now(),
+        attempts: 0,
+      },
+      {
+        id: "2",
+        resource: "goals",
+        action: "update",
+        payload: {},
+        createdAt: Date.now(),
+        attempts: 0,
+      },
     ]);
 
     const { result } = renderHook(() => useSyncStatus());
@@ -155,7 +175,14 @@ describe("useSyncStatus", () => {
     });
 
     mockGetQueue.mockResolvedValue([
-      { id: "3", resource: "products", action: "delete", payload: {} },
+      {
+        id: "3",
+        resource: "products",
+        action: "delete",
+        payload: {},
+        createdAt: Date.now(),
+        attempts: 0,
+      },
     ]);
 
     await act(async () => {

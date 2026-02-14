@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { type Mock, beforeEach, describe, expect, it, vi } from "vitest";
 import { apiFetch, ApiError } from "./http";
 
 // Mock storage device functions
@@ -16,13 +16,19 @@ vi.mock("./devices", () => ({
 
 // Import mocked functions after vi.mock calls
 const {
-  getDeviceToken: mockGetDeviceToken,
-  setDeviceToken: mockSetDeviceToken,
-  clearDeviceToken: mockClearDeviceToken,
-  getOrCreateDeviceId: mockGetOrCreateDeviceId,
+  getDeviceToken,
+  setDeviceToken: _mockSetDeviceToken,
+  clearDeviceToken: _mockClearDeviceToken,
+  getOrCreateDeviceId,
 } = await import("@storage/device");
 
-const { registerDevice: mockRegisterDevice } = await import("./devices");
+const mockGetDeviceToken = getDeviceToken as unknown as Mock;
+const mockSetDeviceToken = _mockSetDeviceToken as unknown as Mock;
+const mockClearDeviceToken = _mockClearDeviceToken as unknown as Mock;
+const mockGetOrCreateDeviceId = getOrCreateDeviceId as unknown as Mock;
+
+const { registerDevice } = await import("./devices");
+const mockRegisterDevice = registerDevice as unknown as Mock;
 
 // Mock global fetch
 const mockFetch = vi.fn();

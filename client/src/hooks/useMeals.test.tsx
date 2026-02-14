@@ -1,6 +1,7 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import type { Meal, Product } from "@models/types";
 import { loadMeals, saveMeals } from "@storage/storage";
 import { useMeals, __testing } from "./useMeals";
 import { makeProduct, makeMeal, makeMealItem } from "../test/helpers";
@@ -30,7 +31,10 @@ const mockSaveMeals = vi.mocked(saveMeals);
 const { normalizeName, sanitizeItems, createMealRecord, patchMealRecord } =
   __testing;
 
-const setupHook = async (initialMeals = [], products = [makeProduct()]) => {
+const setupHook = async (
+  initialMeals: Meal[] = [],
+  products: Product[] = [makeProduct()],
+) => {
   mockLoadMeals.mockResolvedValue(initialMeals);
   mockSaveMeals.mockResolvedValue();
 

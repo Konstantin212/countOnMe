@@ -368,7 +368,7 @@ class TestCalcTotalsForEntry:
         )
 
         # Act & Assert
-        with pytest.raises(Exception):  # FrozenInstanceError in Python 3.10+
+        with pytest.raises((AttributeError, Exception)):  # FrozenInstanceError varies by version
             totals.calories = Decimal("200")
 
     def test_zero_entry_amount(self):

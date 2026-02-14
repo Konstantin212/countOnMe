@@ -1,14 +1,14 @@
 """Tests for goal calculation service (BMR, TDEE, macros, BMI, weight range)."""
 
-from datetime import date, timedelta
+from datetime import date
 from decimal import Decimal
 
 import pytest
 
 from app.schemas.enums import ActivityLevel, Gender, WeightChangePace, WeightGoalType
 from app.services.goal_calculation import (
-    BMI_CATEGORIES,
     ACTIVITY_MULTIPLIERS,
+    BMI_CATEGORIES,
     DEFAULT_MACROS,
     DEFICIT_BY_PACE,
     MIN_CALORIES,
@@ -700,7 +700,7 @@ class TestCalculateBMI:
         height_cm = Decimal("178.9")
 
         # Act
-        bmi, category = calculate_bmi(weight_kg, height_cm)
+        bmi, _category = calculate_bmi(weight_kg, height_cm)
 
         # Assert
         # Should be rounded to 1 decimal place

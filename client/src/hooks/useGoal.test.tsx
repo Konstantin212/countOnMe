@@ -79,12 +79,20 @@ describe("useGoal", () => {
   it("calculates goal", async () => {
     mockLoadGoal.mockResolvedValue(null);
     const calculateResponse = {
-      bmr: 1800,
-      tdee: 2200,
-      recommended_calories: 2000,
-      recommended_protein_g: 150,
-      recommended_carbs_g: 200,
-      recommended_fat_g: 67,
+      bmrKcal: 1800,
+      tdeeKcal: 2200,
+      dailyCaloriesKcal: 2000,
+      proteinPercent: 30,
+      carbsPercent: 40,
+      fatPercent: 30,
+      proteinGrams: 150,
+      carbsGrams: 200,
+      fatGrams: 67,
+      waterMl: 2000,
+      healthyWeightMinKg: 60,
+      healthyWeightMaxKg: 80,
+      currentBmi: 24.7,
+      bmiCategory: "normal",
     };
     mockApiCalculateGoal.mockResolvedValue(calculateResponse);
 
@@ -97,12 +105,12 @@ describe("useGoal", () => {
     let response;
     await act(async () => {
       response = await result.current.calculateGoal({
-        age: 30,
-        sex: "male",
-        height_cm: 180,
-        weight_kg: 80,
-        activity_level: "moderate",
-        goal: "maintain",
+        gender: "male",
+        birthDate: "1996-01-01",
+        heightCm: 180,
+        currentWeightKg: 80,
+        activityLevel: "moderate",
+        weightGoalType: "maintain",
       });
     });
 
@@ -123,12 +131,12 @@ describe("useGoal", () => {
 
     await act(async () => {
       await result.current.saveCalculatedGoal({
-        age: 30,
-        sex: "male",
-        height_cm: 180,
-        weight_kg: 80,
-        activity_level: "moderate",
-        goal: "maintain",
+        gender: "male",
+        birthDate: "1996-01-01",
+        heightCm: 180,
+        currentWeightKg: 80,
+        activityLevel: "moderate",
+        weightGoalType: "maintain",
       });
     });
 
@@ -149,10 +157,11 @@ describe("useGoal", () => {
 
     await act(async () => {
       await result.current.saveManualGoal({
-        daily_calories_kcal: 2000,
-        protein_percent: 30,
-        carbs_percent: 40,
-        fat_percent: 30,
+        dailyCaloriesKcal: 2000,
+        proteinPercent: 30,
+        carbsPercent: 40,
+        fatPercent: 30,
+        waterMl: 2000,
       });
     });
 

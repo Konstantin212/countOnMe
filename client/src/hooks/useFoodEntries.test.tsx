@@ -69,7 +69,12 @@ describe("useFoodEntries", () => {
       const items = [makeMealItem({ productId: "p1" })];
 
       mockGetProduct.mockRejectedValue(new Error("Not found"));
-      mockCreateProduct.mockResolvedValue(undefined);
+      mockCreateProduct.mockResolvedValue({
+        id: "p1",
+        name: "Chicken",
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      });
       mockListPortions.mockResolvedValue([portion]);
       mockCreateFoodEntry.mockResolvedValue(makeFoodEntry());
 

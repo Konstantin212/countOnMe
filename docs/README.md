@@ -2,9 +2,18 @@
 
 ## Structure
 
-- **features/** — User-facing feature documentation
-- **api/** — Backend API endpoint documentation
-- **architecture/** — Architecture decisions and data flow
+### Architecture
+- [`architecture/overview.md`](architecture/overview.md) — System architecture, component diagram, data flow, client-backend integration map
+
+### API Reference
+- [`api/endpoints.md`](api/endpoints.md) — Complete REST API reference (all endpoints, request/response schemas, auth model)
+
+### Features
+- [`features/product-management.md`](features/product-management.md) — Product CRUD, Open Food Facts import, scales and units
+- [`features/food-tracking.md`](features/food-tracking.md) — Daily food logging, meal types, AddMeal flow, day stats
+- [`features/goal-system.md`](features/goal-system.md) — Nutrition goals (calculated via BMR/TDEE or manual), BMI, macros
+- [`features/device-auth.md`](features/device-auth.md) — Anonymous device authentication, token lifecycle
+- [`features/sync-system.md`](features/sync-system.md) — Offline-first sync, queue, cursor-based sync endpoint
 
 ## Generating Docs
 

@@ -1,6 +1,11 @@
-import { buildUrl } from './config';
-import { registerDevice } from './devices';
-import { clearDeviceToken, getDeviceToken, getOrCreateDeviceId, setDeviceToken } from '@storage/device';
+import { buildUrl } from "./config";
+import { registerDevice } from "./devices";
+import {
+  clearDeviceToken,
+  getDeviceToken,
+  getOrCreateDeviceId,
+  setDeviceToken,
+} from "@storage/device";
 
 export class ApiError extends Error {
   status?: number;
@@ -8,14 +13,14 @@ export class ApiError extends Error {
 
   constructor(message: string, opts?: { status?: number; details?: unknown }) {
     super(message);
-    this.name = 'ApiError';
+    this.name = "ApiError";
     this.status = opts?.status;
     this.details = opts?.details;
   }
 }
 
 type ApiFetchOptions = {
-  method?: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE';
+  method?: "GET" | "POST" | "PATCH" | "PUT" | "DELETE";
   body?: unknown;
   query?: Record<string, string | number | boolean | undefined>;
 };
@@ -33,7 +38,7 @@ const ensureDeviceToken = async (): Promise<string> => {
 };
 
 const parseErrorDetails = async (res: Response): Promise<unknown> => {
-  const text = await res.text().catch(() => '');
+  const text = await res.text().catch(() => "");
   if (!text) {
     return undefined;
   }
@@ -46,7 +51,7 @@ const parseErrorDetails = async (res: Response): Promise<unknown> => {
 
 export const apiFetch = async <T>(
   path: string,
-  { method = 'GET', body, query }: ApiFetchOptions = {},
+  { method = "GET", body, query }: ApiFetchOptions = {},
 ): Promise<T> => {
   const token = await ensureDeviceToken();
   const url = buildUrl(path, query);
@@ -55,8 +60,8 @@ export const apiFetch = async <T>(
     return await fetch(url, {
       method,
       headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
+        Accept: "application/json",
+        "Content-Type": "application/json",
         Authorization: `Bearer ${bearer}`,
       },
       body: body === undefined ? undefined : JSON.stringify(body),
@@ -65,7 +70,8 @@ export const apiFetch = async <T>(
 
   let res = await doFetch(token);
 
-  // Token missing/expired → re-register and retry once.
+  // 401 = token expired/missing → re-register and retry once.
+  // 403 = actively revoked → do NOT auto-reissue (force user awareness).
   if (res.status === 401) {
     await clearDeviceToken();
     const refreshed = await ensureDeviceToken();
@@ -74,7 +80,10 @@ export const apiFetch = async <T>(
 
   if (!res.ok) {
     const details = await parseErrorDetails(res);
-    throw new ApiError(`Request failed (${res.status})`, { status: res.status, details });
+    throw new ApiError(`Request failed (${res.status})`, {
+      status: res.status,
+      details,
+    });
   }
 
   // 204 no content
@@ -84,4 +93,3 @@ export const apiFetch = async <T>(
 
   return (await res.json()) as T;
 };
-

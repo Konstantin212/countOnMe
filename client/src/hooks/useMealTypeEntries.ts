@@ -40,20 +40,36 @@ const getTodayDate = (): string => {
 
 /**
  * Cache for portions by product ID to avoid repeated API calls.
+ * Uses LRU eviction when exceeding MAX_PORTION_CACHE_SIZE.
  */
+const MAX_PORTION_CACHE_SIZE = 100;
 const portionCache = new Map<string, PortionResponse[]>();
 
 /**
- * Get portions for a product (with caching).
+ * Get portions for a product (with LRU caching).
  */
 const getPortionsForProduct = async (
   productId: string,
 ): Promise<PortionResponse[]> => {
   const cached = portionCache.get(productId);
-  if (cached) return cached;
+  if (cached) {
+    // Move to end (most recently used) by re-inserting
+    portionCache.delete(productId);
+    portionCache.set(productId, cached);
+    return cached;
+  }
 
   try {
     const portions = await listPortions(productId);
+
+    // Evict oldest entry if at capacity
+    if (portionCache.size >= MAX_PORTION_CACHE_SIZE) {
+      const oldest = portionCache.keys().next().value;
+      if (oldest !== undefined) {
+        portionCache.delete(oldest);
+      }
+    }
+
     portionCache.set(productId, portions);
     return portions;
   } catch {

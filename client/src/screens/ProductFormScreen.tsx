@@ -116,7 +116,10 @@ const ProductFormScreen = ({ navigation, route }: Props) => {
       }
       navigation.goBack();
     } catch (err) {
-      console.error("Failed to save product:", err);
+      console.error(
+        "Failed to save product:",
+        err instanceof Error ? err.message : String(err),
+      );
       Alert.alert("Error", "Failed to save product. Please try again.");
     } finally {
       setSaving(false);

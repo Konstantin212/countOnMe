@@ -25,6 +25,11 @@ Thumbs.db
 *.swo
 
 # ----------------------
+# Claude Code
+# ----------------------
+.claude/agent-memory/
+
+# ----------------------
 # Client (React Native / Expo)
 # ----------------------
 

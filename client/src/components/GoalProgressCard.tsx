@@ -215,7 +215,7 @@ export const GoalProgressCard = ({
         </Text>
         <Text style={styles.arrow}>→</Text>
         <Text style={styles.weightText}>
-          {goal.targetWeightKg.toFixed(1)} kg
+          {goal.targetWeightKg?.toFixed(1) ?? "—"} kg
         </Text>
       </View>
 

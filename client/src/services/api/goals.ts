@@ -4,20 +4,21 @@ import {
   GoalCreateCalculatedRequest,
   GoalCreateManualRequest,
   UserGoal,
-} from '@models/types';
-import { apiFetch } from './http';
+} from "@models/types";
+import { apiFetch } from "./http";
 
 // API response types (snake_case from backend)
+// Note: Backend Decimal fields come as strings in JSON
 type GoalApiResponse = {
   id: string;
   goal_type: string;
   gender?: string;
   birth_date?: string;
-  height_cm?: number;
-  current_weight_kg?: number;
+  height_cm?: string | number; // Decimal from backend
+  current_weight_kg?: string | number; // Decimal from backend
   activity_level?: string;
   weight_goal_type?: string;
-  target_weight_kg?: number;
+  target_weight_kg?: string | number; // Decimal from backend
   weight_change_pace?: string;
   bmr_kcal?: number;
   tdee_kcal?: number;
@@ -54,18 +55,26 @@ type GoalCalculateApiResponse = {
   bmi_category: string;
 };
 
+// Helper to parse string/number to number (backend Decimals come as strings)
+const parseNumeric = (
+  value: string | number | null | undefined,
+): number | undefined => {
+  if (value === null || value === undefined) return undefined;
+  return typeof value === "string" ? parseFloat(value) : value;
+};
+
 // Transform API response to frontend type
 const transformGoalResponse = (response: GoalApiResponse): UserGoal => ({
   id: response.id,
-  goalType: response.goal_type as UserGoal['goalType'],
-  gender: response.gender as UserGoal['gender'],
+  goalType: response.goal_type as UserGoal["goalType"],
+  gender: response.gender as UserGoal["gender"],
   birthDate: response.birth_date,
-  heightCm: response.height_cm,
-  currentWeightKg: response.current_weight_kg,
-  activityLevel: response.activity_level as UserGoal['activityLevel'],
-  weightGoalType: response.weight_goal_type as UserGoal['weightGoalType'],
-  targetWeightKg: response.target_weight_kg,
-  weightChangePace: response.weight_change_pace as UserGoal['weightChangePace'],
+  heightCm: parseNumeric(response.height_cm),
+  currentWeightKg: parseNumeric(response.current_weight_kg),
+  activityLevel: response.activity_level as UserGoal["activityLevel"],
+  weightGoalType: response.weight_goal_type as UserGoal["weightGoalType"],
+  targetWeightKg: parseNumeric(response.target_weight_kg),
+  weightChangePace: response.weight_change_pace as UserGoal["weightChangePace"],
   bmrKcal: response.bmr_kcal,
   tdeeKcal: response.tdee_kcal,
   dailyCaloriesKcal: response.daily_calories_kcal,
@@ -79,7 +88,7 @@ const transformGoalResponse = (response: GoalApiResponse): UserGoal => ({
   healthyWeightMinKg: response.healthy_weight_min_kg,
   healthyWeightMaxKg: response.healthy_weight_max_kg,
   currentBmi: response.current_bmi,
-  bmiCategory: response.bmi_category as UserGoal['bmiCategory'],
+  bmiCategory: response.bmi_category as UserGoal["bmiCategory"],
   createdAt: response.created_at,
   updatedAt: response.updated_at,
 });
@@ -120,10 +129,13 @@ export const calculateGoal = async (
     weight_change_pace: request.weightChangePace,
   };
 
-  const response = await apiFetch<GoalCalculateApiResponse>('/v1/goals/calculate', {
-    method: 'POST',
-    body,
-  });
+  const response = await apiFetch<GoalCalculateApiResponse>(
+    "/v1/goals/calculate",
+    {
+      method: "POST",
+      body,
+    },
+  );
 
   return transformCalculateResponse(response);
 };
@@ -132,7 +144,7 @@ export const calculateGoal = async (
  * Get the current active goal for this device.
  */
 export const getCurrentGoal = async (): Promise<UserGoal | null> => {
-  const response = await apiFetch<GoalApiResponse | null>('/v1/goals/current');
+  const response = await apiFetch<GoalApiResponse | null>("/v1/goals/current");
   return response ? transformGoalResponse(response) : null;
 };
 
@@ -166,8 +178,8 @@ export const createCalculatedGoal = async (
     water_ml: request.waterMl,
   };
 
-  const response = await apiFetch<GoalApiResponse>('/v1/goals/calculated', {
-    method: 'POST',
+  const response = await apiFetch<GoalApiResponse>("/v1/goals/calculated", {
+    method: "POST",
     body,
   });
 
@@ -189,8 +201,8 @@ export const createManualGoal = async (
     water_ml: request.waterMl,
   };
 
-  const response = await apiFetch<GoalApiResponse>('/v1/goals/manual', {
-    method: 'POST',
+  const response = await apiFetch<GoalApiResponse>("/v1/goals/manual", {
+    method: "POST",
     body,
   });
 
@@ -219,7 +231,7 @@ export const updateGoal = async (
   };
 
   const response = await apiFetch<GoalApiResponse>(`/v1/goals/${goalId}`, {
-    method: 'PATCH',
+    method: "PATCH",
     body,
   });
 
@@ -230,5 +242,5 @@ export const updateGoal = async (
  * Delete a goal.
  */
 export const deleteGoal = async (goalId: string): Promise<void> => {
-  await apiFetch<void>(`/v1/goals/${goalId}`, { method: 'DELETE' });
+  await apiFetch<void>(`/v1/goals/${goalId}`, { method: "DELETE" });
 };

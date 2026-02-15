@@ -1,35 +1,40 @@
-import React, { useEffect, useState } from 'react';
-import { Dimensions, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ProgressChart } from 'react-native-chart-kit';
-import { ActivityIndicator, FAB, Portal, ProgressBar } from 'react-native-paper';
-import { useIsFocused, useNavigation } from '@react-navigation/native';
-import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Ionicons } from '@expo/vector-icons';
-import { useDayStats, getMealTypeTotals } from '@hooks/useDayStats';
-import { useGoal } from '@hooks/useGoal';
-import { useTheme } from '@hooks/useTheme';
-import { MyDayStackParamList, RootTabParamList } from '@app/navigationTypes';
-import { MEAL_TYPE_KEYS, MEAL_TYPE_LABEL } from '@services/constants/mealTypes';
-import type { MealTypeKey } from '@models/types';
-
-const hexToRgba = (hex: string, alpha: number) => {
-  const normalized = hex.replace('#', '');
-  const bigint = parseInt(normalized.length === 3 ? normalized.repeat(2) : normalized, 16);
-  const r = (bigint >> 16) & 255;
-  const g = (bigint >> 8) & 255;
-  const b = bigint & 255;
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-};
+import React, { useEffect, useState } from "react";
+import {
+  Image,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
+import {
+  ActivityIndicator,
+  FAB,
+  Portal,
+  ProgressBar,
+} from "react-native-paper";
+import { useIsFocused, useNavigation } from "@react-navigation/native";
+import { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { Ionicons } from "@expo/vector-icons";
+import { useDayStats, getMealTypeTotals } from "@hooks/useDayStats";
+import { useGoal } from "@hooks/useGoal";
+import { useTheme } from "@hooks/useTheme";
+import { MyDayStackParamList, RootTabParamList } from "@app/navigationTypes";
+import { MEAL_TYPE_KEYS, MEAL_TYPE_LABEL } from "@services/constants/mealTypes";
+import type { MealTypeKey } from "@models/types";
+import { MacroRings } from "@components/MacroRings";
 
 const MyDayScreen = () => {
   const { colors } = useTheme();
-  const navigation = useNavigation<NativeStackNavigationProp<MyDayStackParamList, 'MyDay'>>();
+  const navigation =
+    useNavigation<NativeStackNavigationProp<MyDayStackParamList, "MyDay">>();
   const isFocused = useIsFocused();
   const insets = useSafeAreaInsets();
-  const screenWidth = Dimensions.get('window').width;
-  const chartWidth = Math.max(screenWidth - 64, 200); // account for screen + card padding
   const [fabOpen, setFabOpen] = useState(false);
   const backdropColor = colors.background;
   const summaryCardBg = colors.cardBackground;
@@ -48,11 +53,14 @@ const MyDayScreen = () => {
   }, [isFocused, refreshStats]);
 
   useEffect(() => {
-    const blurSub = navigation.addListener('blur', () => setFabOpen(false));
-    const focusSub = navigation.addListener('focus', () => setFabOpen(false));
+    const blurSub = navigation.addListener("blur", () => setFabOpen(false));
+    const focusSub = navigation.addListener("focus", () => setFabOpen(false));
 
-    const parentNav = navigation.getParent<BottomTabNavigationProp<RootTabParamList>>();
-    const tabPressSub = parentNav?.addListener?.('tabPress', () => setFabOpen(false));
+    const parentNav =
+      navigation.getParent<BottomTabNavigationProp<RootTabParamList>>();
+    const tabPressSub = parentNav?.addListener?.("tabPress", () =>
+      setFabOpen(false),
+    );
 
     return () => {
       blurSub();
@@ -68,32 +76,29 @@ const MyDayScreen = () => {
   const fatGoal = goal?.fatGrams ?? 65;
 
   // Today's consumption from stats
-  const consumed = stats?.totals ?? { calories: 0, protein: 0, carbs: 0, fat: 0 };
-
-  // Calculate progress (0-1, capped at 1)
-  const calorieProgress = Math.min(consumed.calories / calorieGoal, 1);
-  const proteinProgress = Math.min(consumed.protein / proteinGoal, 1);
-  const carbsProgress = Math.min(consumed.carbs / carbsGoal, 1);
-  const fatProgress = Math.min(consumed.fat / fatGoal, 1);
-
-  const ringColors = [colors.macroProtein, colors.macroCarb, colors.macroFat];
-
-  const macroProgress = {
-    labels: ['Protein', 'Carbs', 'Fat'],
-    data: [proteinProgress, carbsProgress, fatProgress],
-    colors: ringColors,
+  const consumed = stats?.totals ?? {
+    calories: 0,
+    protein: 0,
+    carbs: 0,
+    fat: 0,
   };
 
+  // Calculate progress (capped for calorie bar, uncapped for macro rings)
+  const calorieProgress = Math.min(consumed.calories / calorieGoal, 1);
+  const proteinProgress = proteinGoal > 0 ? consumed.protein / proteinGoal : 0;
+  const carbsProgress = carbsGoal > 0 ? consumed.carbs / carbsGoal : 0;
+  const fatProgress = fatGoal > 0 ? consumed.fat / fatGoal : 0;
+
   const MEAL_TYPE_ICON: Record<MealTypeKey, number> = {
-    breakfast: require('../../assets/breakfast.png'),
-    lunch: require('../../assets/lunch.png'),
-    dinner: require('../../assets/dinner.png'),
-    snacks: require('../../assets/snacks.png'),
-    water: require('../../assets/water.png'),
+    breakfast: require("../../assets/breakfast.png"),
+    lunch: require("../../assets/lunch.png"),
+    dinner: require("../../assets/dinner.png"),
+    snacks: require("../../assets/snacks.png"),
+    water: require("../../assets/water.png"),
   };
 
   // Calculate per-meal-type calories from stats
-  const meals = MEAL_TYPE_KEYS.filter((key) => key !== 'water').map((key) => {
+  const meals = MEAL_TYPE_KEYS.filter((key) => key !== "water").map((key) => {
     const mealTotals = getMealTypeTotals(stats, key);
     const calories = Math.round(mealTotals.calories);
     // Progress is relative to a quarter of daily goal (rough estimate per meal)
@@ -122,7 +127,7 @@ const MyDayScreen = () => {
       gap: 16,
     },
     chartCard: {
-      width: '100%',
+      width: "100%",
       padding: 16,
       borderRadius: 16,
       backgroundColor: colors.cardBackground,
@@ -135,14 +140,14 @@ const MyDayScreen = () => {
       elevation: 3,
     },
     chartHeader: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
       marginBottom: 12,
     },
     chartTitle: {
       fontSize: 18,
-      fontWeight: '700',
+      fontWeight: "700",
       color: colors.text,
     },
     chartSub: {
@@ -154,7 +159,7 @@ const MyDayScreen = () => {
       backgroundColor: backdropColor,
     },
     summaryCard: {
-      width: '100%',
+      width: "100%",
       marginTop: 16,
       padding: 16,
       borderRadius: 16,
@@ -169,12 +174,12 @@ const MyDayScreen = () => {
       gap: 12,
     },
     summaryHeader: {
-      alignItems: 'center',
+      alignItems: "center",
       gap: 6,
     },
     summaryTitle: {
       fontSize: 20,
-      fontWeight: '700',
+      fontWeight: "700",
       color: colors.text,
     },
     summarySubtitle: {
@@ -195,8 +200,8 @@ const MyDayScreen = () => {
       elevation: 2,
     },
     row: {
-      flexDirection: 'row',
-      alignItems: 'center',
+      flexDirection: "row",
+      alignItems: "center",
       gap: 12,
     },
     rowContent: {
@@ -205,17 +210,17 @@ const MyDayScreen = () => {
     },
     rowTitle: {
       fontSize: 16,
-      fontWeight: '700',
+      fontWeight: "700",
       color: colors.text,
     },
     rowKcal: {
       fontSize: 16,
-      fontWeight: '600',
+      fontWeight: "600",
       color: colors.text,
     },
     rowRight: {
-      flexDirection: 'row',
-      alignItems: 'center',
+      flexDirection: "row",
+      alignItems: "center",
       gap: 4,
     },
     rowSubtitle: {
@@ -225,22 +230,22 @@ const MyDayScreen = () => {
     icon: {
       width: 40,
       height: 40,
-      resizeMode: 'contain',
+      resizeMode: "contain",
     },
     divider: {
       height: 1,
       backgroundColor: colors.borderLight,
     },
     macroLegend: {
-      flexDirection: 'row',
-      justifyContent: 'space-around',
+      flexDirection: "row",
+      justifyContent: "space-around",
       marginTop: 8,
       paddingTop: 12,
       borderTopWidth: 1,
       borderTopColor: colors.borderLight,
     },
     macroItem: {
-      alignItems: 'center',
+      alignItems: "center",
       gap: 4,
     },
     macroDot: {
@@ -254,34 +259,34 @@ const MyDayScreen = () => {
     },
     macroValue: {
       fontSize: 14,
-      fontWeight: '600',
+      fontWeight: "600",
       color: colors.text,
     },
     totalRow: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
       paddingTop: 8,
     },
     totalLabel: {
       fontSize: 16,
-      fontWeight: '700',
+      fontWeight: "700",
       color: colors.textSecondary,
     },
     totalValue: {
       fontSize: 22,
-      fontWeight: '800',
+      fontWeight: "800",
       color: colors.text,
     },
   });
 
   // Format number with thousands separator
   const formatNumber = (num: number): string => {
-    return num.toLocaleString('en-US');
+    return num.toLocaleString("en-US");
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={styles.container} edges={["top"]}>
       <ScrollView
         contentContainerStyle={[styles.content, { paddingBottom: 24 }]}
         showsVerticalScrollIndicator={false}
@@ -292,42 +297,74 @@ const MyDayScreen = () => {
             <Text style={styles.chartSub}>Today</Text>
           </View>
           {isLoading ? (
-            <View style={{ height: 220, justifyContent: 'center', alignItems: 'center' }}>
+            <View
+              style={{
+                height: 220,
+                justifyContent: "center",
+                alignItems: "center",
+              }}
+            >
               <ActivityIndicator size="large" color={colors.primary} />
             </View>
           ) : (
             <>
-              <ProgressChart
-                data={macroProgress}
-                width={chartWidth}
-                height={220}
+              <MacroRings
+                data={[
+                  {
+                    label: "Protein",
+                    progress: proteinProgress,
+                    color: colors.macroProtein,
+                  },
+                  {
+                    label: "Carbs",
+                    progress: carbsProgress,
+                    color: colors.macroCarb,
+                  },
+                  {
+                    label: "Fat",
+                    progress: fatProgress,
+                    color: colors.macroFat,
+                  },
+                ]}
+                size={220}
                 strokeWidth={12}
-                radius={44}
-                withCustomBarColorFromData
-                chartConfig={{
-                  backgroundGradientFrom: colors.cardBackground,
-                  backgroundGradientTo: colors.cardBackground,
-                  // This controls the *track* (unfilled) ring color:
-                  // ProgressChart calls chartConfig.color(0.2, i) for the background ring.
-                  color: (opacity = 1, index = 0) => hexToRgba(ringColors[index] ?? colors.text, opacity),
-                  labelColor: () => colors.text,
-                }}
               />
               <View style={styles.macroLegend}>
                 <View style={styles.macroItem}>
-                  <View style={[styles.macroDot, { backgroundColor: colors.macroProtein }]} />
+                  <View
+                    style={[
+                      styles.macroDot,
+                      { backgroundColor: colors.macroProtein },
+                    ]}
+                  />
                   <Text style={styles.macroLabel}>Protein</Text>
-                  <Text style={styles.macroValue}>{Math.round(consumed.protein)}/{proteinGoal}g</Text>
+                  <Text style={styles.macroValue}>
+                    {Math.round(consumed.protein)}/{proteinGoal}g
+                  </Text>
                 </View>
                 <View style={styles.macroItem}>
-                  <View style={[styles.macroDot, { backgroundColor: colors.macroCarb }]} />
+                  <View
+                    style={[
+                      styles.macroDot,
+                      { backgroundColor: colors.macroCarb },
+                    ]}
+                  />
                   <Text style={styles.macroLabel}>Carbs</Text>
-                  <Text style={styles.macroValue}>{Math.round(consumed.carbs)}/{carbsGoal}g</Text>
+                  <Text style={styles.macroValue}>
+                    {Math.round(consumed.carbs)}/{carbsGoal}g
+                  </Text>
                 </View>
                 <View style={styles.macroItem}>
-                  <View style={[styles.macroDot, { backgroundColor: colors.macroFat }]} />
+                  <View
+                    style={[
+                      styles.macroDot,
+                      { backgroundColor: colors.macroFat },
+                    ]}
+                  />
                   <Text style={styles.macroLabel}>Fat</Text>
-                  <Text style={styles.macroValue}>{Math.round(consumed.fat)}/{fatGoal}g</Text>
+                  <Text style={styles.macroValue}>
+                    {Math.round(consumed.fat)}/{fatGoal}g
+                  </Text>
                 </View>
               </View>
             </>
@@ -354,7 +391,9 @@ const MyDayScreen = () => {
                   styles.rowCard,
                   pressed && { transform: [{ scale: 0.995 }], opacity: 0.9 },
                 ]}
-                onPress={() => navigation.navigate('MealTypeEntries', { mealType: meal.key })}
+                onPress={() =>
+                  navigation.navigate("MealTypeEntries", { mealType: meal.key })
+                }
               >
                 <View style={styles.row}>
                   <Image source={meal.icon} style={styles.icon} />
@@ -364,12 +403,20 @@ const MyDayScreen = () => {
                       progress={meal.progress}
                       color={colors.success}
                       style={{ height: 8, borderRadius: 6 }}
-                      theme={{ colors: { elevation: { level2: colors.borderLight } } }}
+                      theme={{
+                        colors: { elevation: { level2: colors.borderLight } },
+                      }}
                     />
                   </View>
                   <View style={styles.rowRight}>
-                    <Text style={styles.rowKcal}>{formatNumber(meal.calories)} kcal</Text>
-                    <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
+                    <Text style={styles.rowKcal}>
+                      {formatNumber(meal.calories)} kcal
+                    </Text>
+                    <Ionicons
+                      name="chevron-forward"
+                      size={16}
+                      color={colors.textSecondary}
+                    />
                   </View>
                 </View>
               </Pressable>
@@ -378,7 +425,9 @@ const MyDayScreen = () => {
           ))}
           <View style={styles.totalRow}>
             <Text style={styles.totalLabel}>Total today:</Text>
-            <Text style={styles.totalValue}>{formatNumber(totalCalories)} kcal</Text>
+            <Text style={styles.totalValue}>
+              {formatNumber(totalCalories)} kcal
+            </Text>
           </View>
         </View>
 
@@ -393,12 +442,20 @@ const MyDayScreen = () => {
           <FAB.Group
             open={fabOpen}
             visible={isFocused}
-            icon={fabOpen ? 'close' : 'plus'}
+            icon={fabOpen ? "close" : "plus"}
             actions={[
-              { icon: 'food', label: 'Add meal', onPress: () => navigation.navigate('AddMeal') },
-              { icon: 'package-variant', label: 'Add product', onPress: () => {} },
-              { icon: 'cup-water', label: 'Add water', onPress: () => {} },
-              { icon: 'barcode-scan', label: 'Scan food', onPress: () => {} },
+              {
+                icon: "food",
+                label: "Add meal",
+                onPress: () => navigation.navigate("AddMeal"),
+              },
+              {
+                icon: "package-variant",
+                label: "Add product",
+                onPress: () => {},
+              },
+              { icon: "cup-water", label: "Add water", onPress: () => {} },
+              { icon: "barcode-scan", label: "Scan food", onPress: () => {} },
             ]}
             onStateChange={({ open }) => setFabOpen(open)}
             onPress={() => {
@@ -418,4 +475,3 @@ const MyDayScreen = () => {
 };
 
 export default MyDayScreen;
-

@@ -1,16 +1,25 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import NetInfo from '@react-native-community/netinfo';
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import NetInfo from "@react-native-community/netinfo";
 
 import {
   createCalculatedGoal,
   createManualGoal,
   deleteGoal,
   updateGoal,
-} from '@services/api/goals';
-import { createProduct, deleteProduct, updateProduct } from '@services/api/products';
+} from "@services/api/goals";
+import {
+  createProduct,
+  deleteProduct,
+  updateProduct,
+} from "@services/api/products";
+import {
+  createBodyWeight,
+  deleteBodyWeight,
+  updateBodyWeight,
+} from "@services/api/bodyWeights";
 
-type Resource = 'products' | 'goals';
-type Action = 'create' | 'update' | 'delete';
+type Resource = "products" | "goals" | "body-weights";
+type Action = "create" | "update" | "delete";
 
 export type SyncOp = {
   id: string;
@@ -24,9 +33,9 @@ export type SyncOp = {
 };
 
 const STORAGE_KEYS = {
-  queue: 'syncQueue:v1',
-  lastSyncAt: 'syncQueue:lastSyncAt',
-  lastError: 'syncQueue:lastError',
+  queue: "syncQueue:v1",
+  lastSyncAt: "syncQueue:lastSyncAt",
+  lastError: "syncQueue:lastError",
 };
 
 const loadQueue = async (): Promise<SyncOp[]> => {
@@ -74,7 +83,9 @@ const backoffMs = (attempts: number) => {
   return Math.min(max, base * Math.pow(2, exp));
 };
 
-export const enqueue = async (op: Omit<SyncOp, 'attempts' | 'createdAt'>): Promise<void> => {
+export const enqueue = async (
+  op: Omit<SyncOp, "attempts" | "createdAt">,
+): Promise<void> => {
   const queue = await loadQueue();
   queue.push({
     ...op,
@@ -89,39 +100,55 @@ export const getQueue = async (): Promise<SyncOp[]> => {
 };
 
 const applyOp = async (op: SyncOp) => {
-  if (op.resource === 'products') {
+  if (op.resource === "products") {
     const { id, name } = op.payload ?? {};
-    if (op.action === 'create') {
+    if (op.action === "create") {
       await createProduct({ id, name });
       return;
     }
-    if (op.action === 'update') {
+    if (op.action === "update") {
       await updateProduct(id, { name });
       return;
     }
-    if (op.action === 'delete') {
+    if (op.action === "delete") {
       await deleteProduct(id);
       return;
     }
   }
 
-  if (op.resource === 'goals') {
+  if (op.resource === "goals") {
     const { id, goalType, ...rest } = op.payload ?? {};
-    if (op.action === 'create') {
+    if (op.action === "create") {
       // Goals are created via API call directly in the hook, so this is mostly for offline sync
       // We don't need to re-create here as the goal was already created via the API
       return;
     }
-    if (op.action === 'update') {
+    if (op.action === "update") {
       if (id) {
         await updateGoal(id, rest);
       }
       return;
     }
-    if (op.action === 'delete') {
+    if (op.action === "delete") {
       if (id) {
         await deleteGoal(id);
       }
+      return;
+    }
+  }
+
+  if (op.resource === "body-weights") {
+    const { id, day, weightKg } = op.payload ?? {};
+    if (op.action === "create") {
+      await createBodyWeight(day, weightKg);
+      return;
+    }
+    if (op.action === "update") {
+      await updateBodyWeight(id, weightKg);
+      return;
+    }
+    if (op.action === "delete") {
+      await deleteBodyWeight(id);
       return;
     }
   }
@@ -141,7 +168,13 @@ export const flush = async (): Promise<FlushResult> => {
   const net = await NetInfo.fetch();
   const offline = !net.isConnected;
   if (offline) {
-    return { attempted: 0, succeeded: 0, remaining: (await loadQueue()).length, skipped: 0, offline };
+    return {
+      attempted: 0,
+      succeeded: 0,
+      remaining: (await loadQueue()).length,
+      skipped: 0,
+      offline,
+    };
   }
 
   let queue = await loadQueue();
@@ -165,7 +198,7 @@ export const flush = async (): Promise<FlushResult> => {
       await applyOp(op);
       succeeded += 1;
     } catch (e: any) {
-      const msg = e?.message ? String(e.message) : 'Unknown sync error';
+      const msg = e?.message ? String(e.message) : "Unknown sync error";
       const attempts = (op.attempts ?? 0) + 1;
       const delay = backoffMs(attempts);
       next.push({
@@ -188,6 +221,11 @@ export const flush = async (): Promise<FlushResult> => {
     await setLastSyncAt(Date.now());
   }
 
-  return { attempted, succeeded, remaining: queue.length, skipped, offline: false };
+  return {
+    attempted,
+    succeeded,
+    remaining: queue.length,
+    skipped,
+    offline: false,
+  };
 };
-

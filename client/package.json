@@ -33,6 +33,7 @@
     "react-native-chart-kit": "^6.12.0",
     "react-native-gesture-handler": "^2.30.0",
     "react-native-get-random-values": "^2.0.0",
+    "react-native-gifted-charts": "^1.4.74",
     "react-native-paper": "^5.15.0",
     "react-native-safe-area-context": "~5.6.2",
     "react-native-screens": "~4.16.0",

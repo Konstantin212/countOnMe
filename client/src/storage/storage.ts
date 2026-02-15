@@ -1,11 +1,17 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
-import { Meal, MealItem, Product, UserGoal } from '@models/types';
-import { ThemeMode } from '@theme/ThemeContext';
+import {
+  BodyWeightEntry,
+  Meal,
+  MealItem,
+  Product,
+  UserGoal,
+} from "@models/types";
+import { ThemeMode } from "@theme/ThemeContext";
 
-const STORAGE_PREFIX = '@countOnMe';
-const STORAGE_VERSION_V1 = 'v1';
-const STORAGE_VERSION_V2 = 'v2';
+const STORAGE_PREFIX = "@countOnMe";
+const STORAGE_VERSION_V1 = "v1";
+const STORAGE_VERSION_V2 = "v2";
 
 const STORAGE_KEYS = {
   productsV1: `${STORAGE_PREFIX}/products/${STORAGE_VERSION_V1}`,
@@ -16,6 +22,7 @@ const STORAGE_KEYS = {
   productFavourites: `${STORAGE_PREFIX}/products-favourites/${STORAGE_VERSION_V1}`,
   productRecents: `${STORAGE_PREFIX}/products-recents/${STORAGE_VERSION_V1}`,
   goal: `${STORAGE_PREFIX}/goal/${STORAGE_VERSION_V1}`,
+  bodyWeights: `${STORAGE_PREFIX}/body-weights/${STORAGE_VERSION_V1}`,
 } as const;
 
 const parseCollection = <T>(rawValue: string | null): T[] => {
@@ -52,8 +59,8 @@ const saveCollection = async <T>(key: string, data: T[]): Promise<void> => {
 
 const migrateProductsV1ToV2 = (productsV1: Product[]): Product[] => {
   return productsV1.map((p) => {
-    const scaleType = p.scaleType ?? 'Solid';
-    const scaleUnit = p.scaleUnit ?? 'g';
+    const scaleType = p.scaleType ?? "Solid";
+    const scaleUnit = p.scaleUnit ?? "g";
     const portionSize = p.portionSize ?? 100;
 
     return {
@@ -61,11 +68,25 @@ const migrateProductsV1ToV2 = (productsV1: Product[]): Product[] => {
       scaleType,
       scaleUnit,
       portionSize,
-      allowedUnits: p.allowedUnits ?? (scaleType ? (scaleType === 'Solid'
-        ? (scaleUnit === 'kg' ? ['g', 'mg'] : scaleUnit === 'g' ? ['kg', 'mg'] : ['kg', 'g'])
-        : scaleType === 'Liquid'
-          ? (scaleUnit === 'l' ? ['ml'] : ['l'])
-          : (scaleUnit === 'cup' ? ['tbsp', 'tsp'] : scaleUnit === 'tbsp' ? ['cup', 'tsp'] : ['cup', 'tbsp'])) : undefined),
+      allowedUnits:
+        p.allowedUnits ??
+        (scaleType
+          ? scaleType === "Solid"
+            ? scaleUnit === "kg"
+              ? ["g", "mg"]
+              : scaleUnit === "g"
+                ? ["kg", "mg"]
+                : ["kg", "g"]
+            : scaleType === "Liquid"
+              ? scaleUnit === "l"
+                ? ["ml"]
+                : ["l"]
+              : scaleUnit === "cup"
+                ? ["tbsp", "tsp"]
+                : scaleUnit === "tbsp"
+                  ? ["cup", "tsp"]
+                  : ["cup", "tbsp"]
+          : undefined),
       caloriesPerBase: p.caloriesPerBase ?? p.caloriesPer100g,
       proteinPerBase: p.proteinPerBase ?? p.proteinPer100g,
       carbsPerBase: p.carbsPerBase ?? p.carbsPer100g,
@@ -76,16 +97,25 @@ const migrateProductsV1ToV2 = (productsV1: Product[]): Product[] => {
 
 const migrateMealsV1ToV2 = (mealsV1: Meal[]): Meal[] => {
   return mealsV1.map((meal) => {
-    const items = (meal.items as any[]).map((item) => {
-      if (typeof item?.grams === 'number') {
-        const migrated: MealItem = { productId: item.productId, amount: item.grams, unit: 'g' };
-        return migrated;
-      }
-      if (typeof item?.amount === 'number' && typeof item?.unit === 'string') {
-        return item as MealItem;
-      }
-      return null;
-    }).filter(Boolean) as MealItem[];
+    const items = (meal.items as any[])
+      .map((item) => {
+        if (typeof item?.grams === "number") {
+          const migrated: MealItem = {
+            productId: item.productId,
+            amount: item.grams,
+            unit: "g",
+          };
+          return migrated;
+        }
+        if (
+          typeof item?.amount === "number" &&
+          typeof item?.unit === "string"
+        ) {
+          return item as MealItem;
+        }
+        return null;
+      })
+      .filter(Boolean) as MealItem[];
 
     return { ...meal, items };
   });
@@ -113,9 +143,9 @@ export const loadProducts = async (): Promise<Product[]> => {
 };
 
 export const saveProducts = async (products: Product[]): Promise<void> => {
-  console.log('Saving products to storage, count:', products.length);
+  console.log("Saving products to storage, count:", products.length);
   await saveCollection<Product>(STORAGE_KEYS.productsV2, products);
-  console.log('Products saved successfully');
+  console.log("Products saved successfully");
 };
 
 export const loadMeals = async (): Promise<Meal[]> => {
@@ -146,7 +176,9 @@ export const loadProductFavourites = async (): Promise<string[]> => {
   return loadCollection<string>(STORAGE_KEYS.productFavourites);
 };
 
-export const saveProductFavourites = async (productIds: string[]): Promise<void> => {
+export const saveProductFavourites = async (
+  productIds: string[],
+): Promise<void> => {
   await saveCollection<string>(STORAGE_KEYS.productFavourites, productIds);
 };
 
@@ -154,21 +186,23 @@ export const loadProductRecents = async (): Promise<string[]> => {
   return loadCollection<string>(STORAGE_KEYS.productRecents);
 };
 
-export const saveProductRecents = async (productIds: string[]): Promise<void> => {
+export const saveProductRecents = async (
+  productIds: string[],
+): Promise<void> => {
   await saveCollection<string>(STORAGE_KEYS.productRecents, productIds);
 };
 
 export const loadThemePreference = async (): Promise<ThemeMode | null> => {
   try {
     const value = await AsyncStorage.getItem(STORAGE_KEYS.theme);
-    console.log('Loaded theme preference from storage:', value);
-    if (value === 'light' || value === 'dark' || value === 'system') {
+    console.log("Loaded theme preference from storage:", value);
+    if (value === "light" || value === "dark" || value === "system") {
       return value;
     }
-    console.log('No valid theme preference found, using system default');
+    console.log("No valid theme preference found, using system default");
     return null;
   } catch (error) {
-    console.error('Failed to load theme preference', error);
+    console.error("Failed to load theme preference", error);
     return null;
   }
 };
@@ -177,7 +211,7 @@ export const saveThemePreference = async (mode: ThemeMode): Promise<void> => {
   try {
     await AsyncStorage.setItem(STORAGE_KEYS.theme, mode);
   } catch (error) {
-    console.error('Failed to save theme preference', error);
+    console.error("Failed to save theme preference", error);
     throw error;
   }
 };
@@ -191,7 +225,7 @@ export const loadGoal = async (): Promise<UserGoal | null> => {
     }
     return JSON.parse(rawValue) as UserGoal;
   } catch (error) {
-    console.error('Failed to load goal', error);
+    console.error("Failed to load goal", error);
     return null;
   }
 };
@@ -200,7 +234,7 @@ export const saveGoal = async (goal: UserGoal): Promise<void> => {
   try {
     await AsyncStorage.setItem(STORAGE_KEYS.goal, JSON.stringify(goal));
   } catch (error) {
-    console.error('Failed to save goal', error);
+    console.error("Failed to save goal", error);
     throw error;
   }
 };
@@ -209,7 +243,17 @@ export const clearGoal = async (): Promise<void> => {
   try {
     await AsyncStorage.removeItem(STORAGE_KEYS.goal);
   } catch (error) {
-    console.error('Failed to clear goal', error);
+    console.error("Failed to clear goal", error);
     throw error;
   }
+};
+
+export const loadBodyWeights = async (): Promise<BodyWeightEntry[]> => {
+  return loadCollection<BodyWeightEntry>(STORAGE_KEYS.bodyWeights);
+};
+
+export const saveBodyWeights = async (
+  entries: BodyWeightEntry[],
+): Promise<void> => {
+  await saveCollection<BodyWeightEntry>(STORAGE_KEYS.bodyWeights, entries);
 };

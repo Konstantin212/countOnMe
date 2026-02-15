@@ -1,9 +1,9 @@
 export type ISODateString = string;
 
-export type Unit = 'mg' | 'g' | 'kg' | 'ml' | 'l' | 'tsp' | 'tbsp' | 'cup';
-export type ScaleType = 'Liquid' | 'Solid' | 'Dry';
+export type Unit = "mg" | "g" | "kg" | "ml" | "l" | "tsp" | "tbsp" | "cup";
+export type ScaleType = "Liquid" | "Solid" | "Dry";
 
-export type MealTypeKey = 'breakfast' | 'lunch' | 'dinner' | 'snacks' | 'water';
+export type MealTypeKey = "breakfast" | "lunch" | "dinner" | "snacks" | "water";
 
 /**
  * Macro totals for a day or meal type.
@@ -25,12 +25,17 @@ export type DayStats = {
 };
 
 // Goal-related types
-export type GoalType = 'calculated' | 'manual';
-export type Gender = 'male' | 'female';
-export type ActivityLevel = 'sedentary' | 'light' | 'moderate' | 'active' | 'very_active';
-export type WeightGoalType = 'lose' | 'maintain' | 'gain';
-export type WeightChangePace = 'slow' | 'moderate' | 'aggressive';
-export type BmiCategory = 'underweight' | 'normal' | 'overweight' | 'obese';
+export type GoalType = "calculated" | "manual";
+export type Gender = "male" | "female";
+export type ActivityLevel =
+  | "sedentary"
+  | "light"
+  | "moderate"
+  | "active"
+  | "very_active";
+export type WeightGoalType = "lose" | "maintain" | "gain";
+export type WeightChangePace = "slow" | "moderate" | "aggressive";
+export type BmiCategory = "underweight" | "normal" | "overweight" | "obese";
 
 /**
  * User nutrition goal - either calculated from body metrics or manually entered.
@@ -208,4 +213,42 @@ export type EnrichedFoodEntry = {
   /** Units that can be selected (same group as current unit) */
   allowedUnits: Unit[];
   createdAt: ISODateString;
+};
+
+/** Body weight entry for tracking weight over time. */
+export type BodyWeightEntry = {
+  id: string;
+  day: string; // YYYY-MM-DD
+  weightKg: number;
+  createdAt: ISODateString;
+  updatedAt: ISODateString;
+};
+
+/** Time period for stats aggregation. */
+export type StatsPeriod = "7d" | "30d" | "90d";
+
+/** Pace indicator comparing actual weight trend to goal. */
+export type GoalPace = "ahead" | "on_track" | "behind" | "no_data";
+
+/** Tracking streak information. */
+export type StreakInfo = {
+  currentStreak: number;
+  longestStreak: number;
+  totalTrackedDays: number;
+};
+
+/** Macro adherence ratios (0 = 0%, 1 = 100% of goal). */
+export type MacroAdherence = {
+  protein: number;
+  carbs: number;
+  fat: number;
+};
+
+/** A single day's aggregated nutrition stats. */
+export type DailyStatsPoint = {
+  day: string; // YYYY-MM-DD
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
 };

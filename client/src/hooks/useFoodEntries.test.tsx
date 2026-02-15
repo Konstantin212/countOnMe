@@ -54,7 +54,7 @@ describe("useFoodEntries", () => {
 
       expect(entries).toHaveLength(1);
       expect(mockCreateFoodEntry).toHaveBeenCalledWith({
-        productId: "p1",
+        product_id: "p1",
         portion_id: "portion-1",
         day: "2025-06-01",
         meal_type: "breakfast",

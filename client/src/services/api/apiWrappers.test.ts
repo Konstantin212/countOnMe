@@ -18,7 +18,7 @@ describe("API wrappers (thin)", () => {
 
   describe("foodEntries", () => {
     it("listFoodEntries calls apiFetch with query params", async () => {
-      const mockResponse = [
+      const mockApiResponse = [
         {
           id: "entry-1",
           product_id: "p1",
@@ -31,7 +31,7 @@ describe("API wrappers (thin)", () => {
           updated_at: "",
         },
       ];
-      vi.mocked(apiFetch).mockResolvedValue(mockResponse);
+      vi.mocked(apiFetch).mockResolvedValue(mockApiResponse);
 
       const result = await foodEntriesApi.listFoodEntries({
         day: "2025-01-01",
@@ -42,11 +42,23 @@ describe("API wrappers (thin)", () => {
       expect(apiFetch).toHaveBeenCalledWith("/v1/food-entries", {
         query: { day: "2025-01-01", from: "2025-01-01", to: "2025-01-07" },
       });
-      expect(result).toEqual(mockResponse);
+      expect(result).toEqual([
+        {
+          id: "entry-1",
+          productId: "p1",
+          portionId: "por1",
+          day: "2025-01-01",
+          mealType: "lunch",
+          amount: 100,
+          unit: "g",
+          createdAt: "",
+          updatedAt: "",
+        },
+      ]);
     });
 
     it("createFoodEntry calls apiFetch with POST", async () => {
-      const mockResponse = {
+      const mockApiResponse = {
         id: "entry-1",
         product_id: "p1",
         portion_id: "por1",
@@ -57,7 +69,7 @@ describe("API wrappers (thin)", () => {
         created_at: "",
         updated_at: "",
       };
-      vi.mocked(apiFetch).mockResolvedValue(mockResponse);
+      vi.mocked(apiFetch).mockResolvedValue(mockApiResponse);
 
       const body = {
         product_id: "p1",
@@ -73,11 +85,21 @@ describe("API wrappers (thin)", () => {
         method: "POST",
         body,
       });
-      expect(result).toEqual(mockResponse);
+      expect(result).toEqual({
+        id: "entry-1",
+        productId: "p1",
+        portionId: "por1",
+        day: "2025-01-01",
+        mealType: "lunch",
+        amount: 100,
+        unit: "g",
+        createdAt: "",
+        updatedAt: "",
+      });
     });
 
     it("getFoodEntry calls apiFetch with entry ID", async () => {
-      const mockResponse = {
+      const mockApiResponse = {
         id: "entry-1",
         product_id: "p1",
         portion_id: "por1",
@@ -88,16 +110,26 @@ describe("API wrappers (thin)", () => {
         created_at: "",
         updated_at: "",
       };
-      vi.mocked(apiFetch).mockResolvedValue(mockResponse);
+      vi.mocked(apiFetch).mockResolvedValue(mockApiResponse);
 
       const result = await foodEntriesApi.getFoodEntry("entry-1");
 
       expect(apiFetch).toHaveBeenCalledWith("/v1/food-entries/entry-1");
-      expect(result).toEqual(mockResponse);
+      expect(result).toEqual({
+        id: "entry-1",
+        productId: "p1",
+        portionId: "por1",
+        day: "2025-01-01",
+        mealType: "lunch",
+        amount: 100,
+        unit: "g",
+        createdAt: "",
+        updatedAt: "",
+      });
     });
 
     it("updateFoodEntry calls apiFetch with PATCH", async () => {
-      const mockResponse = {
+      const mockApiResponse = {
         id: "entry-1",
         product_id: "p1",
         portion_id: "por1",
@@ -108,7 +140,7 @@ describe("API wrappers (thin)", () => {
         created_at: "",
         updated_at: "",
       };
-      vi.mocked(apiFetch).mockResolvedValue(mockResponse);
+      vi.mocked(apiFetch).mockResolvedValue(mockApiResponse);
 
       const patch = { meal_type: "dinner" as const, amount: 150 };
       const result = await foodEntriesApi.updateFoodEntry("entry-1", patch);
@@ -117,7 +149,17 @@ describe("API wrappers (thin)", () => {
         method: "PATCH",
         body: patch,
       });
-      expect(result).toEqual(mockResponse);
+      expect(result).toEqual({
+        id: "entry-1",
+        productId: "p1",
+        portionId: "por1",
+        day: "2025-01-01",
+        mealType: "dinner",
+        amount: 150,
+        unit: "g",
+        createdAt: "",
+        updatedAt: "",
+      });
     });
 
     it("deleteFoodEntry calls apiFetch with DELETE", async () => {
@@ -133,7 +175,7 @@ describe("API wrappers (thin)", () => {
 
   describe("portions", () => {
     it("listPortions calls apiFetch with product ID", async () => {
-      const mockResponse = [
+      const mockApiResponse = [
         {
           id: "por1",
           product_id: "p1",
@@ -149,16 +191,31 @@ describe("API wrappers (thin)", () => {
           updated_at: "",
         },
       ];
-      vi.mocked(apiFetch).mockResolvedValue(mockResponse);
+      vi.mocked(apiFetch).mockResolvedValue(mockApiResponse);
 
       const result = await portionsApi.listPortions("p1");
 
       expect(apiFetch).toHaveBeenCalledWith("/v1/products/p1/portions");
-      expect(result).toEqual(mockResponse);
+      expect(result).toEqual([
+        {
+          id: "por1",
+          productId: "p1",
+          label: "100g",
+          baseAmount: 100,
+          baseUnit: "g",
+          calories: 200,
+          protein: 20,
+          carbs: 10,
+          fat: 5,
+          isDefault: true,
+          createdAt: "",
+          updatedAt: "",
+        },
+      ]);
     });
 
     it("createPortion calls apiFetch with POST", async () => {
-      const mockResponse = {
+      const mockApiResponse = {
         id: "por1",
         product_id: "p1",
         label: "100g",
@@ -172,7 +229,7 @@ describe("API wrappers (thin)", () => {
         created_at: "",
         updated_at: "",
       };
-      vi.mocked(apiFetch).mockResolvedValue(mockResponse);
+      vi.mocked(apiFetch).mockResolvedValue(mockApiResponse);
 
       const body = {
         label: "100g",
@@ -190,7 +247,20 @@ describe("API wrappers (thin)", () => {
         method: "POST",
         body,
       });
-      expect(result).toEqual(mockResponse);
+      expect(result).toEqual({
+        id: "por1",
+        productId: "p1",
+        label: "100g",
+        baseAmount: 100,
+        baseUnit: "g",
+        calories: 200,
+        protein: 20,
+        carbs: 10,
+        fat: 5,
+        isDefault: true,
+        createdAt: "",
+        updatedAt: "",
+      });
     });
 
     it("getPortion calls apiFetch with portion ID", async () => {

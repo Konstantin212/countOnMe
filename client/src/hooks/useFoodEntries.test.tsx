@@ -33,7 +33,7 @@ describe("useFoodEntries", () => {
   describe("saveMealToBackend", () => {
     it("creates food entries for all items", async () => {
       const product = makeProduct({ id: "p1" });
-      const portion = makePortion({ id: "portion-1", product_id: "p1" });
+      const portion = makePortion({ id: "portion-1", productId: "p1" });
       const items = [makeMealItem({ productId: "p1", amount: 200, unit: "g" })];
 
       mockGetProduct.mockResolvedValue(product as any);
@@ -54,7 +54,7 @@ describe("useFoodEntries", () => {
 
       expect(entries).toHaveLength(1);
       expect(mockCreateFoodEntry).toHaveBeenCalledWith({
-        product_id: "p1",
+        productId: "p1",
         portion_id: "portion-1",
         day: "2025-06-01",
         meal_type: "breakfast",

@@ -1,22 +1,18 @@
-import { useCallback, useRef } from 'react';
+import { useCallback, useRef } from "react";
 
-import { MealItem, MealTypeKey, Product, Unit } from '@models/types';
+import { MealItem, MealTypeKey, Product, Unit } from "@models/types";
 import {
   createFoodEntry,
   deleteFoodEntry,
   FoodEntryCreateRequest,
-  FoodEntryResponse,
+  FoodEntry,
   listFoodEntries,
-} from '@services/api/foodEntries';
-import {
-  createPortion,
-  listPortions,
-  PortionResponse,
-} from '@services/api/portions';
+} from "@services/api/foodEntries";
+import { createPortion, listPortions, Portion } from "@services/api/portions";
 import {
   createProduct as apiCreateProduct,
   getProduct as apiGetProduct,
-} from '@services/api/products';
+} from "@services/api/products";
 
 export type UseFoodEntriesResult = {
   /**
@@ -28,12 +24,12 @@ export type UseFoodEntriesResult = {
     items: MealItem[],
     products: Product[],
     day?: string,
-  ) => Promise<FoodEntryResponse[]>;
+  ) => Promise<FoodEntry[]>;
 
   /**
    * Get all food entries for a specific day.
    */
-  getEntriesForDay: (day: string) => Promise<FoodEntryResponse[]>;
+  getEntriesForDay: (day: string) => Promise<FoodEntry[]>;
 
   /**
    * Delete a food entry.
@@ -46,7 +42,7 @@ export type UseFoodEntriesResult = {
  */
 const getTodayDate = (): string => {
   const today = new Date();
-  return today.toISOString().split('T')[0];
+  return today.toISOString().split("T")[0];
 };
 
 /**
@@ -76,12 +72,12 @@ const ensureProductInBackend = async (product: Product): Promise<void> => {
     productSyncedCache.add(product.id);
   } catch (err) {
     // Product doesn't exist, create it
-    console.log('Product not found in backend, creating:', product.name);
+    console.log("Product not found in backend, creating:", product.name);
     try {
       await apiCreateProduct({ id: product.id, name: product.name });
       productSyncedCache.add(product.id);
     } catch (createErr) {
-      console.error('Failed to create product in backend:', createErr);
+      console.error("Failed to create product in backend:", createErr);
       throw new Error(`Cannot sync product ${product.name} to backend`);
     }
   }
@@ -107,11 +103,12 @@ const getOrCreateDefaultPortion = async (
   try {
     // Try to get existing portions for this product
     const portions = await listPortions(productId);
-    
+
     // Look for default portion or any "100g" portion
-    const defaultPortion = portions.find((p) => p.is_default) 
-      ?? portions.find((p) => p.label.toLowerCase().includes('100g'))
-      ?? portions[0];
+    const defaultPortion =
+      portions.find((p) => p.isDefault) ??
+      portions.find((p) => p.label.toLowerCase().includes("100g")) ??
+      portions[0];
 
     if (defaultPortion) {
       portionCache.set(productId, defaultPortion.id);
@@ -119,14 +116,14 @@ const getOrCreateDefaultPortion = async (
     }
   } catch (err) {
     // No portions found, continue to create one
-    console.log('No existing portions found for product:', productId);
+    console.log("No existing portions found for product:", productId);
   }
 
   // Create a default "100g" portion
   try {
     const baseAmount = product.portionSize ?? 100;
-    const baseUnit = product.scaleUnit ?? 'g';
-    
+    const baseUnit = product.scaleUnit ?? "g";
+
     const newPortion = await createPortion(productId, {
       label: `${baseAmount}${baseUnit}`,
       base_amount: baseAmount,
@@ -141,7 +138,7 @@ const getOrCreateDefaultPortion = async (
     portionCache.set(productId, newPortion.id);
     return newPortion.id;
   } catch (err) {
-    console.error('Failed to create default portion:', err);
+    console.error("Failed to create default portion:", err);
     throw new Error(`Cannot create portion for product ${product.name}`);
   }
 };
@@ -158,9 +155,9 @@ export const useFoodEntries = (): UseFoodEntriesResult => {
       items: MealItem[],
       products: Product[],
       day?: string,
-    ): Promise<FoodEntryResponse[]> => {
+    ): Promise<FoodEntry[]> => {
       if (savingRef.current) {
-        console.warn('Already saving, please wait...');
+        console.warn("Already saving, please wait...");
         return [];
       }
 
@@ -169,23 +166,26 @@ export const useFoodEntries = (): UseFoodEntriesResult => {
       }
 
       savingRef.current = true;
-      const createdEntries: FoodEntryResponse[] = [];
+      const createdEntries: FoodEntry[] = [];
       const entryDay = day ?? getTodayDate();
 
       try {
         for (const item of items) {
           const product = products.find((p) => p.id === item.productId);
           if (!product) {
-            console.warn('Product not found:', item.productId);
+            console.warn("Product not found:", item.productId);
             continue;
           }
 
           // Get or create default portion for this product
           let portionId: string;
           try {
-            portionId = await getOrCreateDefaultPortion(item.productId, product);
+            portionId = await getOrCreateDefaultPortion(
+              item.productId,
+              product,
+            );
           } catch (err) {
-            console.error('Failed to get/create portion:', err);
+            console.error("Failed to get/create portion:", err);
             continue;
           }
 
@@ -194,7 +194,7 @@ export const useFoodEntries = (): UseFoodEntriesResult => {
             product_id: item.productId,
             portion_id: portionId,
             day: entryDay,
-            meal_type: mealType === 'water' ? 'snacks' : mealType, // Map water to snacks
+            meal_type: mealType === "water" ? "snacks" : mealType, // Map water to snacks
             amount: item.amount,
             unit: item.unit,
           };
@@ -203,7 +203,7 @@ export const useFoodEntries = (): UseFoodEntriesResult => {
             const entry = await createFoodEntry(request);
             createdEntries.push(entry);
           } catch (err) {
-            console.error('Failed to create food entry:', err);
+            console.error("Failed to create food entry:", err);
             // Continue with other items even if one fails
           }
         }
@@ -216,14 +216,17 @@ export const useFoodEntries = (): UseFoodEntriesResult => {
     [],
   );
 
-  const getEntriesForDay = useCallback(async (day: string): Promise<FoodEntryResponse[]> => {
-    try {
-      return await listFoodEntries({ day });
-    } catch (err) {
-      console.error('Failed to fetch food entries:', err);
-      return [];
-    }
-  }, []);
+  const getEntriesForDay = useCallback(
+    async (day: string): Promise<FoodEntry[]> => {
+      try {
+        return await listFoodEntries({ day });
+      } catch (err) {
+        console.error("Failed to fetch food entries:", err);
+        return [];
+      }
+    },
+    [],
+  );
 
   const deleteEntry = useCallback(async (entryId: string): Promise<void> => {
     await deleteFoodEntry(entryId);

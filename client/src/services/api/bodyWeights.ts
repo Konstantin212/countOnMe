@@ -1,10 +1,11 @@
 import { BodyWeightEntry } from "@models/types";
 import { apiFetch } from "./http";
+import { parseNumeric } from "@services/utils/parsing";
 
 type BodyWeightApiResponse = {
   id: string;
   day: string;
-  weight_kg: string;
+  weight_kg: string | number; // Decimal from backend
   created_at: string;
   updated_at: string;
 };
@@ -12,10 +13,15 @@ type BodyWeightApiResponse = {
 const mapApiResponseToEntry = (
   response: BodyWeightApiResponse,
 ): BodyWeightEntry => {
+  const weightKg = parseNumeric(response.weight_kg);
+  if (weightKg === undefined) {
+    throw new Error(`Invalid weight_kg value: ${response.weight_kg}`);
+  }
+
   return {
     id: response.id,
     day: response.day,
-    weightKg: parseFloat(response.weight_kg),
+    weightKg,
     createdAt: response.created_at,
     updatedAt: response.updated_at,
   };

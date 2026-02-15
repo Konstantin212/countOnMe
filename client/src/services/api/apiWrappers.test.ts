@@ -194,7 +194,7 @@ describe("API wrappers (thin)", () => {
     });
 
     it("getPortion calls apiFetch with portion ID", async () => {
-      const mockResponse = {
+      const mockApiResponse = {
         id: "por1",
         product_id: "p1",
         label: "100g",
@@ -208,16 +208,30 @@ describe("API wrappers (thin)", () => {
         created_at: "",
         updated_at: "",
       };
-      vi.mocked(apiFetch).mockResolvedValue(mockResponse);
+      vi.mocked(apiFetch).mockResolvedValue(mockApiResponse);
 
       const result = await portionsApi.getPortion("por1");
 
       expect(apiFetch).toHaveBeenCalledWith("/v1/portions/por1");
-      expect(result).toEqual(mockResponse);
+      // Result is transformed to frontend Portion type
+      expect(result).toEqual({
+        id: "por1",
+        productId: "p1",
+        label: "100g",
+        baseAmount: 100,
+        baseUnit: "g",
+        calories: 200,
+        protein: null,
+        carbs: null,
+        fat: null,
+        isDefault: true,
+        createdAt: "",
+        updatedAt: "",
+      });
     });
 
     it("updatePortion calls apiFetch with PATCH", async () => {
-      const mockResponse = {
+      const mockApiResponse = {
         id: "por1",
         product_id: "p1",
         label: "150g",
@@ -231,7 +245,7 @@ describe("API wrappers (thin)", () => {
         created_at: "",
         updated_at: "",
       };
-      vi.mocked(apiFetch).mockResolvedValue(mockResponse);
+      vi.mocked(apiFetch).mockResolvedValue(mockApiResponse);
 
       const patch = { label: "150g", base_amount: 150, calories: 300 };
       const result = await portionsApi.updatePortion("por1", patch);
@@ -240,7 +254,21 @@ describe("API wrappers (thin)", () => {
         method: "PATCH",
         body: patch,
       });
-      expect(result).toEqual(mockResponse);
+      // Result is transformed to frontend Portion type
+      expect(result).toEqual({
+        id: "por1",
+        productId: "p1",
+        label: "150g",
+        baseAmount: 150,
+        baseUnit: "g",
+        calories: 300,
+        protein: null,
+        carbs: null,
+        fat: null,
+        isDefault: true,
+        createdAt: "",
+        updatedAt: "",
+      });
     });
 
     it("deletePortion calls apiFetch with DELETE", async () => {

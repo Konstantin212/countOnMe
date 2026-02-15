@@ -186,7 +186,7 @@ export const GoalProgressCard = ({
   }
 
   // Manual goal (no weight tracking)
-  if (goal.goalType === "manual" || !goal.targetWeightKg) {
+  if (goal.goalType === "manual" || goal.targetWeightKg === undefined) {
     return (
       <View style={styles.card}>
         <Text style={styles.title}>Your Goal</Text>

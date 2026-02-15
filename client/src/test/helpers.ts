@@ -6,8 +6,8 @@ import type {
   UserGoal,
   Unit,
 } from "@models/types";
-import type { FoodEntryResponse } from "@services/api/foodEntries";
-import type { PortionResponse } from "@services/api/portions";
+import type { FoodEntry } from "@services/api/foodEntries";
+import type { Portion } from "@services/api/portions";
 import type { DayStatsResponse } from "@services/api/stats";
 
 /**
@@ -42,35 +42,33 @@ export const makeMeal = (overrides: Partial<Meal> = {}): Meal => ({
 });
 
 export const makeFoodEntry = (
-  overrides: Partial<FoodEntryResponse> = {},
-): FoodEntryResponse => ({
+  overrides: Partial<FoodEntry> = {},
+): FoodEntry => ({
   id: "entry-1",
-  product_id: "prod-1",
-  portion_id: "portion-1",
+  productId: "prod-1",
+  portionId: "portion-1",
   day: "2025-06-01",
-  meal_type: "breakfast",
-  amount: "200",
+  mealType: "breakfast",
+  amount: 200,
   unit: "g",
-  created_at: "2025-06-01T08:00:00Z",
-  updated_at: "2025-06-01T08:00:00Z",
+  createdAt: "2025-06-01T08:00:00Z",
+  updatedAt: "2025-06-01T08:00:00Z",
   ...overrides,
 });
 
-export const makePortion = (
-  overrides: Partial<PortionResponse> = {},
-): PortionResponse => ({
+export const makePortion = (overrides: Partial<Portion> = {}): Portion => ({
   id: "portion-1",
-  product_id: "prod-1",
+  productId: "prod-1",
   label: "100g",
-  base_amount: "100",
-  base_unit: "g",
-  calories: "165",
-  protein: "31",
-  carbs: "0",
-  fat: "3.6",
-  is_default: true,
-  created_at: "2025-01-01T00:00:00Z",
-  updated_at: "2025-01-01T00:00:00Z",
+  baseAmount: 100,
+  baseUnit: "g",
+  calories: 165,
+  protein: 31,
+  carbs: 0,
+  fat: 3.6,
+  isDefault: true,
+  createdAt: "2025-01-01T00:00:00Z",
+  updatedAt: "2025-01-01T00:00:00Z",
   ...overrides,
 });
 

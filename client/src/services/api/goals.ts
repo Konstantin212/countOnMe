@@ -6,6 +6,7 @@ import {
   UserGoal,
 } from "@models/types";
 import { apiFetch } from "./http";
+import { parseNumeric } from "@services/utils/parsing";
 
 // API response types (snake_case from backend)
 // Note: Backend Decimal fields come as strings in JSON
@@ -53,14 +54,6 @@ type GoalCalculateApiResponse = {
   healthy_weight_max_kg: number;
   current_bmi: number;
   bmi_category: string;
-};
-
-// Helper to parse string/number to number (backend Decimals come as strings)
-const parseNumeric = (
-  value: string | number | null | undefined,
-): number | undefined => {
-  if (value === null || value === undefined) return undefined;
-  return typeof value === "string" ? parseFloat(value) : value;
 };
 
 // Transform API response to frontend type

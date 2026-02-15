@@ -3,11 +3,11 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { EnrichedFoodEntry, MealTypeKey, Product, Unit } from "@models/types";
 import {
   deleteFoodEntry,
-  FoodEntryResponse,
+  FoodEntry,
   listFoodEntries,
   updateFoodEntry,
 } from "@services/api/foodEntries";
-import { listPortions, PortionResponse } from "@services/api/portions";
+import { listPortions, Portion } from "@services/api/portions";
 import { convertUnit, getCompatibleUnits } from "@services/utils/units";
 
 import { useProducts } from "./useProducts";
@@ -43,14 +43,12 @@ const getTodayDate = (): string => {
  * Uses LRU eviction when exceeding MAX_PORTION_CACHE_SIZE.
  */
 const MAX_PORTION_CACHE_SIZE = 100;
-const portionCache = new Map<string, PortionResponse[]>();
+const portionCache = new Map<string, Portion[]>();
 
 /**
  * Get portions for a product (with LRU caching).
  */
-const getPortionsForProduct = async (
-  productId: string,
-): Promise<PortionResponse[]> => {
+const getPortionsForProduct = async (productId: string): Promise<Portion[]> => {
   const cached = portionCache.get(productId);
   if (cached) {
     // Move to end (most recently used) by re-inserting
@@ -104,13 +102,13 @@ export const useMealTypeEntries = (
    */
   const enrichEntry = useCallback(
     async (
-      entry: FoodEntryResponse,
+      entry: FoodEntry,
       productsMap: Map<string, Product>,
     ): Promise<EnrichedFoodEntry | null> => {
-      const product = productsMap.get(entry.product_id);
+      const product = productsMap.get(entry.productId);
       if (!product) return null;
 
-      const amount = parseFloat(entry.amount);
+      const amount = entry.amount;
       const unit = entry.unit as Unit;
 
       // Get portion data for accurate calorie calculation
@@ -120,22 +118,21 @@ export const useMealTypeEntries = (
       let fat = 0;
 
       try {
-        const portions = await getPortionsForProduct(entry.product_id);
-        const portion = portions.find((p) => p.id === entry.portion_id);
+        const portions = await getPortionsForProduct(entry.productId);
+        const portion = portions.find((p) => p.id === entry.portionId);
 
         if (portion) {
           // Calculate based on portion's base values
-          const baseAmount = parseFloat(portion.base_amount);
-          const baseUnit = portion.base_unit as Unit;
+          const baseAmount = portion.baseAmount;
+          const baseUnit = portion.baseUnit as Unit;
           const converted = convertUnit(amount, unit, baseUnit);
 
           if (converted !== null && baseAmount > 0) {
             const ratio = converted / baseAmount;
-            calories = parseFloat(portion.calories) * ratio;
-            protein =
-              (portion.protein ? parseFloat(portion.protein) : 0) * ratio;
-            carbs = (portion.carbs ? parseFloat(portion.carbs) : 0) * ratio;
-            fat = (portion.fat ? parseFloat(portion.fat) : 0) * ratio;
+            calories = portion.calories * ratio;
+            protein = (portion.protein ?? 0) * ratio;
+            carbs = (portion.carbs ?? 0) * ratio;
+            fat = (portion.fat ?? 0) * ratio;
           }
         }
       } catch {
@@ -160,9 +157,9 @@ export const useMealTypeEntries = (
 
       return {
         id: entry.id,
-        productId: entry.product_id,
+        productId: entry.productId,
         productName: product.name,
-        portionId: entry.portion_id,
+        portionId: entry.portionId,
         amount,
         unit,
         calories: Math.round(calories),
@@ -170,7 +167,7 @@ export const useMealTypeEntries = (
         carbs: Math.round(carbs * 10) / 10,
         fat: Math.round(fat * 10) / 10,
         allowedUnits,
-        createdAt: entry.created_at,
+        createdAt: entry.createdAt,
       };
     },
     [],
@@ -188,7 +185,7 @@ export const useMealTypeEntries = (
       const response = await listFoodEntries({ day });
 
       // Filter by meal type
-      const filtered = response.filter((e) => e.meal_type === mealType);
+      const filtered = response.filter((e) => e.mealType === mealType);
 
       // Build product map for quick lookup (use ref for stable identity)
       const productsMap = new Map(productsRef.current.map((p) => [p.id, p]));

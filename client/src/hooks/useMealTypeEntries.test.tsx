@@ -4,11 +4,11 @@ import { vi, type Mock } from "vitest";
 import type { Product } from "@models/types";
 import {
   deleteFoodEntry,
-  FoodEntryResponse,
+  FoodEntry,
   listFoodEntries,
   updateFoodEntry,
 } from "@services/api/foodEntries";
-import { listPortions, PortionResponse } from "@services/api/portions";
+import { listPortions, Portion } from "@services/api/portions";
 
 import {
   clearMealTypeEntriesCache,
@@ -54,17 +54,17 @@ const mockListPortions = listPortions as Mock;
 // ── Helpers ────────────────────────────────────────────────────────
 
 const makeFoodEntry = (
-  overrides: Partial<FoodEntryResponse> = {},
-): FoodEntryResponse => ({
+  overrides: Partial<FoodEntry> = {},
+): FoodEntry => ({
   id: "entry-1",
-  product_id: "prod-1",
-  portion_id: "portion-1",
+  productId: "prod-1",
+  portionId: "portion-1",
   day: "2025-06-01",
-  meal_type: "breakfast",
-  amount: "200",
+  mealType: "breakfast",
+  amount: 200,
   unit: "g",
-  created_at: "2025-06-01T08:00:00Z",
-  updated_at: "2025-06-01T08:00:00Z",
+  createdAt: "2025-06-01T08:00:00Z",
+  updatedAt: "2025-06-01T08:00:00Z",
   ...overrides,
 });
 
@@ -78,27 +78,27 @@ const makeProduct = (overrides: Partial<Product> = {}): Product => ({
 });
 
 const makePortion = (
-  overrides: Partial<PortionResponse> = {},
-): PortionResponse => ({
+  overrides: Partial<Portion> = {},
+): Portion => ({
   id: "portion-1",
-  product_id: "prod-1",
+  productId: "prod-1",
   label: "100g",
-  base_amount: "100",
-  base_unit: "g",
-  calories: "165",
-  protein: "31",
-  carbs: "0",
-  fat: "3.6",
-  is_default: true,
-  created_at: "2025-01-01T00:00:00Z",
-  updated_at: "2025-01-01T00:00:00Z",
+  baseAmount: 100,
+  baseUnit: "g",
+  calories: 165,
+  protein: 31,
+  carbs: 0,
+  fat: 3.6,
+  isDefault: true,
+  createdAt: "2025-01-01T00:00:00Z",
+  updatedAt: "2025-01-01T00:00:00Z",
   ...overrides,
 });
 
 const setupHook = async (
-  entries: FoodEntryResponse[] = [],
+  entries: FoodEntry[] = [],
   products: Product[] = [],
-  portions: PortionResponse[] = [],
+  portions: Portion[] = [],
 ) => {
   // Set mock data
   mockProducts.length = 0;
@@ -135,8 +135,8 @@ describe("useMealTypeEntries", () => {
 
     it("filters entries by meal type", async () => {
       const entries = [
-        makeFoodEntry({ id: "e1", meal_type: "breakfast" }),
-        makeFoodEntry({ id: "e2", meal_type: "lunch" }),
+        makeFoodEntry({ id: "e1", mealType: "breakfast" }),
+        makeFoodEntry({ id: "e2", mealType: "lunch" }),
       ];
       const product = makeProduct();
       const portion = makePortion();
@@ -148,7 +148,7 @@ describe("useMealTypeEntries", () => {
     });
 
     it("returns empty entries when no products match", async () => {
-      const entries = [makeFoodEntry({ product_id: "unknown" })];
+      const entries = [makeFoodEntry({ productId: "unknown" })];
       const { result } = await setupHook(entries, [], []);
 
       expect(result.current.entries).toHaveLength(0);
@@ -171,14 +171,14 @@ describe("useMealTypeEntries", () => {
     });
 
     it("enriches entries with portion-based nutrition", async () => {
-      const entry = makeFoodEntry({ amount: "200" });
+      const entry = makeFoodEntry({ amount: 200 });
       const product = makeProduct();
       const portion = makePortion({
-        base_amount: "100",
-        calories: "165",
-        protein: "31",
-        carbs: "0",
-        fat: "3.6",
+        baseAmount: 100,
+        calories: 165,
+        protein: 31,
+        carbs: 0,
+        fat: 3.6,
       });
 
       const { result } = await setupHook([entry], [product], [portion]);
@@ -233,7 +233,7 @@ describe("useMealTypeEntries", () => {
 
   describe("updateEntry", () => {
     it("persists to database then updates local state", async () => {
-      const entry = makeFoodEntry({ amount: "100" });
+      const entry = makeFoodEntry({ amount: 200 });
       const product = makeProduct();
       const portion = makePortion();
 

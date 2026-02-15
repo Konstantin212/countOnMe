@@ -4,20 +4,26 @@ import { describe, it, expect, vi } from "vitest";
 import { MacroRings, darkenHex } from "./MacroRings";
 
 // Mock react-native-svg to map to regular HTML elements with testID → data-testid
-vi.mock("react-native-svg", () => ({
-  __esModule: true,
-  default: ({ children, ...props }: any) => {
-    const { testID, ...rest } = props;
-    return React.createElement(
-      "svg",
-      { ...rest, "data-testid": testID },
-      children,
-    );
-  },
-  Circle: ({ testID, ...props }: any) => {
-    return React.createElement("circle", { ...props, "data-testid": testID });
-  },
-}));
+// Note: react-native-svg is also aliased in vitest.config.ts to avoid Flow parse errors
+vi.mock("react-native-svg", () => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const R = require("react");
+  return {
+    __esModule: true,
+    default: function MockSvg(props: Record<string, unknown>) {
+      const { testID, children, ...rest } = props;
+      return R.createElement(
+        "svg",
+        { ...rest, "data-testid": testID },
+        children,
+      );
+    },
+    Circle: function MockCircle(props: Record<string, unknown>) {
+      const { testID, ...rest } = props;
+      return R.createElement("circle", { ...rest, "data-testid": testID });
+    },
+  };
+});
 
 describe("MacroRings", () => {
   const mockData = [

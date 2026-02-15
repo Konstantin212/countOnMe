@@ -1,5 +1,5 @@
 import React from "react";
-import { View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import Svg, { Circle } from "react-native-svg";
 
 type MacroRingDatum = {
@@ -65,7 +65,7 @@ export const MacroRings: React.FC<MacroRingsProps> = ({
   const cy = size / 2;
 
   return (
-    <View style={{ alignItems: "center" }}>
+    <View style={ringStyles.container}>
       <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
         {data.map((datum, i) => {
           const radius = baseRadius + i * ringGap;
@@ -140,5 +140,11 @@ export const MacroRings: React.FC<MacroRingsProps> = ({
     </View>
   );
 };
+
+const ringStyles = StyleSheet.create({
+  container: {
+    alignItems: "center",
+  },
+});
 
 export default MacroRings;

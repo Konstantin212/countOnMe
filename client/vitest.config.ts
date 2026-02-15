@@ -22,6 +22,14 @@ export default defineConfig({
       "@services": path.resolve(__dirname, "src/services"),
       "@storage": path.resolve(__dirname, "src/storage"),
       "@theme": path.resolve(__dirname, "src/theme"),
+      "react-native-svg": path.resolve(
+        __dirname,
+        "src/test/__mocks__/react-native-svg.js",
+      ),
+      "react-native": path.resolve(
+        __dirname,
+        "src/test/__mocks__/react-native.js",
+      ),
     },
   },
   esbuild: {

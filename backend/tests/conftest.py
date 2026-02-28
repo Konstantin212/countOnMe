@@ -20,6 +20,8 @@ from app.api.deps import get_session
 from app.db.base import Base
 from app.main import create_app
 from app.models.body_weight import BodyWeight
+from app.models.catalog_portion import CatalogPortion
+from app.models.catalog_product import CatalogProduct
 from app.models.device import Device
 from app.models.food_entry import FoodEntry
 from app.models.product import Product
@@ -41,7 +43,7 @@ async def test_engine() -> AsyncIterator[AsyncEngine]:
     engine = create_async_engine(TEST_DATABASE_URL, echo=False, pool_pre_ping=True)
 
     # Import all models to ensure they're registered with Base
-    _ = (Device, Product, ProductPortion, FoodEntry, UserGoal, BodyWeight)
+    _ = (Device, Product, ProductPortion, FoodEntry, UserGoal, BodyWeight, CatalogProduct, CatalogPortion)
 
     # Create schema (reuse existing enums if they exist)
     async with engine.begin() as conn:

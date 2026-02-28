@@ -11,6 +11,7 @@
 ### Features
 - [`features/product-management.md`](features/product-management.md) — Product CRUD, Open Food Facts import, scales and units
 - [`features/food-tracking.md`](features/food-tracking.md) — Daily food logging, meal types, AddMeal flow, day stats
+- [`features/catalog-seeding.md`](features/catalog-seeding.md) — Global USDA product catalog, seed script, API endpoints
 - [`features/goal-system.md`](features/goal-system.md) — Nutrition goals (calculated via BMR/TDEE or manual), BMI, macros
 - [`features/device-auth.md`](features/device-auth.md) — Anonymous device authentication, token lifecycle
 - [`features/sync-system.md`](features/sync-system.md) — Offline-first sync, queue, cursor-based sync endpoint

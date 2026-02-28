@@ -1,6 +1,5 @@
 ---
 tools: ["Read", "Grep", "Glob"]
-model: sonnet
 description: Code quality reviewer. Checks correctness, security, maintainability, testing, and project pattern compliance.
 ---
 

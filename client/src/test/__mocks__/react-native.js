@@ -41,8 +41,25 @@ const Text = createMockComponent("Text");
 const Image = createMockComponent("Image");
 const ScrollView = createMockComponent("ScrollView");
 const TextInput = createMockComponent("TextInput");
-const TouchableOpacity = createMockComponent("TouchableOpacity");
-const Pressable = createMockComponent("Pressable");
+
+// TouchableOpacity / Pressable: map onPress → onClick so fireEvent.click works
+function createPressableMockComponent(name) {
+  const component = function (props) {
+    const { testID, children, onPress, style, ...rest } = props || {};
+    // style may be a function (pressed state) — resolve to plain object for jsdom
+    const resolvedStyle = typeof style === "function" ? style({ pressed: false }) : style;
+    return React.createElement(
+      name.toLowerCase(),
+      { ...rest, style: resolvedStyle, "data-testid": testID, onClick: onPress },
+      children,
+    );
+  };
+  component.displayName = name;
+  return component;
+}
+
+const TouchableOpacity = createPressableMockComponent("TouchableOpacity");
+const Pressable = createPressableMockComponent("Pressable");
 const FlatList = createMockComponent("FlatList");
 const ActivityIndicator = createMockComponent("ActivityIndicator");
 const SafeAreaView = createMockComponent("SafeAreaView");

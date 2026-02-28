@@ -1,6 +1,5 @@
 ---
 tools: ["Read", "Write", "Edit", "Bash", "Grep", "Glob"]
-model: sonnet
 description: Fix build and type errors incrementally. Parses errors, fixes one at a time, re-verifies after each fix.
 ---
 

@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -8,10 +8,14 @@ import {
   Text,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
-import { useNavigation } from "@react-navigation/native";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
+import { FAB, Portal } from "react-native-paper";
+import { useIsFocused, useNavigation } from "@react-navigation/native";
 import { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useTheme } from "@hooks/useTheme";
 import { useGoal } from "@hooks/useGoal";
 import { useBodyWeight } from "@hooks/useBodyWeight";
@@ -27,20 +31,22 @@ import { WeightChart } from "@components/WeightChart";
 import { CalorieTrendBars } from "@components/CalorieTrendBars";
 import { MacroAdherenceCard } from "@components/MacroAdherenceCard";
 import { StreaksCard } from "@components/StreaksCard";
-import { LogWeightModal } from "@components/LogWeightModal";
-import type { RootTabParamList } from "@app/navigationTypes";
+import type { MyPathStackParamList, RootTabParamList } from "@app/navigationTypes";
 import type { StatsPeriod } from "@models/types";
 
 const MyPathScreen = () => {
   const { colors } = useTheme();
-  const navigation = useNavigation<BottomTabNavigationProp<RootTabParamList>>();
+  const navigation = useNavigation<NativeStackNavigationProp<MyPathStackParamList, "MyPath">>();
+  const insets = useSafeAreaInsets();
+  const isFocused = useIsFocused();
+  const [fabOpen, setFabOpen] = useState(false);
+  const backdropColor = colors.background;
 
   // Hooks
   const { goal, loading: goalLoading, refresh: refreshGoal } = useGoal();
   const {
     weights,
     loading: weightsLoading,
-    logWeight,
     refresh: refreshWeights,
   } = useBodyWeight();
   const {
@@ -50,9 +56,6 @@ const MyPathScreen = () => {
     loading: statsLoading,
     refresh: refreshStats,
   } = useStatsRange();
-
-  // Modal state
-  const [isWeightModalVisible, setIsWeightModalVisible] = useState(false);
 
   // Derived data
   const weightDelta = goal ? calculateWeightDelta(weights, goal) : null;
@@ -74,6 +77,24 @@ const MyPathScreen = () => {
     await Promise.all([refreshGoal(), refreshWeights(), refreshStats()]);
   }, [refreshGoal, refreshWeights, refreshStats]);
 
+  // Close FAB on navigation events
+  useEffect(() => {
+    const blurSub = navigation.addListener("blur", () => setFabOpen(false));
+    const focusSub = navigation.addListener("focus", () => setFabOpen(false));
+
+    const parentNav =
+      navigation.getParent<BottomTabNavigationProp<RootTabParamList>>();
+    const tabPressSub = parentNav?.addListener?.("tabPress", () =>
+      setFabOpen(false),
+    );
+
+    return () => {
+      blurSub();
+      focusSub();
+      tabPressSub?.();
+    };
+  }, [navigation]);
+
   // Handle period selection
   const handlePeriodChange = (newPeriod: StatsPeriod) => {
     setPeriod(newPeriod);
@@ -81,18 +102,9 @@ const MyPathScreen = () => {
 
   // Handle goal setup navigation
   const handleSetupGoal = () => {
-    navigation.navigate("ProfileTab", { screen: "GoalSetup" });
-  };
-
-  // Handle weight logging
-  const handleLogWeight = async (day: string, weightKg: number) => {
-    await logWeight(day, weightKg);
-    await refreshWeights();
-  };
-
-  // Handle FAB press
-  const handleFabPress = () => {
-    setIsWeightModalVisible(true);
+    navigation
+      .getParent<BottomTabNavigationProp<RootTabParamList>>()
+      ?.navigate("ProfileTab", { screen: "GoalSetup" });
   };
 
   const styles = StyleSheet.create({
@@ -144,21 +156,9 @@ const MyPathScreen = () => {
       fontWeight: "600",
       color: colors.textSecondary,
     },
-    fab: {
-      position: "absolute",
-      bottom: 32,
-      right: 24,
-      width: 56,
-      height: 56,
-      borderRadius: 28,
-      backgroundColor: colors.primary,
-      justifyContent: "center",
-      alignItems: "center",
-      shadowColor: colors.shadow,
-      shadowOpacity: 0.3,
-      shadowOffset: { width: 0, height: 4 },
-      shadowRadius: 8,
-      elevation: 8,
+    fabOverlay: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: "transparent",
     },
     loadingContainer: {
       flex: 1,
@@ -273,20 +273,48 @@ const MyPathScreen = () => {
         </ScrollView>
       )}
 
-      <Pressable
-        style={styles.fab}
-        onPress={handleFabPress}
-        testID="fab-log-weight"
-      >
-        <Ionicons name="add" size={28} color={colors.buttonText} />
-      </Pressable>
-
-      <LogWeightModal
-        visible={isWeightModalVisible}
-        onClose={() => setIsWeightModalVisible(false)}
-        onSave={handleLogWeight}
-        initialWeight={latestWeight ?? undefined}
-      />
+      <Portal>
+        {fabOpen && (
+          <Pressable
+            accessibilityLabel="Close quick actions"
+            testID="backdrop-close"
+            style={styles.fabOverlay}
+            onPress={() => setFabOpen(false)}
+          />
+        )}
+        <FAB.Group
+          open={fabOpen}
+          visible={isFocused}
+          icon={fabOpen ? "close" : "plus"}
+          actions={[
+            {
+              icon: "food",
+              label: "Add meal",
+              onPress: () =>
+                navigation
+                  .getParent<BottomTabNavigationProp<RootTabParamList>>()
+                  ?.navigate("MyDayTab", { screen: "AddMeal" }),
+            },
+            {
+              icon: "package-variant",
+              label: "Add product",
+              onPress: () => {},
+            },
+            { icon: "cup-water", label: "Add water", onPress: () => {} },
+            { icon: "barcode-scan", label: "Scan food", onPress: () => {} },
+          ]}
+          onStateChange={({ open }) => setFabOpen(open)}
+          onPress={() => {
+            if (fabOpen) {
+              setFabOpen(false);
+            }
+          }}
+          fabStyle={{ backgroundColor: colors.primary }}
+          color={colors.textInverse}
+          style={{ bottom: insets.bottom + 72 }}
+          backdropColor={backdropColor}
+        />
+      </Portal>
     </SafeAreaView>
   );
 };

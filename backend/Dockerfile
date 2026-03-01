@@ -18,6 +18,7 @@ RUN pip install --no-cache-dir poetry==1.8.5 \
 COPY app /app/app
 COPY alembic /app/alembic
 COPY alembic.ini /app/alembic.ini
+COPY scripts /app/scripts
 
 EXPOSE 8000
 

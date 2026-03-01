@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import sqlalchemy as sa
 from alembic import op
+from sqlalchemy.dialects import postgresql as pg
 
 
 revision = "0008_catalog_portions"
@@ -36,11 +37,7 @@ def upgrade() -> None:
         sa.Column("base_amount", sa.Numeric(12, 3), nullable=False),
         sa.Column(
             "base_unit",
-            sa.Enum(
-                "mg", "g", "kg", "ml", "l", "tsp", "tbsp", "cup",
-                name="unit_enum",
-                create_type=False,
-            ),
+            pg.ENUM(name="unit_enum", create_type=False),
             nullable=False,
         ),
         sa.Column("gram_weight", sa.Numeric(12, 3), nullable=True),

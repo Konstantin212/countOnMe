@@ -16,7 +16,6 @@ from app.services.products import (
     update_product,
 )
 
-
 router = APIRouter(prefix="/products", tags=["products"])
 
 

@@ -17,7 +17,6 @@ from app.services.food_entries import (
     update_food_entry,
 )
 
-
 router = APIRouter(prefix="/food-entries", tags=["food-entries"])
 
 

@@ -12,7 +12,6 @@ from app.services.auth import (
     verify_device_token,
 )
 
-
 _bearer = HTTPBearer(auto_error=False)
 
 

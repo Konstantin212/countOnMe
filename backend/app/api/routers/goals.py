@@ -27,7 +27,6 @@ from app.services.goals import (
     update_goal,
 )
 
-
 router = APIRouter(prefix="/goals", tags=["goals"])
 
 

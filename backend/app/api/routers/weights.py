@@ -18,7 +18,6 @@ from app.services.weights import (
     update_body_weight,
 )
 
-
 router = APIRouter(prefix="/body-weights", tags=["body-weights"])
 
 

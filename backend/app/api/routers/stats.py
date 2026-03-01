@@ -19,7 +19,6 @@ from app.schemas.stats import (
 from app.services.stats import get_daily_stats, get_day_stats
 from app.services.weights import list_body_weights
 
-
 router = APIRouter(prefix="/stats", tags=["stats"])
 
 

@@ -5,7 +5,6 @@ from decimal import Decimal
 
 from app.schemas.enums import Unit
 
-
 _MASS_TO_G: dict[Unit, Decimal] = {
     Unit.mg: Decimal("0.001"),
     Unit.g: Decimal("1"),

@@ -13,7 +13,6 @@ from app.schemas.enums import (
     WeightGoalType,
 )
 
-
 # Activity level multipliers for TDEE calculation
 ACTIVITY_MULTIPLIERS: dict[ActivityLevel, float] = {
     ActivityLevel.sedentary: 1.2,  # Little or no exercise

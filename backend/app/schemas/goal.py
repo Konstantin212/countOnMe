@@ -33,7 +33,7 @@ class GoalCalculateRequest(APIModel):
     )
 
     @model_validator(mode="after")
-    def validate_weight_goal_fields(self) -> "GoalCalculateRequest":
+    def validate_weight_goal_fields(self) -> GoalCalculateRequest:
         if self.weight_goal_type in (WeightGoalType.lose, WeightGoalType.gain):
             if self.target_weight_kg is None:
                 raise ValueError("target_weight_kg is required for lose/gain goals")
@@ -89,7 +89,7 @@ class GoalCreateCalculatedRequest(GoalCalculateRequest):
     water_ml: int | None = Field(default=None, ge=0, le=10000)
 
     @model_validator(mode="after")
-    def validate_macro_sum(self) -> "GoalCreateCalculatedRequest":
+    def validate_macro_sum(self) -> GoalCreateCalculatedRequest:
         # Only validate if all three are provided
         if (
             self.protein_percent is not None
@@ -113,7 +113,7 @@ class GoalCreateManualRequest(APIModel):
     water_ml: int = Field(ge=0, le=10000)
 
     @model_validator(mode="after")
-    def validate_macro_sum(self) -> "GoalCreateManualRequest":
+    def validate_macro_sum(self) -> GoalCreateManualRequest:
         total = self.protein_percent + self.carbs_percent + self.fat_percent
         if total != 100:
             raise ValueError(f"Macro percentages must sum to 100, got {total}")

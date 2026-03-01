@@ -5,7 +5,7 @@ import hmac
 import secrets
 import uuid
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -53,6 +53,6 @@ async def get_device_by_id(session: AsyncSession, device_id: uuid.UUID) -> Devic
 
 
 async def touch_device_last_seen(session: AsyncSession, device: Device) -> None:
-    device.last_seen_at = datetime.now(timezone.utc)
+    device.last_seen_at = datetime.now(UTC)
     session.add(device)
 

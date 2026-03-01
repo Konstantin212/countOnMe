@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy import and_, or_, select
@@ -14,7 +14,6 @@ from app.models.product import Product
 from app.models.product_portion import ProductPortion
 from app.schemas.sync import SyncSinceResponse
 
-
 router = APIRouter(prefix="/sync", tags=["sync"])
 
 
@@ -26,14 +25,14 @@ def _parse_cursor(cursor: str | None) -> tuple[datetime, uuid.UUID] | None:
         # ISO 8601
         ts = datetime.fromisoformat(ts_raw.replace("Z", "+00:00"))
         if ts.tzinfo is None:
-            ts = ts.replace(tzinfo=timezone.utc)
+            ts = ts.replace(tzinfo=UTC)
         return ts, uuid.UUID(id_raw)
     except Exception:
         return None
 
 
 def _format_cursor(ts: datetime, id_: uuid.UUID) -> str:
-    return f"{ts.astimezone(timezone.utc).isoformat().replace('+00:00', 'Z')}|{id_}"
+    return f"{ts.astimezone(UTC).isoformat().replace('+00:00', 'Z')}|{id_}"
 
 
 def _cursor_filter(model, since: tuple[datetime, uuid.UUID] | None):

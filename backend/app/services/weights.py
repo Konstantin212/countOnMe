@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 
 from sqlalchemy import Select, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -86,7 +86,7 @@ async def update_body_weight(
     if row is None:
         return None
     row.weight_kg = weight_kg
-    row.updated_at = datetime.now(timezone.utc)
+    row.updated_at = datetime.now(UTC)
     session.add(row)
     await session.commit()
     await session.refresh(row)
@@ -102,8 +102,8 @@ async def soft_delete_body_weight(
     row = await get_body_weight(session, device_id=device_id, weight_id=weight_id)
     if row is None:
         return False
-    row.deleted_at = datetime.now(timezone.utc)
-    row.updated_at = datetime.now(timezone.utc)
+    row.deleted_at = datetime.now(UTC)
+    row.updated_at = datetime.now(UTC)
     session.add(row)
     await session.commit()
     return True

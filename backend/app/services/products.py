@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy import Select, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -48,7 +48,7 @@ async def update_product(
 
     if name is not None:
         product.name = name
-    product.updated_at = datetime.now(timezone.utc)
+    product.updated_at = datetime.now(UTC)
     session.add(product)
 
     await session.commit()
@@ -66,8 +66,8 @@ async def soft_delete_product(
     if product is None:
         return False
 
-    product.deleted_at = datetime.now(timezone.utc)
-    product.updated_at = datetime.now(timezone.utc)
+    product.deleted_at = datetime.now(UTC)
+    product.updated_at = datetime.now(UTC)
     session.add(product)
     await session.commit()
     return True

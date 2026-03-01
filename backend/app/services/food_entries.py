@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 
 from sqlalchemy import Select, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -117,7 +117,7 @@ async def update_food_entry(
 
     for k, v in patch.items():
         setattr(entry, k, v)
-    entry.updated_at = datetime.now(timezone.utc)
+    entry.updated_at = datetime.now(UTC)
     session.add(entry)
     await session.commit()
     await session.refresh(entry)
@@ -134,8 +134,8 @@ async def soft_delete_food_entry(
     if entry is None:
         return False
 
-    entry.deleted_at = datetime.now(timezone.utc)
-    entry.updated_at = datetime.now(timezone.utc)
+    entry.deleted_at = datetime.now(UTC)
+    entry.updated_at = datetime.now(UTC)
     session.add(entry)
     await session.commit()
     return True

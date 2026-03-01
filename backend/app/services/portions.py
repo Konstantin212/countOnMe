@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy import Select, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -88,7 +88,7 @@ async def create_portion(
                 ProductPortion.id != portion.id,
                 ProductPortion.deleted_at.is_(None),
             )
-            .values(is_default=False, updated_at=datetime.now(timezone.utc))
+            .values(is_default=False, updated_at=datetime.now(UTC))
         )
 
     await session.commit()
@@ -117,7 +117,7 @@ async def update_portion(
 
     for k, v in patch.items():
         setattr(portion, k, v)
-    portion.updated_at = datetime.now(timezone.utc)
+    portion.updated_at = datetime.now(UTC)
     session.add(portion)
     await session.flush()
 
@@ -130,7 +130,7 @@ async def update_portion(
                 ProductPortion.id != portion.id,
                 ProductPortion.deleted_at.is_(None),
             )
-            .values(is_default=False, updated_at=datetime.now(timezone.utc))
+            .values(is_default=False, updated_at=datetime.now(UTC))
         )
 
     await session.commit()
@@ -164,11 +164,11 @@ async def soft_delete_portion(
         if replacement is None:
             raise PortionConflict("Cannot delete the only default portion.")
         replacement.is_default = True
-        replacement.updated_at = datetime.now(timezone.utc)
+        replacement.updated_at = datetime.now(UTC)
         session.add(replacement)
 
-    portion.deleted_at = datetime.now(timezone.utc)
-    portion.updated_at = datetime.now(timezone.utc)
+    portion.deleted_at = datetime.now(UTC)
+    portion.updated_at = datetime.now(UTC)
     portion.is_default = False
     session.add(portion)
     await session.commit()

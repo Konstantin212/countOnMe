@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from decimal import Decimal
 
 from sqlalchemy import Select, select
@@ -11,17 +11,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.user_goal import UserGoal
 from app.schemas.enums import (
-    ActivityLevel,
-    Gender,
     GoalType,
-    WeightChangePace,
-    WeightGoalType,
 )
 from app.schemas.goal import GoalCreateCalculatedRequest, GoalCreateManualRequest
 from app.services.goal_calculation import (
-    calculate_bmi,
     calculate_full_goal,
-    calculate_healthy_weight_range,
     calculate_macros_for_manual,
 )
 
@@ -253,7 +247,7 @@ async def update_goal(
     if water_ml is not None:
         goal.water_ml = water_ml
 
-    goal.updated_at = datetime.now(timezone.utc)
+    goal.updated_at = datetime.now(UTC)
     session.add(goal)
     await session.commit()
     await session.refresh(goal)
@@ -271,8 +265,8 @@ async def soft_delete_goal(
     if goal is None:
         return False
 
-    goal.deleted_at = datetime.now(timezone.utc)
-    goal.updated_at = datetime.now(timezone.utc)
+    goal.deleted_at = datetime.now(UTC)
+    goal.updated_at = datetime.now(UTC)
     session.add(goal)
     await session.commit()
     return True
@@ -288,7 +282,7 @@ async def _soft_delete_existing_goals(
     res = await session.execute(stmt)
     goals = res.scalars().all()
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     for goal in goals:
         goal.deleted_at = now
         goal.updated_at = now

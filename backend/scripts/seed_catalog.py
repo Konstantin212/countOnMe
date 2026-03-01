@@ -357,6 +357,11 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="Directory containing USDA FoundationFoods *.json files (default: <repo>/seeds/)",
     )
     parser.add_argument(
+        "--db-url",
+        default=None,
+        help="PostgreSQL connection URL (overrides DATABASE_URL env var)",
+    )
+    parser.add_argument(
         "--dry-run",
         action="store_true",
         help="Parse and validate without writing to the database.",
@@ -366,4 +371,6 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 if __name__ == "__main__":
     args = _parse_args()
+    if args.db_url:
+        os.environ["DATABASE_URL"] = args.db_url
     seed(args.seeds_dir, dry_run=args.dry_run)

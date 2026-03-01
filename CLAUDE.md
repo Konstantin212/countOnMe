@@ -1,5 +1,7 @@
 # CountOnMe — Claude Code Rules
 
+Don't write long explanatory answers, keep the answers short, and don't demonstrate the plan to me after the architect. Don't show me comprehensive output after you've finished planning, designing, or implementing.
+
 ## Product Overview
 
 **CountOnMe** is a fast, offline-first calorie tracking app (Expo React Native + FastAPI backend). Manual tracking first, AI dish parsing later. No accounts, no cloud for basics.

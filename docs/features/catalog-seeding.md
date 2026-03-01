@@ -27,6 +27,7 @@ This sources `.env` (if present) and runs the seed script with default settings.
 **Options:**
 
 - `--seeds-dir PATH` — Directory containing USDA FoundationFoods `*.json` files. Default: `backend/seeds/`
+- `--db-url URL` — PostgreSQL connection URL. Overrides the `DATABASE_URL` environment variable (useful for non-standard database locations)
 - `--dry-run` — Parse and validate without writing to the database. Prints estimated product count.
 
 ### Direct Invocation
@@ -38,20 +39,34 @@ python -m scripts.seed_catalog --seeds-dir ../seeds
 
 ### Environment Setup
 
-The seed script requires database connectivity:
+The seed script uses a default database connection and does not require configuration for typical setups.
 
-**Option 1: Environment variable**
+**Default behavior:**
+- `seed.sh` automatically sets `DATABASE_URL` to `postgresql://countonme:countonme@localhost:5433/countonme` (host-accessible port via Docker Compose)
+- If you have already started the database with Docker Compose, no further setup is needed
+
+**Override the database URL:**
+
+**Option 1: Command-line flag**
+```bash
+./seed.sh --db-url "postgresql://user:pass@custom-host:5432/countonme"
+```
+
+**Option 2: Environment variable**
 ```bash
 export DATABASE_URL="postgresql://user:pass@localhost:5432/countonme"
 ./seed.sh
 ```
 
-**Option 2: `.env` file at repo root**
+**Option 3: `.env` file at repo root**
 ```
 DATABASE_URL=postgresql://user:pass@localhost:5432/countonme
 ```
 
-The script reads the `.env` file automatically and converts `postgresql+asyncpg://` URLs to sync `postgresql://` format.
+**Database Port Clarification:**
+- From the **host machine**: `localhost:5433` (exposed by Docker Compose)
+- Inside **Docker** (container to container): `db:5432` (internal Docker network)
+- Use `localhost:5433` when running the seed script from your development machine
 
 ## Idempotency
 
@@ -254,19 +269,23 @@ Products are **skipped** (not seeded) if:
 
 - `fdc_id` is missing or zero
 - `description` is empty
-- Calculated `kcal_100g` is zero or negative
+- Calculated `kcal_100g` is zero or negative (e.g., pure oils and non-nutritive foods with Energy=0 in USDA data)
 
-This ensures only valid, quantifiable foods enter the catalog.
+This ensures only valid, quantifiable foods enter the catalog. Note that some USDA entries (e.g., pure oils) have Energy=0 and are intentionally excluded; use the gram weight and macro data to calculate their nutritional value manually if needed.
+
+## Technical Details
+
+**Database Library:** The seed script uses `asyncpg` (not psycopg) for efficient async PostgreSQL connections. This allows the script to be run standalone without importing app dependencies that require environment configuration.
 
 ## Key Files
 
-- `backend/scripts/seed_catalog.py` — Main seeding script (USDA JSON parsing, batch insert with idempotency)
+- `backend/scripts/seed_catalog.py` — Main seeding script (USDA JSON parsing, batch insert with idempotency, asyncpg connection)
 - `backend/app/api/routers/catalog.py` — FastAPI router (`GET /v1/catalog/products`, `GET /v1/catalog/products/{id}`)
 - `backend/app/services/catalog.py` — Service layer (list with search, get by id, default portion lookup)
 - `backend/app/schemas/catalog.py` — Pydantic response schemas
 - `backend/app/models/catalog_product.py` — SQLAlchemy ORM model for products
 - `backend/app/models/catalog_portion.py` — SQLAlchemy ORM model for portions
-- `seed.sh` — Bash wrapper at repo root
+- `seed.sh` — Bash wrapper at repo root (sets default DATABASE_URL automatically)
 
 ## Related Features
 

@@ -75,8 +75,8 @@ Soft-delete. **Response** `204 No Content`
 
 ## Key Files
 
-- `backend/app/api/routers/goals.py` — Router
-- `backend/app/services/goals.py` — Service (CRUD)
-- `backend/app/services/goal_calculation.py` — BMR, TDEE, macro computation
-- `backend/app/models/goal.py` — ORM model
-- `backend/app/schemas/goal.py` — Pydantic schemas
+- `backend/app/features/goals/router.py` — Router
+- `backend/app/features/goals/service.py` — Service (CRUD)
+- `backend/app/features/goals/calculation.py` — BMR, TDEE, macro computation
+- `backend/app/features/goals/models.py` — ORM model
+- `backend/app/features/goals/schemas.py` — Pydantic schemas

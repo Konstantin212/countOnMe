@@ -288,11 +288,10 @@ This ensures only valid, quantifiable foods enter the catalog. Note that some US
 ## Key Files
 
 - `backend/scripts/seed_catalog.py` — Main seeding script (USDA JSON parsing, batch insert with idempotency, asyncpg connection)
-- `backend/app/api/routers/catalog.py` — FastAPI router (`GET /v1/catalog/products`, `GET /v1/catalog/products/{id}`)
-- `backend/app/services/catalog.py` — Service layer (list with search, get by id, default portion lookup)
-- `backend/app/schemas/catalog.py` — Pydantic response schemas
-- `backend/app/models/catalog_product.py` — SQLAlchemy ORM model for products
-- `backend/app/models/catalog_portion.py` — SQLAlchemy ORM model for portions
+- `backend/app/features/catalog/router.py` — FastAPI router (`GET /v1/catalog/products`, `GET /v1/catalog/products/{id}`)
+- `backend/app/features/catalog/service.py` — Service layer (list with search, get by id, default portion lookup)
+- `backend/app/features/catalog/schemas.py` — Pydantic response schemas
+- `backend/app/features/catalog/models.py` — SQLAlchemy ORM models for products and portions
 - `seed.py` — Cross-platform Python wrapper at repo root (sets default DATABASE_URL automatically)
 
 ## Related Features

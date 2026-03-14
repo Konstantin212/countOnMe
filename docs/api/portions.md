@@ -55,7 +55,7 @@ Soft-delete a portion. **Errors:** `404`, `409` if referenced by entries.
 
 ## Key Files
 
-- `backend/app/api/routers/portions.py` — Router
-- `backend/app/services/portions.py` — Service (CRUD, default enforcement)
-- `backend/app/models/portion.py` — ORM model
-- `backend/app/schemas/portion.py` — Pydantic schemas
+- `backend/app/features/portions/router.py` — Router
+- `backend/app/features/portions/service.py` — Service (CRUD, default enforcement)
+- `backend/app/features/portions/models.py` — ORM model
+- `backend/app/features/portions/schemas.py` — Pydantic schemas

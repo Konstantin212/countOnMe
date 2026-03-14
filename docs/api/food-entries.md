@@ -61,7 +61,7 @@ Soft-delete an entry. **Response** `204 No Content`
 
 ## Key Files
 
-- `backend/app/api/routers/food_entries.py` — Router
-- `backend/app/services/food_entries.py` — Service (CRUD, validation)
-- `backend/app/models/food_entry.py` — ORM model
-- `backend/app/schemas/food_entry.py` — Pydantic schemas
+- `backend/app/features/meals/router.py` — Router
+- `backend/app/features/meals/service.py` — Service (CRUD, validation)
+- `backend/app/features/meals/models.py` — ORM model
+- `backend/app/features/meals/schemas.py` — Pydantic schemas

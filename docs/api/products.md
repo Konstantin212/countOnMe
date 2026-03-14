@@ -74,7 +74,7 @@ Unified search across user products and catalog.
 
 ## Key Files
 
-- `backend/app/api/routers/products.py` — Router
-- `backend/app/services/products.py` — Service (CRUD, search, name check)
-- `backend/app/models/product.py` — ORM model
-- `backend/app/schemas/product.py` — Pydantic schemas
+- `backend/app/features/products/router.py` — Router
+- `backend/app/features/products/service.py` — Service (CRUD, search, name check)
+- `backend/app/features/products/models.py` — ORM model
+- `backend/app/features/products/schemas.py` — Pydantic schemas

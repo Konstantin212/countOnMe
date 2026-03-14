@@ -37,7 +37,7 @@ Uses `SELECT ... FOR UPDATE` to prevent race conditions on concurrent registrati
 
 ## Key Files
 
-- `backend/app/api/routers/devices.py` — Router
-- `backend/app/services/auth.py` — Token issuance and verification
-- `backend/app/models/device.py` — Device ORM model
-- `backend/app/schemas/device.py` — Pydantic schemas
+- `backend/app/features/auth/router.py` — Router
+- `backend/app/features/auth/service.py` — Token issuance and verification
+- `backend/app/features/auth/models.py` — Device ORM model
+- `backend/app/features/auth/schemas.py` — Pydantic schemas

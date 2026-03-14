@@ -78,7 +78,7 @@ Every API call (except device registration and health check) requires authentica
 
 A singleton promise (`pendingRegistration`) prevents concurrent device registrations. If multiple API calls detect a missing token simultaneously, they all wait on the same registration promise rather than making parallel registration requests.
 
-### Server Side (`get_current_device` in `backend/app/api/deps.py`)
+### Server Side (`get_current_device` in `backend/app/core/deps.py`)
 
 The authentication dependency chain:
 

@@ -287,11 +287,11 @@ Soft-deletes all food entries for the authenticated device (sets `deleted_at` on
 
 ### Client
 
-- `client/src/screens/ProductFormScreen.tsx` — Product creation/edit form with name uniqueness check, auto-favorite
+- `client/src/screens/ProductFlow/ProductFormScreen.tsx` — Product creation/edit form with name uniqueness check, auto-favorite
 - `client/src/screens/AddMealFlow/components/SelectProduct/index.tsx` — Product selection with default list (5 favs + 10 recents), search, catalog results
 - `client/src/screens/AddMealFlow/components/AddFood/index.tsx` — Adds product to meal draft, updates recents
 - `client/src/screens/AddMealFlow/components/AddMeal/index.tsx` — Displays today's saved entries per meal type
-- `client/src/screens/ProductsListScreen.tsx` — Lists user products (filters out catalog source)
+- `client/src/screens/ProductFlow/ProductsListScreen.tsx` — Lists user products (filters out catalog source)
 - `client/src/screens/ProfileScreen.tsx` — "Reset all data" button with confirmation
 - `client/src/hooks/useProducts.ts` — Product CRUD and state management
 - `client/src/services/api/products.ts` — API calls: checkProductName, searchProducts
@@ -301,12 +301,12 @@ Soft-deletes all food entries for the authenticated device (sets `deleted_at` on
 
 ### Backend
 
-- `backend/app/api/routers/products.py` — Endpoints: check-name, search, CRUD
-- `backend/app/api/routers/data.py` — Endpoint: DELETE /v1/data/reset
-- `backend/app/services/products.py` — Service: check_product_name_available, search_products, create_product, get_product, update_product, soft_delete_product
-- `backend/app/services/data.py` — Service: delete_all_food_entries
-- `backend/app/schemas/product.py` — Pydantic models: ProductNameCheckResponse, ProductSearchResultItem
-- `backend/app/models/product.py` — SQLAlchemy Product ORM model
+- `backend/app/features/products/router.py` — Endpoints: check-name, search, CRUD
+- `backend/app/features/data/router.py` — Endpoint: DELETE /v1/data/reset
+- `backend/app/features/products/service.py` — Service: check_product_name_available, search_products, create_product, get_product, update_product, soft_delete_product
+- `backend/app/features/data/service.py` — Service: delete_all_food_entries
+- `backend/app/features/products/schemas.py` — Pydantic models: ProductNameCheckResponse, ProductSearchResultItem
+- `backend/app/features/products/models.py` — SQLAlchemy Product ORM model
 
 ## Related Features
 

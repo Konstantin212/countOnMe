@@ -1,6 +1,6 @@
 ---
 type: plan
-status: active
+status: completed
 created: 2026-03-14
 ---
 

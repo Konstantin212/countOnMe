@@ -71,7 +71,7 @@ Macro grams are calculated from the percentages and calorie target.
 
 ## Calculation Engine
 
-The backend calculation service lives in `backend/app/services/goal_calculation.py`. All formulas are pure functions with no database access.
+The backend calculation service lives in `backend/app/features/goals/calculation.py`. All formulas are pure functions with no database access.
 
 ### BMR (Basal Metabolic Rate)
 
@@ -184,15 +184,15 @@ The goal is stored in AsyncStorage under `@countOnMe/goal/v1` as a JSON-serializ
 
 ## Key Files
 
-- `client/src/screens/GoalSetupScreen.tsx` -- Goal type selection (calculated vs. manual)
-- `client/src/screens/GoalCalculatedScreen.tsx` -- Body metrics input form
-- `client/src/screens/GoalCalculatedResultScreen.tsx` -- Preview and save calculated results
-- `client/src/screens/GoalManualScreen.tsx` -- Manual target entry form
+- `client/src/screens/GoalFlow/GoalSetupScreen.tsx` -- Goal type selection (calculated vs. manual)
+- `client/src/screens/GoalFlow/GoalCalculatedScreen.tsx` -- Body metrics input form
+- `client/src/screens/GoalFlow/GoalCalculatedResultScreen.tsx` -- Preview and save calculated results
+- `client/src/screens/GoalFlow/GoalManualScreen.tsx` -- Manual target entry form
+- `client/src/screens/GoalFlow/components/BmiScale.tsx` -- BMI visualization component
 - `client/src/hooks/useGoal.ts` -- Goal state management and sync
-- `client/src/components/BmiScale.tsx` -- BMI visualization component
-- `backend/app/api/routers/goals.py` -- Goal API endpoints
-- `backend/app/services/goals.py` -- Goal business logic and CRUD
-- `backend/app/services/goal_calculation.py` -- Calculation engine (pure formulas)
+- `backend/app/features/goals/router.py` -- Goal API endpoints
+- `backend/app/features/goals/service.py` -- Goal business logic and CRUD
+- `backend/app/features/goals/calculation.py` -- Calculation engine (pure formulas)
 
 ## Related Features
 

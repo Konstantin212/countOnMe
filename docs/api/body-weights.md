@@ -56,7 +56,7 @@ Soft-delete. **Response** `204 No Content`
 
 ## Key Files
 
-- `backend/app/api/routers/weights.py` — Router
-- `backend/app/services/weights.py` — Service (CRUD)
-- `backend/app/models/weight.py` — ORM model
-- `backend/app/schemas/weight.py` — Pydantic schemas
+- `backend/app/features/weights/router.py` — Router
+- `backend/app/features/weights/service.py` — Service (CRUD)
+- `backend/app/features/weights/models.py` — ORM model
+- `backend/app/features/weights/schemas.py` — Pydantic schemas

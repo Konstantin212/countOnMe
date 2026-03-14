@@ -35,7 +35,8 @@ The catalog is populated via `seed.py` which imports USDA FDC data. See [Catalog
 
 ## Key Files
 
-- `backend/app/api/routers/products.py` — Search endpoint (includes catalog)
-- `backend/app/services/products.py` — Catalog query logic in `search_products`
-- `backend/app/models/catalog.py` — CatalogProduct, CatalogPortion ORM models
-- `seed.py` — USDA data import script
+- `backend/app/features/products/router.py` — Search endpoint (includes catalog)
+- `backend/app/features/products/service.py` — Catalog query logic in `search_products`
+- `backend/app/features/catalog/models.py` — CatalogProduct, CatalogPortion ORM models
+- `backend/scripts/seed_catalog.py` — USDA data import script
+- `seed.py` — Cross-platform wrapper at repo root

@@ -45,6 +45,5 @@ Fetch records updated since a cursor position.
 
 ## Key Files
 
-- `backend/app/api/routers/sync.py` — Router
-- `backend/app/services/sync.py` — Cursor parsing and query logic
-- `backend/app/schemas/sync.py` — Pydantic schemas
+- `backend/app/features/sync/router.py` — Router
+- `backend/app/features/sync/schemas.py` — Pydantic schemas

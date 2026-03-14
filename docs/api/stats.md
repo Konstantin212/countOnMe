@@ -59,6 +59,6 @@ Weight history for a date range.
 
 ## Key Files
 
-- `backend/app/api/routers/stats.py` — Router
-- `backend/app/services/stats.py` — Aggregation queries
-- `backend/app/schemas/stats.py` — Pydantic schemas
+- `backend/app/features/stats/router.py` — Router
+- `backend/app/features/stats/service.py` — Aggregation queries
+- `backend/app/features/stats/schemas.py` — Pydantic schemas

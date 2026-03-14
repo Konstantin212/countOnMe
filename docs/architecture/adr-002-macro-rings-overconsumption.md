@@ -10,7 +10,7 @@ related-features:
 
 ## Status
 
-Accepted
+Implemented
 
 ## Context
 
@@ -42,7 +42,7 @@ Replace `react-native-chart-kit`'s `ProgressChart` with a custom `MacroRings` SV
 ### What Changes
 
 - **New file**: `client/src/components/MacroRings.tsx` -- custom SVG ring chart component
-- **Modified file**: `client/src/screens/MyDayScreen.tsx` -- replace `ProgressChart` import/usage with `MacroRings`
+- **Modified file**: `client/src/screens/MyDayScreen.tsx` -- replace `ProgressChart` import/usage with `MacroRings` (NOTE: MyDayScreen is a standalone file, not in a flow folder)
 - **Removed dependency usage**: `react-native-chart-kit` import is removed from MyDayScreen (the package itself may remain in `package.json` if used elsewhere)
 - **Removed utility**: The `hexToRgba` function (lines 17-24 of MyDayScreen) becomes unused and should be removed
 

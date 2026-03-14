@@ -39,7 +39,7 @@ The **MyDayScreen** is the home screen. It displays:
 Data is fetched via the `useDayStats` hook, which calls `GET /v1/stats/day/{YYYY-MM-DD}`.
 
 From this screen, users can:
-- Tap a meal type card to view its entries (**MealTypeEntriesScreen**)
+- Tap a meal type card to view its entries (**MealFlow/MealTypeEntriesScreen**)
 - Tap "Add Food" to start the AddMeal flow
 
 ### Adding Food (AddMeal Flow)
@@ -47,9 +47,9 @@ From this screen, users can:
 The AddMeal flow uses a multi-screen wizard wrapped in a `DraftMealProvider` React context.
 
 **Screen sequence:**
-1. **AddMealScreen** -- Shows the current draft with items grouped by meal type. Users can switch between meal types (breakfast, lunch, dinner, snacks). Tap "Add Product" to pick a product. Tap "Save" to submit all items.
-2. **SelectProductScreen** -- Browse/search the local product list. Tap a product to proceed.
-3. **AddFoodScreen** -- Enter the amount and unit for the selected product. Confirm to add the item to the draft.
+1. **AddMeal/index.tsx** -- Shows the current draft with items grouped by meal type. Users can switch between meal types (breakfast, lunch, dinner, snacks). Tap "Add Product" to pick a product. Tap "Save" to submit all items.
+2. **SelectProduct/index.tsx** -- Browse/search the local product list. Tap a product to proceed.
+3. **AddFood/index.tsx** -- Enter the amount and unit for the selected product. Confirm to add the item to the draft.
 
 **DraftMealProvider** (in `client/src/screens/AddMealFlow/context.tsx`) holds the draft state:
 - `mealType` -- Currently selected meal type (defaults to `breakfast`)
@@ -71,7 +71,7 @@ When the user taps "Save" in AddMealScreen, the `useFoodEntries` hook's `saveMea
 
 The saving process is guarded by a `savingRef` to prevent concurrent saves.
 
-### Viewing and Editing Entries (MealTypeEntriesScreen)
+### Viewing and Editing Entries (MealFlow/MealTypeEntriesScreen)
 
 The **MealTypeEntriesScreen** displays all food entries for a specific meal type on today's date. It uses the `useMealTypeEntries` hook, which:
 
@@ -101,7 +101,7 @@ Macro calculation follows the same pattern on both client and backend:
 - Primary path: Fetch portion data from the backend, use portion's nutritional values
 - Fallback path: If portion fetch fails, use the product's local nutritional data
 
-**Backend-side** (in `app/services/calculation.py`):
+**Backend-side** (in `app/features/stats/calculation.py`):
 - `calc_totals_for_entry()` performs the same conversion using `Decimal` arithmetic for precision
 - Returns a `MacroTotals` dataclass with calories, protein, carbs, fat
 
@@ -157,7 +157,7 @@ Helper: `getMealTypeTotals(stats, mealType)` returns the totals for a specific m
 
 ### Food Entries
 
-All endpoints require device authentication and scope data to the authenticated `device_id`.
+All endpoints require device authentication and scope data to the authenticated `device_id`. See [Food Entries API](../api/food-entries.md) for full endpoint details.
 
 - `GET /v1/food-entries` -- List entries. Supports filters: `day` (single date), `from`/`to` (date range)
 - `POST /v1/food-entries` -- Create an entry. Requires `product_id`, `portion_id`, `day`, `meal_type`, `amount`, `unit`
@@ -166,6 +166,8 @@ All endpoints require device authentication and scope data to the authenticated 
 - `DELETE /v1/food-entries/{entry_id}` -- Soft-delete an entry
 
 ### Stats
+
+See [Stats API](../api/stats.md) for full endpoint details.
 
 - `GET /v1/stats/day/{day}` -- Returns macro totals for a single day, broken down by meal type. Joins `food_entries` with `product_portions` and uses unit conversion to calculate accurate totals.
 - `GET /v1/stats/daily?from={date}&to={date}` -- Returns daily macro totals for a date range

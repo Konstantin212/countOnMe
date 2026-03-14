@@ -4,8 +4,8 @@ from decimal import Decimal
 
 import pytest
 
-from app.schemas.enums import Unit
-from app.services.calculation import (
+from app.core.enums import Unit
+from app.features.stats.calculation import (
     MacroTotals,
     calc_totals_for_entry,
     convert_unit,

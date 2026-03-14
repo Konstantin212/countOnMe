@@ -8,8 +8,8 @@ from decimal import Decimal
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.schemas.enums import Unit
-from app.services.portions import (
+from app.core.enums import Unit
+from app.features.portions.service import (
     PortionConflict,
     create_portion,
     get_portion,

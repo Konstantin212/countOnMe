@@ -38,14 +38,15 @@ Backend architecture patterns and best practices for CountOnMe's FastAPI backend
 ### Router Pattern (FastAPI)
 
 ```python
-# backend/app/api/routers/products.py
+# backend/app/features/products/router.py
 from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_session, get_current_device_id
-from app.schemas.product import ProductCreate, ProductUpdate, ProductRead
-from app.services.products import ProductService
+from app.core.db import get_session
+from app.core.deps import get_current_device_id
+from app.features.products.schemas import ProductCreate, ProductUpdate, ProductRead
+from app.features.products.service import ProductService
 
 router = APIRouter(prefix="/v1/products", tags=["products"])
 
@@ -123,14 +124,14 @@ async def delete_product(
 ### Service Layer Pattern
 
 ```python
-# backend/app/services/products.py
+# backend/app/features/products/service.py
 from uuid import UUID
 from datetime import datetime, UTC
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.product import Product
-from app.schemas.product import ProductCreate, ProductUpdate
+from app.features.products.models import Product
+from app.features.products.schemas import ProductCreate, ProductUpdate
 
 
 class ProductService:
@@ -215,15 +216,15 @@ class ProductService:
 ### Dependency Injection Pattern
 
 ```python
-# backend/app/api/deps.py
+# backend/app/core/deps.py
 from uuid import UUID
 from typing import AsyncGenerator
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.session import async_session_factory
-from app.services.auth import AuthService
+from app.core.db import SessionLocal
+from app.features.auth.service import AuthService
 
 security = HTTPBearer()
 
@@ -261,13 +262,13 @@ async def get_current_device_id(
 ### SQLAlchemy Model Pattern
 
 ```python
-# backend/app/models/product.py
+# backend/app/features/products/models.py
 from uuid import UUID, uuid4
 from datetime import datetime, UTC
 from sqlalchemy import String, Integer, ForeignKey, DateTime
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.models.base import Base
+from app.core.db import Base
 
 
 class Product(Base):
@@ -308,7 +309,7 @@ class Product(Base):
 ### Soft Delete Pattern
 
 ```python
-# backend/app/models/base.py
+# backend/app/core/mixins.py (TimestampMixin) + app/core/db.py (Base)
 from datetime import datetime
 from sqlalchemy import DateTime
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
@@ -490,14 +491,14 @@ class ProductRead(BaseModel):
 ### Anonymous Device Auth
 
 ```python
-# backend/app/services/auth.py
+# backend/app/features/auth/service.py
 from uuid import UUID, uuid4
 import secrets
 from passlib.hash import bcrypt
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.device import Device
+from app.features.auth.models import Device
 
 
 class AuthService:
@@ -540,14 +541,14 @@ class AuthService:
 ### Auth Router
 
 ```python
-# backend/app/api/routers/auth.py
+# backend/app/features/auth/router.py
 from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_session
-from app.schemas.auth import RegisterRequest, RegisterResponse
-from app.services.auth import AuthService
+from app.core.db import get_session
+from app.features.auth.schemas import RegisterRequest, RegisterResponse
+from app.features.auth.service import AuthService
 
 router = APIRouter(prefix="/v1/auth", tags=["auth"])
 
@@ -670,11 +671,11 @@ def downgrade() -> None:
 ### Service Tests
 
 ```python
-# backend/tests/test_product_service.py
+# backend/tests/services/test_products_db.py
 import pytest
 from uuid import uuid4
-from app.services.products import ProductService
-from app.schemas.product import ProductCreate
+from app.features.products.service import ProductService
+from app.features.products.schemas import ProductCreate
 
 
 @pytest.mark.asyncio

@@ -9,8 +9,8 @@ from decimal import Decimal
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.schemas.enums import MealType, Unit
-from app.services.food_entries import (
+from app.core.enums import MealType, Unit
+from app.features.meals.service import (
     create_food_entry,
     get_food_entry,
     list_food_entries,

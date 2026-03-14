@@ -9,8 +9,7 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.catalog_portion import CatalogPortion
-from app.models.catalog_product import CatalogProduct
+from app.features.catalog.models import CatalogPortion, CatalogProduct
 
 
 def _unique_fdc_id() -> int:

@@ -5,8 +5,8 @@ from decimal import Decimal
 
 import pytest
 
-from app.schemas.enums import ActivityLevel, Gender, WeightChangePace, WeightGoalType
-from app.services.goal_calculation import (
+from app.core.enums import ActivityLevel, Gender, WeightChangePace, WeightGoalType
+from app.features.goals.calculation import (
     ACTIVITY_MULTIPLIERS,
     BMI_CATEGORIES,
     DEFAULT_MACROS,

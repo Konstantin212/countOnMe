@@ -8,8 +8,8 @@ from decimal import Decimal
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.schemas.enums import MealType
-from app.services.stats import get_day_stats
+from app.core.enums import MealType
+from app.features.stats.service import get_day_stats
 from tests.factories import create_device, create_food_entry, create_portion, create_product
 
 
@@ -187,7 +187,7 @@ async def test_get_day_stats_excludes_deleted(db_session: AsyncSession):
     )
 
     # Soft delete entry2
-    from app.services.food_entries import soft_delete_food_entry
+    from app.features.meals.service import soft_delete_food_entry
     await soft_delete_food_entry(db_session, device_id=device.id, entry_id=entry2.id)
 
     totals, _by_meal = await get_day_stats(db_session, device_id=device.id, day=today)

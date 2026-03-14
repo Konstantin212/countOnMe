@@ -9,10 +9,9 @@ from decimal import Decimal
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.catalog_portion import CatalogPortion
-from app.models.catalog_product import CatalogProduct
-from app.schemas.enums import Unit
-from app.services.products import (
+from app.core.enums import Unit
+from app.features.catalog.models import CatalogPortion, CatalogProduct
+from app.features.products.service import (
     check_product_name_available,
     create_product,
     get_product,
@@ -284,7 +283,7 @@ async def _make_catalog_product(
     fat: Decimal | None = None,
 ) -> CatalogProduct:
     """Helper: create a catalog product with an optional default portion."""
-    fdc_id = random.randint(10_000_000, 99_999_999)
+    fdc_id = random.randint(10_000_000, 99_999_999)  # noqa: S311
     cp = CatalogProduct(fdc_id=fdc_id, name=name)
     session.add(cp)
     await session.flush()

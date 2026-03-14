@@ -9,7 +9,7 @@ from decimal import Decimal
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.services.weights import (
+from app.features.weights.service import (
     WeightConflict,
     create_body_weight,
     get_body_weight,

@@ -3,20 +3,22 @@ from __future__ import annotations
 import asyncio
 from logging.config import fileConfig
 
-from alembic import context
 from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 
-from app.db.base import Base
-from app.settings import settings
+from alembic import context
+from app.core.db import Base
 
 # Import models so metadata is populated
-from app.models import device as _device  # noqa: F401
-from app.models import product as _product  # noqa: F401
-from app.models import product_portion as _product_portion  # noqa: F401
-from app.models import food_entry as _food_entry  # noqa: F401
-from app.models import body_weight as _body_weight  # noqa: F401
+from app.features.auth import models as _auth  # noqa: F401
+from app.features.catalog import models as _catalog  # noqa: F401
+from app.features.goals import models as _goals  # noqa: F401
+from app.features.meals import models as _meals  # noqa: F401
+from app.features.portions import models as _portions  # noqa: F401
+from app.features.products import models as _products  # noqa: F401
+from app.features.weights import models as _weights  # noqa: F401
+from app.settings import settings
 
 config = context.config
 

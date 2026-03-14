@@ -8,14 +8,14 @@ from decimal import Decimal
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.body_weight import BodyWeight
-from app.models.device import Device
-from app.models.food_entry import FoodEntry
-from app.models.product import Product
-from app.models.product_portion import ProductPortion
-from app.models.user_goal import UserGoal
-from app.schemas.enums import MealType, Unit
-from app.services.auth import issue_device_token
+from app.core.enums import MealType, Unit
+from app.features.auth.models import Device
+from app.features.auth.service import issue_device_token
+from app.features.goals.models import UserGoal
+from app.features.meals.models import FoodEntry
+from app.features.portions.models import ProductPortion
+from app.features.products.models import Product
+from app.features.weights.models import BodyWeight
 
 
 async def create_device(

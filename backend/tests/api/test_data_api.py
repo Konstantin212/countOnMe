@@ -6,13 +6,11 @@ import uuid
 
 import pytest
 from httpx import AsyncClient
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.food_entry import FoodEntry
-from tests.factories import create_device, create_food_entry, create_portion, create_product
-from app.services.auth import issue_device_token
-from app.models.device import Device
+from app.features.auth.models import Device
+from app.features.auth.service import issue_device_token
+from tests.factories import create_food_entry, create_portion, create_product
 
 
 @pytest.mark.asyncio
@@ -57,7 +55,7 @@ async def test_reset_device_scoped(
 
     # Register device B
     device_b_id = uuid.uuid4()
-    token_b, token_hash_b = issue_device_token(device_b_id)
+    _token_b, token_hash_b = issue_device_token(device_b_id)
     device_b = Device(id=device_b_id, token_hash=token_hash_b)
     db_session.add(device_b)
     await db_session.flush()

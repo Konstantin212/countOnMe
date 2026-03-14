@@ -9,9 +9,9 @@ from decimal import Decimal
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.schemas.enums import ActivityLevel, Gender, GoalType, WeightGoalType
-from app.schemas.goal import GoalCreateCalculatedRequest, GoalCreateManualRequest
-from app.services.goals import (
+from app.core.enums import ActivityLevel, Gender, GoalType, WeightGoalType
+from app.features.goals.schemas import GoalCreateCalculatedRequest, GoalCreateManualRequest
+from app.features.goals.service import (
     create_calculated_goal,
     create_manual_goal,
     get_current_goal,

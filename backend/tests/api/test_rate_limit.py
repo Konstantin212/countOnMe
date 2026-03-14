@@ -7,7 +7,7 @@ from unittest.mock import MagicMock
 import pytest
 from fastapi import HTTPException
 
-from app.api.rate_limit import RateLimiter
+from app.core.rate_limit import RateLimiter
 
 
 def _make_request(ip: str = "127.0.0.1") -> MagicMock:

@@ -7,13 +7,13 @@ from uuid import uuid4
 import pytest
 from pydantic import ValidationError
 
-from app.schemas.enums import (
+from app.core.enums import (
     ActivityLevel,
     Gender,
     WeightChangePace,
     WeightGoalType,
 )
-from app.schemas.goal import (
+from app.features.goals.schemas import (
     GoalCalculateRequest,
     GoalCreateCalculatedRequest,
     GoalCreateManualRequest,

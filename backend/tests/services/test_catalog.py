@@ -8,9 +8,8 @@ import uuid
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.catalog_portion import CatalogPortion
-from app.models.catalog_product import CatalogProduct
-from app.services.catalog import (
+from app.features.catalog.models import CatalogPortion, CatalogProduct
+from app.features.catalog.service import (
     get_catalog_product,
     get_default_portion,
     list_catalog_products,

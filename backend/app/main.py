@@ -2,16 +2,16 @@ from __future__ import annotations
 
 from fastapi import APIRouter, FastAPI
 
-from app.api.routers.catalog import router as catalog_router
-from app.api.routers.data import router as data_router
-from app.api.routers.devices import router as devices_router
-from app.api.routers.food_entries import router as food_entries_router
-from app.api.routers.goals import router as goals_router
-from app.api.routers.portions import router as portions_router
-from app.api.routers.products import router as products_router
-from app.api.routers.stats import router as stats_router
-from app.api.routers.sync import router as sync_router
-from app.api.routers.weights import router as weights_router
+from app.features.auth.router import router as devices_router
+from app.features.catalog.router import router as catalog_router
+from app.features.data.router import router as data_router
+from app.features.goals.router import router as goals_router
+from app.features.meals.router import router as food_entries_router
+from app.features.portions.router import router as portions_router
+from app.features.products.router import router as products_router
+from app.features.stats.router import router as stats_router
+from app.features.sync.router import router as sync_router
+from app.features.weights.router import router as weights_router
 
 
 def create_app() -> FastAPI:

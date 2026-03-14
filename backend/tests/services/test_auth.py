@@ -5,7 +5,7 @@ import uuid
 
 import pytest
 
-from app.services.auth import (
+from app.features.auth.service import (
     ParsedDeviceToken,
     _hash_secret,
     issue_device_token,

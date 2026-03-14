@@ -8,8 +8,8 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.device import Device
-from app.services.auth import issue_device_token
+from app.features.auth.models import Device
+from app.features.auth.service import issue_device_token
 
 
 @pytest.mark.asyncio
@@ -91,7 +91,7 @@ async def test_auth_updates_last_seen(
     # Get initial last_seen
     from sqlalchemy import select
 
-    from app.models.device import Device
+    from app.features.auth.models import Device
 
     stmt = select(Device).where(Device.id == device_id)
     result = await db_session.execute(stmt)

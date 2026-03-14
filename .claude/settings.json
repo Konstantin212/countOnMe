@@ -51,7 +51,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node .claude/hooks/block-random-md.js"
+            "command": "node D:/cot/countOnMe/.claude/hooks/block-random-md.js"
           }
         ]
       },
@@ -60,7 +60,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node .claude/hooks/pre-write-env-block.js"
+            "command": "node D:/cot/countOnMe/.claude/hooks/pre-write-env-block.js"
           }
         ]
       },
@@ -69,7 +69,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node .claude/hooks/git-push-warn.js"
+            "command": "node D:/cot/countOnMe/.claude/hooks/git-push-warn.js"
           }
         ]
       },
@@ -78,7 +78,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node .claude/hooks/pre-bash-destructive-warn.js"
+            "command": "node D:/cot/countOnMe/.claude/hooks/pre-bash-destructive-warn.js"
           }
         ]
       },
@@ -87,7 +87,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node .claude/hooks/suggest-compact.js"
+            "command": "node D:/cot/countOnMe/.claude/hooks/suggest-compact.js"
           }
         ]
       }
@@ -98,7 +98,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node .claude/hooks/post-edit-typecheck.js",
+            "command": "node D:/cot/countOnMe/.claude/hooks/post-edit-typecheck.js",
             "timeout": 60
           }
         ]
@@ -108,7 +108,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node .claude/hooks/post-edit-lint-python.js",
+            "command": "node D:/cot/countOnMe/.claude/hooks/post-edit-lint-python.js",
             "timeout": 30
           }
         ]
@@ -118,7 +118,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node .claude/hooks/post-edit-console-warn.js"
+            "command": "node D:/cot/countOnMe/.claude/hooks/post-edit-console-warn.js"
           }
         ]
       },
@@ -127,7 +127,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node .claude/hooks/post-edit-format.js",
+            "command": "node D:/cot/countOnMe/.claude/hooks/post-edit-format.js",
             "timeout": 15
           }
         ]
@@ -137,7 +137,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node .claude/hooks/post-edit-ts-any-warn.js"
+            "command": "node D:/cot/countOnMe/.claude/hooks/post-edit-ts-any-warn.js"
           }
         ]
       },
@@ -146,7 +146,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node .claude/hooks/post-edit-inline-style-warn.js"
+            "command": "node D:/cot/countOnMe/.claude/hooks/post-edit-inline-style-warn.js"
           }
         ]
       },
@@ -155,7 +155,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node .claude/hooks/post-edit-py-print-warn.js"
+            "command": "node D:/cot/countOnMe/.claude/hooks/post-edit-py-print-warn.js"
           }
         ]
       },
@@ -164,7 +164,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node .claude/hooks/post-edit-secret-warn.js"
+            "command": "node D:/cot/countOnMe/.claude/hooks/post-edit-secret-warn.js"
           }
         ]
       },
@@ -173,7 +173,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node .claude/hooks/post-edit-router-sql-warn.js"
+            "command": "node D:/cot/countOnMe/.claude/hooks/post-edit-router-sql-warn.js"
           }
         ]
       },
@@ -182,7 +182,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node .claude/hooks/post-edit-screen-storage-warn.js"
+            "command": "node D:/cot/countOnMe/.claude/hooks/post-edit-screen-storage-warn.js"
           }
         ]
       },
@@ -191,7 +191,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node .claude/hooks/post-edit-nesting-warn.js"
+            "command": "node D:/cot/countOnMe/.claude/hooks/post-edit-nesting-warn.js"
           }
         ]
       }
@@ -201,7 +201,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node .claude/hooks/check-console-log.js",
+            "command": "node D:/cot/countOnMe/.claude/hooks/check-console-log.js",
             "timeout": 30
           }
         ]
@@ -210,7 +210,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node .claude/hooks/stop-file-size-check.js",
+            "command": "node D:/cot/countOnMe/.claude/hooks/stop-file-size-check.js",
             "timeout": 30
           }
         ]
@@ -219,7 +219,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node .claude/hooks/stop-function-length-check.js",
+            "command": "node D:/cot/countOnMe/.claude/hooks/stop-function-length-check.js",
             "timeout": 30
           }
         ]
@@ -228,7 +228,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node .claude/hooks/stop-device-scope-check.js",
+            "command": "node D:/cot/countOnMe/.claude/hooks/stop-device-scope-check.js",
             "timeout": 30
           }
         ]

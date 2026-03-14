@@ -1,3 +1,13 @@
+---
+type: feature
+status: current
+last-updated: 2026-03-14
+related-features:
+  - food-tracking
+  - sync-system
+  - device-auth
+---
+
 # Goal System
 
 ## Overview
@@ -154,38 +164,38 @@ Located in `client/src/hooks/useGoal.ts`. Provides offline-first goal management
 
 ## Backend Endpoints
 
-All endpoints require device authentication.
+All endpoints require device authentication. See `docs/api/goals.md` for full schemas.
 
-- `POST /v1/goals/calculate` -- Preview calculation results without saving. Returns BMR, TDEE, target calories, macros, water, BMI, and healthy weight range.
-- `GET /v1/goals/current` -- Get the current active goal for the authenticated device. Returns `null` if no goal exists.
-- `GET /v1/goals/{goal_id}` -- Get a specific goal by ID
-- `POST /v1/goals/calculated` -- Create a calculated goal. Soft-deletes any existing goals for the device.
-- `POST /v1/goals/manual` -- Create a manual goal. Soft-deletes any existing goals for the device.
-- `PATCH /v1/goals/{goal_id}` -- Update goal targets (daily calories, macro percentages, water)
-- `DELETE /v1/goals/{goal_id}` -- Soft-delete a goal
+- `POST /v1/goals/calculate` -- Preview calculation (BMR, TDEE, macros, water, BMI, healthy range)
+- `GET /v1/goals/current` -- Fetch active goal (returns `null` if none)
+- `GET /v1/goals/{goal_id}` -- Get goal by ID
+- `POST /v1/goals/calculated` -- Create calculated goal (soft-deletes existing)
+- `POST /v1/goals/manual` -- Create manual goal (soft-deletes existing)
+- `PATCH /v1/goals/{goal_id}` -- Update targets (calories, macro %, water)
+- `DELETE /v1/goals/{goal_id}` -- Soft-delete goal
 
 ## Backend Data Model
 
-The `user_goals` table stores all goal data:
-
-**Identity:** `id` (UUID), `device_id` (UUID, FK to devices)
-
-**Type:** `goal_type` (string: "calculated" or "manual")
-
-**Body metrics (calculated only):** `gender`, `birth_date`, `height_cm`, `current_weight_kg`, `activity_level`
-
-**Weight goal (calculated only):** `weight_goal_type`, `target_weight_kg`, `weight_change_pace`
-
-**Calculated values:** `bmr_kcal`, `tdee_kcal`
-
-**Targets (both types):** `daily_calories_kcal`, `protein_percent`, `carbs_percent`, `fat_percent`, `protein_grams`, `carbs_grams`, `fat_grams`, `water_ml`
-
-**Weight range (calculated only):** `healthy_weight_min_kg`, `healthy_weight_max_kg`, `current_bmi`, `bmi_category`
-
-**Timestamps:** `created_at`, `updated_at`, `deleted_at` (soft delete)
-
-Only one active goal exists per device at a time. Creating a new goal soft-deletes any existing ones.
+The `user_goals` table stores identity (`id`, `device_id`), type (`goal_type`: "calculated" or "manual"), body metrics for calculated goals (`gender`, `birth_date`, `height_cm`, `current_weight_kg`, `activity_level`), targets shared by both types (`daily_calories_kcal`, protein/carbs/fat percent and grams, `water_ml`), and timestamps (`created_at`, `updated_at`, `deleted_at`). Only one active goal per device; creating a new goal soft-deletes existing ones.
 
 ## Local Storage
 
 The goal is stored in AsyncStorage under `@countOnMe/goal/v1` as a JSON-serialized `UserGoal` object. The `loadGoal()`/`saveGoal()`/`clearGoal()` functions in the storage layer handle persistence.
+
+## Key Files
+
+- `client/src/screens/GoalSetupScreen.tsx` -- Goal type selection (calculated vs. manual)
+- `client/src/screens/GoalCalculatedScreen.tsx` -- Body metrics input form
+- `client/src/screens/GoalCalculatedResultScreen.tsx` -- Preview and save calculated results
+- `client/src/screens/GoalManualScreen.tsx` -- Manual target entry form
+- `client/src/hooks/useGoal.ts` -- Goal state management and sync
+- `client/src/components/BmiScale.tsx` -- BMI visualization component
+- `backend/app/api/routers/goals.py` -- Goal API endpoints
+- `backend/app/services/goals.py` -- Goal business logic and CRUD
+- `backend/app/services/goal_calculation.py` -- Calculation engine (pure formulas)
+
+## Related Features
+
+- [Food Tracking](./food-tracking.md) -- Daily macro progress driven by active goal
+- [Sync System](./sync-system.md) -- Goal mutations enqueued for remote sync
+- [Device Auth](./device-auth.md) -- All goals scoped to authenticated device

@@ -194,6 +194,15 @@
             "command": "node D:/cot/countOnMe/.claude/hooks/post-edit-nesting-warn.js"
           }
         ]
+      },
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node D:/cot/countOnMe/.claude/hooks/post-edit-doc-lint.js"
+          }
+        ]
       }
     ],
     "Stop": [

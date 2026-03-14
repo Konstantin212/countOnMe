@@ -1,8 +1,16 @@
+---
+type: adr
+status: accepted
+last-updated: 2026-03-14
+related-features:
+  - goal-system
+---
+
 # ADR-002: Macro Rings with Overconsumption Visualization
 
 ## Status
 
-Proposed
+Accepted
 
 ## Context
 

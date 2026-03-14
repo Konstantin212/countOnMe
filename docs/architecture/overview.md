@@ -1,3 +1,10 @@
+---
+type: architecture
+status: current
+last-updated: 2026-03-14
+related-features: []
+---
+
 # CountOnMe Architecture Overview
 
 ## 1. System Overview

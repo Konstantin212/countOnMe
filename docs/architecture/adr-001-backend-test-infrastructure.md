@@ -1,8 +1,15 @@
+---
+type: adr
+status: accepted
+last-updated: 2026-03-14
+related-features: []
+---
+
 # ADR-001: Backend Test Infrastructure
 
 ## Status
 
-Proposed
+Accepted
 
 ## Context
 

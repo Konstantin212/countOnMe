@@ -1,3 +1,12 @@
+---
+type: feature
+status: current
+last-updated: 2026-03-14
+related-features:
+  - catalog-seeding
+  - food-tracking
+---
+
 # Product Management
 
 ## Overview

@@ -1,3 +1,9 @@
+---
+type: plan
+status: completed
+created: 2026-03-14
+---
+
 # Implementation Plan: Products Epic
 
 ## Phases Overview

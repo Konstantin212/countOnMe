@@ -1,8 +1,17 @@
+---
+type: adr
+status: accepted
+last-updated: 2026-03-14
+related-features:
+  - catalog-seeding
+  - product-management
+---
+
 # ADR-003: Global Product Catalog (USDA Seed Data)
 
 ## Status
 
-Proposed
+Accepted
 
 ## Context
 

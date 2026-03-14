@@ -1,3 +1,9 @@
+---
+type: plan
+status: completed
+created: 2026-03-14
+---
+
 # Bug Fix Plan: CountOnMe — 6 Bugs
 
 ## Overview

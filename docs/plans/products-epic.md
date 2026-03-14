@@ -1,3 +1,9 @@
+---
+type: plan
+status: completed
+created: 2026-03-14
+---
+
 # Architecture Design: Products Epic
 
 ## Context

@@ -34,6 +34,7 @@ Claude MUST follow these workflows automatically without being asked. Specialize
 | `refactor-cleaner` | sonnet | Finding and removing dead code |
 | `security-reviewer` | sonnet | Security vulnerability scanning |
 | `doc-writer` | haiku | Generating/updating feature docs in docs/ |
+| `doc-reviewer` | sonnet | Doc accuracy validation (structural + deep content) |
 
 ### Available Commands
 
@@ -53,6 +54,7 @@ Claude MUST follow these workflows automatically without being asked. Specialize
 | `/security` | Security audit |
 | `/orchestrate` | Run multi-agent workflow (feature/bugfix/refactor) |
 | `/doc` | Generate/update feature documentation |
+| `/doc-lint` | Validate doc quality, structure, and accuracy |
 | `/checkpoint` | Create named git checkpoint with SHA |
 | `/lint-fix` | Auto-fix linting issues |
 | `/format` | Auto-format code |
@@ -69,6 +71,7 @@ Claude MUST select the correct agents based on what changed:
 - **Verification**: After ANY code edit → `verifier` always
 - **Review after code**: Backend changes → `backend-reviewer`; Client changes → `fe-reviewer`; Both → run in parallel
 - **Security**: Auth, input, API, or token changes → `security-reviewer` always
+- **Documentation**: After feature/bugfix/refactor completion → `doc-writer` then `doc-reviewer`
 - **Build errors** → `build-fixer` agent
 
 > **CRITICAL RULE**: Claude MUST NOT write code directly for tasks involving 3+ files. Always delegate to the appropriate developer agent (`fe-developer` or `backend-developer`). Raw implementation without agent involvement is prohibited for non-trivial tasks.
@@ -119,7 +122,8 @@ architect → planner → [user approval] →
   backend-developer (if backend/) ∥ fe-developer (if client/) →
   verifier →
   backend-reviewer (if backend/) ∥ fe-reviewer (if client/) →
-  security-reviewer (if auth/input/API) -> tdd-guide → doc-writer
+  security-reviewer (if auth/input/API) → tdd-guide →
+  doc-writer → doc-reviewer
 ```
 
 #### Flow 2: Bug Fix
@@ -127,16 +131,18 @@ architect → planner → [user approval] →
 [analyze root cause] →
   backend-developer (if backend/) / fe-developer (if client/) →
     (internally: write failing test → fix → verify) →
-  verifier → tdd-guide ->
-  backend-reviewer ∥ fe-reviewer (based on changed files)
+  verifier → tdd-guide →
+  backend-reviewer ∥ fe-reviewer (based on changed files) →
+  doc-writer (if fix changed documented behavior/API) → doc-reviewer
 ```
 
 #### Flow 3: Refactor
 ```
 verifier (baseline) → planner → [user approval] →
   backend-developer ∥ fe-developer (implement changes) →
-  refactor-cleaner → verifier → tdd-guide ->
-  backend-reviewer ∥ fe-reviewer
+  refactor-cleaner → verifier → tdd-guide →
+  backend-reviewer ∥ fe-reviewer →
+  doc-writer (if file locations/APIs/models changed) → doc-reviewer
 ```
 
 #### Flow 4: Code Review Only
@@ -179,6 +185,7 @@ Hook scripts live in `.claude/hooks/` and fire automatically:
 - `post-edit-lint-python.js` — Runs `ruff check` after `.py` edits, reports errors
 - `post-edit-console-warn.js` — Warns if `console.log` introduced in `.ts/.tsx`
 - `post-edit-format.js` — Runs `prettier --write` after `.ts/.tsx/.js/.jsx` edits
+- `post-edit-doc-lint.js` — Blocks writes to `docs/` without valid YAML frontmatter (type, status, last-updated)
 
 **PreToolUse** (before tool execution):
 - `block-random-md.js` — Blocks `.md` creation outside `docs/`, `README.md`, `CLAUDE.md`, `.claude/`

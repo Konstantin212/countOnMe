@@ -1,3 +1,12 @@
+---
+type: feature
+status: current
+last-updated: 2026-03-14
+related-features:
+  - product-management
+  - goal-system
+---
+
 # Food Tracking
 
 ## Overview

@@ -28,6 +28,7 @@ For new features, especially those touching 5+ files or introducing a new domain
    - Both → Run **both reviewers in parallel**
 6. **Security** → Scan for vulnerabilities if auth/input/API involved (use `security-reviewer` agent)
 7. **Doc** → Update or create documentation in `docs/` (use `doc-writer` agent)
+8. **Doc Review** → Validate documentation accuracy against source code (use `doc-reviewer` agent)
 
 ### Flow 2: Bug Fix
 
@@ -39,6 +40,8 @@ For new features, especially those touching 5+ files or introducing a new domain
 4. **Review** → Run specialist reviewer(s) based on changed files:
    - `backend/` → **backend-reviewer**
    - `client/` → **fe-reviewer**
+5. **Doc** → If the fix changed user-visible behavior or API contracts, update docs (use `doc-writer` agent). Skip if the fix is purely internal.
+6. **Doc Review** → Validate updated documentation accuracy (use `doc-reviewer` agent)
 
 ### Flow 3: Refactor
 
@@ -53,6 +56,8 @@ For new features, especially those touching 5+ files or introducing a new domain
 6. **Review** → Run specialist reviewer(s):
    - `backend/` → **backend-reviewer**
    - `client/` → **fe-reviewer**
+7. **Doc** → If file locations, APIs, or data models changed, update docs (use `doc-writer` agent). Skip if only internal refactoring.
+8. **Doc Review** → Validate updated documentation accuracy (use `doc-reviewer` agent)
 
 ### Flow 4: Code Review Only
 
@@ -66,7 +71,8 @@ For new features, especially those touching 5+ files or introducing a new domain
 
 1. **Architect** → Analyze requirements, produce design with trade-offs (use `architect` agent)
 2. **ADR** → Create Architecture Decision Record in `docs/architecture/`
-3. **Plan** → Turn design into implementation phases (use `planner` agent), get user approval
+3. **Doc Review** → Validate ADR structure and accuracy (use `doc-reviewer` agent)
+4. **Plan** → Turn design into implementation phases (use `planner` agent), get user approval
 
 ### Flow 6: Small Fix (Single File, Skip Architect)
 
@@ -89,6 +95,7 @@ For new features, especially those touching 5+ files or introducing a new domain
 | `security-reviewer` | Security vulnerability scanning | sonnet |
 | `refactor-cleaner` | Dead code removal | sonnet |
 | `doc-writer` | Documentation generation | haiku |
+| `doc-reviewer` | Doc accuracy validation (structural + deep) | sonnet |
 | `tdd-guide` | TDD cycle enforcement | sonnet |
 | `build-fixer` | Incremental error fixing | sonnet |
 | `code-reviewer` | Generic review (routes to specialists) | sonnet |

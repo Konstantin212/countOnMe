@@ -1,3 +1,11 @@
+---
+type: feature
+status: current
+last-updated: 2026-03-14
+related-features:
+  - product-management
+---
+
 # Global Product Catalog Seeding
 
 ## Overview

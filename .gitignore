@@ -28,7 +28,8 @@ Thumbs.db
 # ----------------------
 # Claude Code
 # ----------------------
-.claude/agent-memory/
+**/.claude/agent-memory/
+.claude/settings.local.json
 
 # ----------------------
 # Client (React Native / Expo)

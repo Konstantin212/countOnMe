@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState } from "react";
 import {
   Alert,
   Pressable,
@@ -7,17 +7,17 @@ import {
   Text,
   TextInput,
   View,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Ionicons } from '@expo/vector-icons';
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { NativeStackScreenProps } from "@react-navigation/native-stack";
+import { Ionicons } from "@expo/vector-icons";
 
-import { ProfileStackParamList } from '@app/navigationTypes';
-import { useProducts } from '@hooks/useProducts';
-import { Scale, SCALE_OPTIONS, toGrams } from '@services/utils/scales';
-import { useTheme } from '@hooks/useTheme';
+import { ProfileStackParamList } from "@app/navigationTypes";
+import { useProducts } from "@hooks/useProducts";
+import { Scale, SCALE_OPTIONS, toGrams } from "@services/utils/scales";
+import { useTheme } from "@hooks/useTheme";
 
-type Props = NativeStackScreenProps<ProfileStackParamList, 'ProductDetails'>;
+type Props = NativeStackScreenProps<ProfileStackParamList, "ProductDetails">;
 
 const ProductDetailsScreen = ({ navigation, route }: Props) => {
   const { products, deleteProduct } = useProducts();
@@ -26,8 +26,8 @@ const ProductDetailsScreen = ({ navigation, route }: Props) => {
     return products.find((p) => p.id === route.params.productId);
   }, [products, route.params.productId]);
 
-  const [amount, setAmount] = useState('100');
-  const [selectedScale, setSelectedScale] = useState<Scale>('g');
+  const [amount, setAmount] = useState("100");
+  const [selectedScale, setSelectedScale] = useState<Scale>("g");
 
   // Calculate nutritional values for the selected amount
   const calculatedValues = useMemo(() => {
@@ -47,8 +47,12 @@ const ProductDetailsScreen = ({ navigation, route }: Props) => {
     return {
       grams: gramsAmount,
       calories: Math.round(product.caloriesPer100g * ratio),
-      protein: product.proteinPer100g ? (product.proteinPer100g * ratio).toFixed(1) : null,
-      carbs: product.carbsPer100g ? (product.carbsPer100g * ratio).toFixed(1) : null,
+      protein: product.proteinPer100g
+        ? (product.proteinPer100g * ratio).toFixed(1)
+        : null,
+      carbs: product.carbsPer100g
+        ? (product.carbsPer100g * ratio).toFixed(1)
+        : null,
       fat: product.fatPer100g ? (product.fatPer100g * ratio).toFixed(1) : null,
     };
   }, [amount, selectedScale, product]);
@@ -57,27 +61,28 @@ const ProductDetailsScreen = ({ navigation, route }: Props) => {
     if (!product) return;
 
     Alert.alert(
-      'Delete Product',
+      "Delete Product",
       `Are you sure you want to delete "${product.name}"?`,
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: "Cancel", style: "cancel" },
         {
-          text: 'Delete',
-          style: 'destructive',
+          text: "Delete",
+          style: "destructive",
           onPress: async () => {
             try {
-              console.log('Deleting product:', product.id);
               const wasDeleted = await deleteProduct(product.id);
-              console.log('Product deleted successfully:', wasDeleted);
-              
+
               if (wasDeleted) {
                 navigation.goBack();
               } else {
-                Alert.alert('Error', 'Product not found');
+                Alert.alert("Error", "Product not found");
               }
             } catch (error) {
-              console.error('Delete error:', error);
-              Alert.alert('Error', 'Failed to delete product. Please try again.');
+              console.error("Delete error:", error);
+              Alert.alert(
+                "Error",
+                "Failed to delete product. Please try again.",
+              );
             }
           },
         },
@@ -92,8 +97,8 @@ const ProductDetailsScreen = ({ navigation, route }: Props) => {
       paddingTop: 16,
     },
     header: {
-      flexDirection: 'row',
-      alignItems: 'center',
+      flexDirection: "row",
+      alignItems: "center",
       paddingHorizontal: 16,
       marginBottom: 8,
     },
@@ -105,7 +110,7 @@ const ProductDetailsScreen = ({ navigation, route }: Props) => {
     },
     title: {
       fontSize: 20,
-      fontWeight: '700',
+      fontWeight: "700",
       color: colors.text,
     },
     scrollView: {
@@ -118,9 +123,9 @@ const ProductDetailsScreen = ({ navigation, route }: Props) => {
     },
     sectionTitle: {
       fontSize: 14,
-      fontWeight: '600',
+      fontWeight: "600",
       color: colors.textSecondary,
-      textTransform: 'uppercase',
+      textTransform: "uppercase",
       letterSpacing: 0.5,
       marginBottom: 12,
     },
@@ -137,7 +142,7 @@ const ProductDetailsScreen = ({ navigation, route }: Props) => {
     },
     productName: {
       fontSize: 20,
-      fontWeight: '700',
+      fontWeight: "700",
       color: colors.text,
       marginBottom: 8,
     },
@@ -159,7 +164,7 @@ const ProductDetailsScreen = ({ navigation, route }: Props) => {
       color: colors.text,
     },
     scaleButtons: {
-      flexDirection: 'row',
+      flexDirection: "row",
       gap: 8,
     },
     scaleButton: {
@@ -170,7 +175,7 @@ const ProductDetailsScreen = ({ navigation, route }: Props) => {
       borderWidth: 2,
       borderColor: colors.border,
       backgroundColor: colors.cardBackground,
-      alignItems: 'center',
+      alignItems: "center",
     },
     scaleButtonActive: {
       borderColor: colors.primary,
@@ -178,7 +183,7 @@ const ProductDetailsScreen = ({ navigation, route }: Props) => {
     },
     scaleButtonText: {
       fontSize: 16,
-      fontWeight: '600',
+      fontWeight: "600",
       color: colors.textSecondary,
     },
     scaleButtonTextActive: {
@@ -199,9 +204,9 @@ const ProductDetailsScreen = ({ navigation, route }: Props) => {
       borderColor: colors.border,
     },
     nutrientRow: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
       paddingVertical: 8,
       borderBottomWidth: 1,
       borderBottomColor: colors.border,
@@ -209,24 +214,24 @@ const ProductDetailsScreen = ({ navigation, route }: Props) => {
     nutrientLabel: {
       fontSize: 15,
       color: colors.text,
-      fontWeight: '500',
+      fontWeight: "500",
     },
     nutrientValue: {
       fontSize: 15,
       color: colors.text,
-      fontWeight: '600',
+      fontWeight: "600",
     },
     nutrientValueLarge: {
       fontSize: 24,
       color: colors.success,
-      fontWeight: '700',
+      fontWeight: "700",
     },
     equivalentText: {
       fontSize: 13,
       color: colors.success,
       marginTop: 12,
-      textAlign: 'center',
-      fontWeight: '500',
+      textAlign: "center",
+      fontWeight: "500",
     },
     footer: {
       padding: 16,
@@ -235,14 +240,14 @@ const ProductDetailsScreen = ({ navigation, route }: Props) => {
       backgroundColor: colors.background,
     },
     buttonRow: {
-      flexDirection: 'row',
+      flexDirection: "row",
       gap: 12,
     },
     button: {
       flex: 1,
       padding: 16,
       borderRadius: 8,
-      alignItems: 'center',
+      alignItems: "center",
     },
     editButton: {
       backgroundColor: colors.primary,
@@ -250,7 +255,7 @@ const ProductDetailsScreen = ({ navigation, route }: Props) => {
     editButtonText: {
       color: colors.buttonText,
       fontSize: 16,
-      fontWeight: '600',
+      fontWeight: "600",
     },
     deleteButton: {
       backgroundColor: colors.cardBackground,
@@ -260,24 +265,24 @@ const ProductDetailsScreen = ({ navigation, route }: Props) => {
     deleteButtonText: {
       color: colors.error,
       fontSize: 16,
-      fontWeight: '600',
+      fontWeight: "600",
     },
     notFoundContainer: {
       flex: 1,
-      justifyContent: 'center',
-      alignItems: 'center',
+      justifyContent: "center",
+      alignItems: "center",
       padding: 32,
     },
     notFoundText: {
       fontSize: 20,
-      fontWeight: '600',
+      fontWeight: "600",
       color: colors.text,
       marginBottom: 8,
     },
     notFoundSubtext: {
       fontSize: 14,
       color: colors.textSecondary,
-      textAlign: 'center',
+      textAlign: "center",
       marginBottom: 24,
     },
     backButton: {
@@ -289,23 +294,37 @@ const ProductDetailsScreen = ({ navigation, route }: Props) => {
     backButtonText: {
       color: colors.buttonText,
       fontSize: 16,
-      fontWeight: '600',
+      fontWeight: "600",
+    },
+    catalogInfoText: {
+      fontSize: 14,
+      color: colors.textSecondary,
+      fontStyle: "italic",
+      textAlign: "center",
     },
   });
 
   if (!product) {
     return (
-      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+      <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
         <View style={styles.header}>
-          <Pressable onPress={() => navigation.goBack()} style={styles.topBarBackButton}>
+          <Pressable
+            onPress={() => navigation.goBack()}
+            style={styles.topBarBackButton}
+          >
             <Ionicons name="arrow-back" size={22} color={colors.text} />
           </Pressable>
           <Text style={styles.title}>Product</Text>
         </View>
         <View style={styles.notFoundContainer}>
           <Text style={styles.notFoundText}>Product not found</Text>
-          <Text style={styles.notFoundSubtext}>This product may have been deleted.</Text>
-          <Pressable style={styles.backButton} onPress={() => navigation.goBack()}>
+          <Text style={styles.notFoundSubtext}>
+            This product may have been deleted.
+          </Text>
+          <Pressable
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
+          >
             <Text style={styles.backButtonText}>Go Back</Text>
           </Pressable>
         </View>
@@ -314,9 +333,12 @@ const ProductDetailsScreen = ({ navigation, route }: Props) => {
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+    <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
       <View style={styles.header}>
-        <Pressable onPress={() => navigation.goBack()} style={styles.topBarBackButton}>
+        <Pressable
+          onPress={() => navigation.goBack()}
+          style={styles.topBarBackButton}
+        >
           <Ionicons name="arrow-back" size={22} color={colors.text} />
         </Pressable>
         <Text style={styles.title}>{product.name}</Text>
@@ -369,7 +391,8 @@ const ProductDetailsScreen = ({ navigation, route }: Props) => {
                   <Text
                     style={[
                       styles.scaleButtonText,
-                      selectedScale === option.value && styles.scaleButtonTextActive,
+                      selectedScale === option.value &&
+                        styles.scaleButtonTextActive,
                     ]}
                   >
                     {option.label}
@@ -389,24 +412,32 @@ const ProductDetailsScreen = ({ navigation, route }: Props) => {
             <View style={styles.calculatedCard}>
               <View style={styles.nutrientRow}>
                 <Text style={styles.nutrientLabel}>Calories</Text>
-                <Text style={styles.nutrientValueLarge}>{calculatedValues.calories} kcal</Text>
+                <Text style={styles.nutrientValueLarge}>
+                  {calculatedValues.calories} kcal
+                </Text>
               </View>
               {calculatedValues.protein !== null && (
                 <View style={styles.nutrientRow}>
                   <Text style={styles.nutrientLabel}>Protein</Text>
-                  <Text style={styles.nutrientValue}>{calculatedValues.protein} g</Text>
+                  <Text style={styles.nutrientValue}>
+                    {calculatedValues.protein} g
+                  </Text>
                 </View>
               )}
               {calculatedValues.carbs !== null && (
                 <View style={styles.nutrientRow}>
                   <Text style={styles.nutrientLabel}>Carbohydrates</Text>
-                  <Text style={styles.nutrientValue}>{calculatedValues.carbs} g</Text>
+                  <Text style={styles.nutrientValue}>
+                    {calculatedValues.carbs} g
+                  </Text>
                 </View>
               )}
               {calculatedValues.fat !== null && (
                 <View style={styles.nutrientRow}>
                   <Text style={styles.nutrientLabel}>Fat</Text>
-                  <Text style={styles.nutrientValue}>{calculatedValues.fat} g</Text>
+                  <Text style={styles.nutrientValue}>
+                    {calculatedValues.fat} g
+                  </Text>
                 </View>
               )}
               <Text style={styles.equivalentText}>
@@ -422,24 +453,32 @@ const ProductDetailsScreen = ({ navigation, route }: Props) => {
           <View style={styles.nutrientCard}>
             <View style={styles.nutrientRow}>
               <Text style={styles.nutrientLabel}>Calories</Text>
-              <Text style={styles.nutrientValue}>{Math.round(product.caloriesPer100g)} kcal</Text>
+              <Text style={styles.nutrientValue}>
+                {Math.round(product.caloriesPer100g)} kcal
+              </Text>
             </View>
             {product.proteinPer100g !== undefined && (
               <View style={styles.nutrientRow}>
                 <Text style={styles.nutrientLabel}>Protein</Text>
-                <Text style={styles.nutrientValue}>{product.proteinPer100g.toFixed(1)} g</Text>
+                <Text style={styles.nutrientValue}>
+                  {product.proteinPer100g.toFixed(1)} g
+                </Text>
               </View>
             )}
             {product.carbsPer100g !== undefined && (
               <View style={styles.nutrientRow}>
                 <Text style={styles.nutrientLabel}>Carbohydrates</Text>
-                <Text style={styles.nutrientValue}>{product.carbsPer100g.toFixed(1)} g</Text>
+                <Text style={styles.nutrientValue}>
+                  {product.carbsPer100g.toFixed(1)} g
+                </Text>
               </View>
             )}
             {product.fatPer100g !== undefined && (
               <View style={styles.nutrientRow}>
                 <Text style={styles.nutrientLabel}>Fat</Text>
-                <Text style={styles.nutrientValue}>{product.fatPer100g.toFixed(1)} g</Text>
+                <Text style={styles.nutrientValue}>
+                  {product.fatPer100g.toFixed(1)} g
+                </Text>
               </View>
             )}
           </View>
@@ -448,21 +487,31 @@ const ProductDetailsScreen = ({ navigation, route }: Props) => {
 
       {/* Action Buttons */}
       <View style={styles.footer}>
-        <View style={styles.buttonRow}>
-          <Pressable
-            style={[styles.button, styles.editButton]}
-            onPress={() => navigation.navigate('ProductForm', { productId: product.id })}
-          >
-            <Text style={styles.editButtonText}>Edit Product</Text>
-          </Pressable>
-          <Pressable style={[styles.button, styles.deleteButton]} onPress={handleDelete}>
-            <Text style={styles.deleteButtonText}>Delete</Text>
-          </Pressable>
-        </View>
+        {product.source === "catalog" ? (
+          <Text style={styles.catalogInfoText}>
+            This is a catalog product and cannot be edited.
+          </Text>
+        ) : (
+          <View style={styles.buttonRow}>
+            <Pressable
+              style={[styles.button, styles.editButton]}
+              onPress={() =>
+                navigation.navigate("ProductForm", { productId: product.id })
+              }
+            >
+              <Text style={styles.editButtonText}>Edit Product</Text>
+            </Pressable>
+            <Pressable
+              style={[styles.button, styles.deleteButton]}
+              onPress={handleDelete}
+            >
+              <Text style={styles.deleteButtonText}>Delete</Text>
+            </Pressable>
+          </View>
+        )}
       </View>
     </SafeAreaView>
   );
 };
 
 export default ProductDetailsScreen;
-

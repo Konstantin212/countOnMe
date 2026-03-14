@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from "react";
 import {
   FlatList,
   Keyboard,
@@ -8,16 +8,17 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Ionicons } from '@expo/vector-icons';
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { NativeStackScreenProps } from "@react-navigation/native-stack";
+import { Ionicons } from "@expo/vector-icons";
 
-import { ProfileStackParamList } from '@app/navigationTypes';
-import { useProducts } from '@hooks/useProducts';
-import { useTheme } from '@hooks/useTheme';
+import { useFocusEffect } from "@react-navigation/native";
+import { ProfileStackParamList } from "@app/navigationTypes";
+import { useProducts } from "@hooks/useProducts";
+import { useTheme } from "@hooks/useTheme";
 
-type Props = NativeStackScreenProps<ProfileStackParamList, 'ProductSearch'>;
+type Props = NativeStackScreenProps<ProfileStackParamList, "ProductSearch">;
 
 type SearchResultItem = {
   id: string;
@@ -26,14 +27,24 @@ type SearchResultItem = {
 };
 
 const ProductSearchScreen = ({ navigation }: Props) => {
-  const { products } = useProducts();
+  const { products, refresh } = useProducts();
   const { colors } = useTheme();
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
 
-  // Get 5 most recent products
+  useFocusEffect(
+    useCallback(() => {
+      refresh();
+    }, [refresh]),
+  );
+
+  // Get 5 most recent user-created products (exclude catalog items)
   const recentProducts = useMemo(() => {
     return [...products]
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .filter((p) => p.source === "user")
+      .sort(
+        (a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+      )
       .slice(0, 5);
   }, [products]);
 
@@ -41,7 +52,9 @@ const ProductSearchScreen = ({ navigation }: Props) => {
   const displayItems = useMemo((): SearchResultItem[] => {
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
-      const matchingRecent = recentProducts.filter((p) => p.name.toLowerCase().includes(query));
+      const matchingRecent = recentProducts.filter((p) =>
+        p.name.toLowerCase().includes(query),
+      );
 
       return matchingRecent.map((p) => ({
         id: `recent-${p.id}`,
@@ -63,24 +76,27 @@ const ProductSearchScreen = ({ navigation }: Props) => {
       Keyboard.dismiss();
 
       // Recent product - find it and navigate to edit
-      const productId = item.id.replace('recent-', '');
-      navigation.navigate('ProductForm', { productId });
+      const productId = item.id.replace("recent-", "");
+      navigation.navigate("ProductForm", { productId });
     },
     [navigation],
   );
 
   const handleAddProduct = useCallback(() => {
-    navigation.navigate('ProductForm', {});
+    navigation.navigate("ProductForm", {});
   }, [navigation]);
 
   const handleAddMeal = useCallback(() => {
     // Navigate to MealBuilder in the same stack
-    navigation.navigate('MealBuilder', {});
+    navigation.navigate("MealBuilder", {});
   }, [navigation]);
 
   const renderItem = ({ item }: { item: SearchResultItem }) => (
     <Pressable
-      style={({ pressed }) => [styles.resultItem, pressed && styles.resultItemPressed]}
+      style={({ pressed }) => [
+        styles.resultItem,
+        pressed && styles.resultItemPressed,
+      ]}
       onPress={() => handleSelectProduct(item)}
     >
       <View style={styles.resultContent}>
@@ -119,7 +135,9 @@ const ProductSearchScreen = ({ navigation }: Props) => {
       return (
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyText}>No recent products</Text>
-          <Text style={styles.emptySubtext}>Add your first product to get started</Text>
+          <Text style={styles.emptySubtext}>
+            Add your first product to get started
+          </Text>
         </View>
       );
     }
@@ -134,8 +152,8 @@ const ProductSearchScreen = ({ navigation }: Props) => {
       paddingTop: 16,
     },
     header: {
-      flexDirection: 'row',
-      alignItems: 'center',
+      flexDirection: "row",
+      alignItems: "center",
       paddingHorizontal: 16,
       marginBottom: 4,
     },
@@ -147,11 +165,11 @@ const ProductSearchScreen = ({ navigation }: Props) => {
     },
     title: {
       fontSize: 20,
-      fontWeight: '700',
+      fontWeight: "700",
       color: colors.text,
     },
     buttonRow: {
-      flexDirection: 'row',
+      flexDirection: "row",
       padding: 16,
       gap: 12,
       borderBottomWidth: 1,
@@ -163,20 +181,20 @@ const ProductSearchScreen = ({ navigation }: Props) => {
       paddingVertical: 14,
       paddingHorizontal: 16,
       borderRadius: 8,
-      alignItems: 'center',
-      justifyContent: 'center',
+      alignItems: "center",
+      justifyContent: "center",
     },
     actionButtonText: {
       color: colors.buttonText,
       fontSize: 15,
-      fontWeight: '600',
+      fontWeight: "600",
     },
     searchContainer: {
       padding: 16,
       borderBottomWidth: 1,
       borderBottomColor: colors.border,
-      flexDirection: 'row',
-      alignItems: 'center',
+      flexDirection: "row",
+      alignItems: "center",
     },
     searchInput: {
       flex: 1,
@@ -195,9 +213,9 @@ const ProductSearchScreen = ({ navigation }: Props) => {
     },
     sectionTitle: {
       fontSize: 14,
-      fontWeight: '600',
+      fontWeight: "600",
       color: colors.textSecondary,
-      textTransform: 'uppercase',
+      textTransform: "uppercase",
       letterSpacing: 0.5,
     },
     listContent: {
@@ -212,17 +230,17 @@ const ProductSearchScreen = ({ navigation }: Props) => {
       backgroundColor: colors.pressed,
     },
     resultContent: {
-      flexDirection: 'column',
+      flexDirection: "column",
     },
     resultName: {
       fontSize: 16,
-      fontWeight: '600',
+      fontWeight: "600",
       color: colors.text,
       marginBottom: 4,
     },
     badge: {
-      alignSelf: 'flex-start',
-      backgroundColor: colors.primary + '20',
+      alignSelf: "flex-start",
+      backgroundColor: colors.primary + "20",
       paddingHorizontal: 8,
       paddingVertical: 4,
       borderRadius: 4,
@@ -230,33 +248,36 @@ const ProductSearchScreen = ({ navigation }: Props) => {
     },
     badgeText: {
       fontSize: 12,
-      fontWeight: '600',
+      fontWeight: "600",
       color: colors.primary,
     },
     emptyContainer: {
-      alignItems: 'center',
-      justifyContent: 'center',
+      alignItems: "center",
+      justifyContent: "center",
       paddingVertical: 48,
       paddingHorizontal: 32,
     },
     emptyText: {
       fontSize: 18,
-      fontWeight: '600',
+      fontWeight: "600",
       color: colors.text,
       marginBottom: 8,
-      textAlign: 'center',
+      textAlign: "center",
     },
     emptySubtext: {
       fontSize: 14,
       color: colors.textSecondary,
-      textAlign: 'center',
+      textAlign: "center",
     },
   });
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+    <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
       <View style={styles.header}>
-        <Pressable onPress={() => navigation.goBack()} style={styles.backButton}>
+        <Pressable
+          onPress={() => navigation.goBack()}
+          style={styles.backButton}
+        >
           <Ionicons name="arrow-back" size={22} color={colors.text} />
         </Pressable>
         <Text style={styles.title}>Add Product</Text>
@@ -264,7 +285,10 @@ const ProductSearchScreen = ({ navigation }: Props) => {
 
       {/* Button Row */}
       <View style={styles.buttonRow}>
-        <TouchableOpacity style={styles.actionButton} onPress={handleAddProduct}>
+        <TouchableOpacity
+          style={styles.actionButton}
+          onPress={handleAddProduct}
+        >
           <Text style={styles.actionButtonText}>Add New Product</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.actionButton} onPress={handleAddMeal}>
@@ -301,4 +325,3 @@ const ProductSearchScreen = ({ navigation }: Props) => {
 };
 
 export default ProductSearchScreen;
-

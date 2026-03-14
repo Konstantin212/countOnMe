@@ -13,20 +13,20 @@ The catalog is stored in separate `catalog_products` and `catalog_portions` tabl
 From the repository root:
 
 ```bash
-./seed.sh
+python seed.py
 ```
 
-This sources `.env` (if present) and runs the seed script with default settings.
+This sets the default `DATABASE_URL` and runs the seed script. Works on any OS (Windows, macOS, Linux) without shell compatibility issues.
 
 ### Command-Line Options
 
 ```bash
-./seed.sh --seeds-dir /path/to/json/files --dry-run
+python seed.py --seeds-dir /path/to/json/files --dry-run
 ```
 
 **Options:**
 
-- `--seeds-dir PATH` — Directory containing USDA FoundationFoods `*.json` files. Default: `backend/seeds/`
+- `--seeds-dir PATH` — Directory containing USDA FoundationFoods `*.json` files. Default: `seeds/`
 - `--db-url URL` — PostgreSQL connection URL. Overrides the `DATABASE_URL` environment variable (useful for non-standard database locations)
 - `--dry-run` — Parse and validate without writing to the database. Prints estimated product count.
 
@@ -42,20 +42,20 @@ python -m scripts.seed_catalog --seeds-dir ../seeds
 The seed script uses a default database connection and does not require configuration for typical setups.
 
 **Default behavior:**
-- `seed.sh` automatically sets `DATABASE_URL` to `postgresql://countonme:countonme@localhost:5433/countonme` (host-accessible port via Docker Compose)
+- `seed.py` automatically sets `DATABASE_URL` to `postgresql://countonme:countonme@localhost:5433/countonme` (host-accessible port via Docker Compose)
 - If you have already started the database with Docker Compose, no further setup is needed
 
 **Override the database URL:**
 
 **Option 1: Command-line flag**
 ```bash
-./seed.sh --db-url "postgresql://user:pass@custom-host:5432/countonme"
+python seed.py --db-url "postgresql://user:pass@custom-host:5432/countonme"
 ```
 
 **Option 2: Environment variable**
 ```bash
 export DATABASE_URL="postgresql://user:pass@localhost:5432/countonme"
-./seed.sh
+python seed.py
 ```
 
 **Option 3: `.env` file at repo root**
@@ -285,7 +285,7 @@ This ensures only valid, quantifiable foods enter the catalog. Note that some US
 - `backend/app/schemas/catalog.py` — Pydantic response schemas
 - `backend/app/models/catalog_product.py` — SQLAlchemy ORM model for products
 - `backend/app/models/catalog_portion.py` — SQLAlchemy ORM model for portions
-- `seed.sh` — Bash wrapper at repo root (sets default DATABASE_URL automatically)
+- `seed.py` — Cross-platform Python wrapper at repo root (sets default DATABASE_URL automatically)
 
 ## Related Features
 

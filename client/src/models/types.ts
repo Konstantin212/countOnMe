@@ -1,5 +1,18 @@
 export type ISODateString = string;
 
+export type ProductSource = "user" | "catalog";
+
+export type ProductSearchResult = {
+  id: string;
+  name: string;
+  source: ProductSource;
+  caloriesPer100g: number | null;
+  catalogId: string | null;
+  proteinPer100g: number | null;
+  carbsPer100g: number | null;
+  fatPer100g: number | null;
+};
+
 export type Unit = "mg" | "g" | "kg" | "ml" | "l" | "tsp" | "tbsp" | "cup";
 export type ScaleType = "Liquid" | "Solid" | "Dry";
 
@@ -167,6 +180,7 @@ export type Product = {
   proteinPer100g?: number;
   carbsPer100g?: number;
   fatPer100g?: number;
+  source?: ProductSource;
   createdAt: ISODateString;
   updatedAt: ISODateString;
 };

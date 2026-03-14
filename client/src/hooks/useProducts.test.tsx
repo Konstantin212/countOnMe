@@ -112,4 +112,31 @@ describe("useProducts", () => {
     expect(result.current.products).toEqual([sampleProduct]);
     expect(mockSaveProducts).not.toHaveBeenCalled();
   });
+
+  it("defaults source to 'user' when not provided", async () => {
+    const { result } = await setupHook();
+
+    await act(async () => {
+      await result.current.addProduct({
+        name: "Homemade Bread",
+        caloriesPer100g: 250,
+      });
+    });
+
+    expect(result.current.products[0].source).toBe("user");
+  });
+
+  it("preserves source: 'catalog' when explicitly provided", async () => {
+    const { result } = await setupHook();
+
+    await act(async () => {
+      await result.current.addProduct({
+        name: "Catalog Item",
+        caloriesPer100g: 300,
+        source: "catalog",
+      });
+    });
+
+    expect(result.current.products[0].source).toBe("catalog");
+  });
 });

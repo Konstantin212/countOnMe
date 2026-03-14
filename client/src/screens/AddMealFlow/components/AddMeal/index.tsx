@@ -17,8 +17,10 @@ import { useTheme } from "@hooks/useTheme";
 import { useProducts } from "@hooks/useProducts";
 import { useMeals } from "@hooks/useMeals";
 import { useFoodEntries } from "@hooks/useFoodEntries";
+import { FoodEntry } from "@services/api/foodEntries";
 import { calcMealCalories } from "@services/utils/calories";
 import { MEAL_TYPE_KEYS, MEAL_TYPE_LABEL } from "@services/constants/mealTypes";
+import { MealTypeKey } from "@models/types";
 import { MyDayStackParamList } from "@app/navigationTypes";
 import { useDraftMeal } from "../../context";
 
@@ -28,15 +30,24 @@ const AddMealScreen = ({ navigation }: Props) => {
   const { colors } = useTheme();
   const { products, refresh: refreshProducts } = useProducts();
 
+  const { addMeal } = useMeals(products);
+  const { saveMealToBackend, getEntriesForDay } = useFoodEntries();
+  const { draft, setMealType, reset, removeItem } = useDraftMeal();
+  const [saving, setSaving] = useState(false);
+  const [savedEntries, setSavedEntries] = useState<FoodEntry[]>([]);
+  const [loadingEntries, setLoadingEntries] = useState(false);
+
   useFocusEffect(
     useCallback(() => {
       refreshProducts();
-    }, [refreshProducts]),
+      setLoadingEntries(true);
+      const today = new Date().toISOString().split("T")[0];
+      getEntriesForDay(today)
+        .then((entries) => setSavedEntries(entries))
+        .catch(() => setSavedEntries([]))
+        .finally(() => setLoadingEntries(false));
+    }, [refreshProducts, getEntriesForDay]),
   );
-  const { addMeal } = useMeals(products);
-  const { saveMealToBackend } = useFoodEntries();
-  const { draft, setMealType, reset, removeItem } = useDraftMeal();
-  const [saving, setSaving] = useState(false);
 
   const currentItems = draft.itemsByMealType[draft.mealType] ?? [];
 
@@ -54,6 +65,18 @@ const AddMealScreen = ({ navigation }: Props) => {
     }
     return total;
   }, [draft.itemsByMealType, products]);
+
+  const savedByMealType = useMemo(() => {
+    const map: Partial<Record<MealTypeKey, FoodEntry[]>> = {};
+    for (const entry of savedEntries) {
+      if (!MEAL_TYPE_KEYS.includes(entry.mealType as MealTypeKey)) continue;
+      const key = entry.mealType as MealTypeKey;
+      const bucket = map[key] ?? [];
+      bucket.push(entry);
+      map[key] = bucket;
+    }
+    return map;
+  }, [savedEntries]);
 
   const hasAnyItems = useMemo(() => {
     return Object.values(draft.itemsByMealType).some(
@@ -149,6 +172,31 @@ const AddMealScreen = ({ navigation }: Props) => {
       fontSize: 16,
       fontWeight: "700",
     },
+    savedSectionTitle: {
+      fontSize: 12,
+      fontWeight: "600",
+      color: colors.textSecondary,
+      marginTop: 8,
+      marginBottom: 4,
+    },
+    savedEntryRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      paddingVertical: 4,
+      opacity: 0.7,
+    },
+    savedEntryName: {
+      flex: 1,
+      color: colors.text,
+      fontSize: 14,
+    },
+    savedEntryMeta: {
+      color: colors.textSecondary,
+      fontSize: 13,
+    },
+    activityIndicator: {
+      alignSelf: "flex-start" as const,
+    },
   });
 
   return (
@@ -196,6 +244,31 @@ const AddMealScreen = ({ navigation }: Props) => {
           >
             <Text style={styles.addButtonText}>Add product</Text>
           </Pressable>
+
+          {loadingEntries ? (
+            <ActivityIndicator
+              size="small"
+              color={colors.textSecondary}
+              style={styles.activityIndicator}
+            />
+          ) : (savedByMealType[draft.mealType] ?? []).length > 0 ? (
+            <>
+              <Text style={styles.savedSectionTitle}>Already logged today</Text>
+              {(savedByMealType[draft.mealType] ?? []).map((entry) => {
+                const p = products.find((x) => x.id === entry.productId);
+                return (
+                  <View key={entry.id} style={styles.savedEntryRow}>
+                    <Text style={styles.savedEntryName}>
+                      {p?.name ?? "Unknown product"}
+                    </Text>
+                    <Text style={styles.savedEntryMeta}>
+                      {entry.amount} {entry.unit}
+                    </Text>
+                  </View>
+                );
+              })}
+            </>
+          ) : null}
 
           {currentItems.length === 0 ? (
             <Text style={styles.itemMeta}>No products added yet.</Text>

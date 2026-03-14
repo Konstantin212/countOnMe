@@ -15,6 +15,9 @@ vi.mock("@react-native-async-storage/async-storage", () => {
       removeItem: vi.fn(async (key: string) => {
         storageStore.delete(key);
       }),
+      multiRemove: vi.fn(async (keys: string[]) => {
+        keys.forEach((key) => storageStore.delete(key));
+      }),
       clear: vi.fn(async () => {
         storageStore.clear();
       }),
@@ -65,7 +68,13 @@ describe("storage repositories", () => {
 
   it("saves and loads products via AsyncStorage", async () => {
     await saveProducts(sampleProducts);
-    await expect(loadProducts()).resolves.toEqual(sampleProducts);
+    const loaded = await loadProducts();
+    // loadProducts patches missing source to "user"
+    const expected = sampleProducts.map((p) => ({
+      ...p,
+      source: p.source ?? "user",
+    }));
+    expect(loaded).toEqual(expected);
   });
 
   it("saves and loads meals via AsyncStorage", async () => {
@@ -114,6 +123,35 @@ describe("storage repositories", () => {
       await saveProductRecents(["p3", "p1"]);
       expect(await loadProductRecents()).toEqual(["p3", "p1"]);
     });
+
+    describe("pushProductRecent", () => {
+      it("prepends id to the front of the list", async () => {
+        const { pushProductRecent, saveProductRecents, loadProductRecents } =
+          await import("./storage");
+        await saveProductRecents(["p1", "p2"]);
+        await pushProductRecent("p3");
+        expect(await loadProductRecents()).toEqual(["p3", "p1", "p2"]);
+      });
+
+      it("moves an existing id to the front (deduplicates)", async () => {
+        const { pushProductRecent, saveProductRecents, loadProductRecents } =
+          await import("./storage");
+        await saveProductRecents(["p1", "p2", "p3"]);
+        await pushProductRecent("p2");
+        expect(await loadProductRecents()).toEqual(["p2", "p1", "p3"]);
+      });
+
+      it("caps the list at 50 items", async () => {
+        const { pushProductRecent, saveProductRecents, loadProductRecents } =
+          await import("./storage");
+        const existing = Array.from({ length: 50 }, (_, i) => `p${i}`);
+        await saveProductRecents(existing);
+        await pushProductRecent("new");
+        const result = await loadProductRecents();
+        expect(result).toHaveLength(50);
+        expect(result[0]).toBe("new");
+      });
+    });
   });
 
   describe("goal storage", () => {
@@ -161,6 +199,141 @@ describe("storage repositories", () => {
       await saveGoal(goal);
       await clearGoal();
       expect(await loadGoal()).toBeNull();
+    });
+  });
+
+  describe("draft meal storage", () => {
+    it("returns null when no draft meal is stored", async () => {
+      const { loadDraftMeal } = await import("./storage");
+      expect(await loadDraftMeal()).toBeNull();
+    });
+
+    it("saves and loads a draft meal", async () => {
+      const { saveDraftMeal, loadDraftMeal } = await import("./storage");
+      const draft = {
+        mealType: "lunch" as const,
+        itemsByMealType: {
+          breakfast: [],
+          lunch: [{ productId: "chicken", amount: 150, unit: "g" as const }],
+          dinner: [],
+          snacks: [],
+          water: [],
+        },
+      };
+      await saveDraftMeal(draft);
+      expect(await loadDraftMeal()).toEqual(draft);
+    });
+
+    it("clears draft meal from storage", async () => {
+      const { saveDraftMeal, clearDraftMeal, loadDraftMeal } =
+        await import("./storage");
+      const draft = {
+        mealType: "breakfast" as const,
+        itemsByMealType: {
+          breakfast: [{ productId: "rice", amount: 200, unit: "g" as const }],
+          lunch: [],
+          dinner: [],
+          snacks: [],
+          water: [],
+        },
+      };
+      await saveDraftMeal(draft);
+      await clearDraftMeal();
+      expect(await loadDraftMeal()).toBeNull();
+    });
+
+    it("returns null when JSON parse fails for draft meal", async () => {
+      const { loadDraftMeal } = await import("./storage");
+      storageStore.set("@countOnMe/draft-meal/v1", "invalid json");
+      expect(await loadDraftMeal()).toBeNull();
+    });
+  });
+
+  describe("clearAllFoodData", () => {
+    it("removes all food-related keys from storage", async () => {
+      const { clearAllFoodData } = await import("./storage");
+
+      // Arrange: seed several food-related keys
+      storageStore.set("@countOnMe/products/v1", "[]");
+      storageStore.set("@countOnMe/products/v2", "[]");
+      storageStore.set("@countOnMe/meals/v1", "[]");
+      storageStore.set("@countOnMe/meals/v2", "[]");
+      storageStore.set("@countOnMe/products-favourites/v1", "[]");
+      storageStore.set("@countOnMe/products-recents/v1", "[]");
+      storageStore.set("@countOnMe/goal/v1", "{}");
+      storageStore.set("@countOnMe/body-weights/v1", "[]");
+      storageStore.set("@countOnMe/draft-meal/v1", "{}");
+      // Theme should NOT be deleted
+      storageStore.set("@countOnMe/theme/v1", "dark");
+
+      // Act
+      await clearAllFoodData();
+
+      // Assert: all food keys removed
+      expect(storageStore.has("@countOnMe/products/v1")).toBe(false);
+      expect(storageStore.has("@countOnMe/products/v2")).toBe(false);
+      expect(storageStore.has("@countOnMe/meals/v1")).toBe(false);
+      expect(storageStore.has("@countOnMe/meals/v2")).toBe(false);
+      expect(storageStore.has("@countOnMe/products-favourites/v1")).toBe(false);
+      expect(storageStore.has("@countOnMe/products-recents/v1")).toBe(false);
+      expect(storageStore.has("@countOnMe/goal/v1")).toBe(false);
+      expect(storageStore.has("@countOnMe/body-weights/v1")).toBe(false);
+      expect(storageStore.has("@countOnMe/draft-meal/v1")).toBe(false);
+      // Theme should remain
+      expect(storageStore.get("@countOnMe/theme/v1")).toBe("dark");
+    });
+  });
+
+  describe("patchProductSource", () => {
+    it("stamps source: 'user' on legacy products missing source field", async () => {
+      // Arrange: products without source field stored in v2
+      const legacyProducts = [
+        {
+          id: "old-prod",
+          name: "Old Product",
+          caloriesPer100g: 100,
+          createdAt: "2025-01-01T00:00:00.000Z",
+          updatedAt: "2025-01-01T00:00:00.000Z",
+        },
+      ];
+      storageStore.set(
+        "@countOnMe/products/v2",
+        JSON.stringify(legacyProducts),
+      );
+
+      // Act
+      const loaded = await loadProducts();
+
+      // Assert: source patched to "user"
+      expect(loaded).toHaveLength(1);
+      expect(loaded[0].source).toBe("user");
+
+      // Assert: patched products persisted back to storage
+      const stored = JSON.parse(
+        storageStore.get("@countOnMe/products/v2") ?? "[]",
+      );
+      expect(stored[0].source).toBe("user");
+    });
+
+    it("does not re-save products when all already have source", async () => {
+      // Arrange: products with source already set
+      const products = [
+        {
+          id: "new-prod",
+          name: "New Product",
+          caloriesPer100g: 200,
+          source: "catalog",
+          createdAt: "2025-01-01T00:00:00.000Z",
+          updatedAt: "2025-01-01T00:00:00.000Z",
+        },
+      ];
+      storageStore.set("@countOnMe/products/v2", JSON.stringify(products));
+
+      // Act
+      const loaded = await loadProducts();
+
+      // Assert: source preserved as "catalog"
+      expect(loaded[0].source).toBe("catalog");
     });
   });
 

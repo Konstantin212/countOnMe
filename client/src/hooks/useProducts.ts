@@ -1,10 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { v4 as uuid } from 'uuid';
+import { useCallback, useEffect, useRef, useState } from "react";
+import { v4 as uuid } from "uuid";
 
-import { Product, ScaleType, Unit } from '@models/types';
-import { SCALE_UNITS } from '@services/constants/scaleConstants';
-import { loadProducts, saveProducts } from '@storage/storage';
-import { enqueue } from '@storage/syncQueue';
+import { Product, ScaleType, Unit } from "@models/types";
+import { SCALE_UNITS } from "@services/constants/scaleConstants";
+import { loadProducts, saveProducts } from "@storage/storage";
+import { enqueue } from "@storage/syncQueue";
 
 export type NewProductInput = {
   name: string;
@@ -24,6 +24,7 @@ export type NewProductInput = {
   proteinPer100g?: number;
   carbsPer100g?: number;
   fatPer100g?: number;
+  source?: "user" | "catalog";
 };
 
 export type UpdateProductInput = Partial<NewProductInput>;
@@ -33,21 +34,24 @@ export type UseProductsResult = {
   loading: boolean;
   refresh: () => Promise<void>;
   addProduct: (input: NewProductInput) => Promise<Product>;
-  updateProduct: (id: string, patch: UpdateProductInput) => Promise<Product | null>;
+  updateProduct: (
+    id: string,
+    patch: UpdateProductInput,
+  ) => Promise<Product | null>;
   deleteProduct: (id: string) => Promise<boolean>;
 };
 
 const now = () => new Date().toISOString();
 
 const sanitizeRequiredNumber = (value: number): number => {
-  if (typeof value !== 'number' || Number.isNaN(value) || value < 0) {
+  if (typeof value !== "number" || Number.isNaN(value) || value < 0) {
     return 0;
   }
   return Number(value);
 };
 
 const sanitizeOptionalNumber = (value?: number): number | undefined => {
-  if (typeof value !== 'number' || Number.isNaN(value) || value < 0) {
+  if (typeof value !== "number" || Number.isNaN(value) || value < 0) {
     return undefined;
   }
   return Number(value);
@@ -55,10 +59,13 @@ const sanitizeOptionalNumber = (value?: number): number | undefined => {
 
 const normalizeName = (name: string): string => {
   const trimmed = name?.trim();
-  return trimmed?.length ? trimmed : 'Untitled product';
+  return trimmed?.length ? trimmed : "Untitled product";
 };
 
-const deriveAllowedUnits = (scaleType?: ScaleType, scaleUnit?: Unit): Unit[] | undefined => {
+const deriveAllowedUnits = (
+  scaleType?: ScaleType,
+  scaleUnit?: Unit,
+): Unit[] | undefined => {
   if (!scaleType || !scaleUnit) {
     return undefined;
   }
@@ -86,19 +93,29 @@ const createProductRecord = (input: NewProductInput): Product => {
     proteinPer100g: sanitizeOptionalNumber(input.proteinPer100g),
     carbsPer100g: sanitizeOptionalNumber(input.carbsPer100g),
     fatPer100g: sanitizeOptionalNumber(input.fatPer100g),
+    source: input.source ?? "user",
     createdAt: timestamp,
     updatedAt: timestamp,
   };
 };
 
-const patchProductRecord = (product: Product, patch: UpdateProductInput): Product => {
+const patchProductRecord = (
+  product: Product,
+  patch: UpdateProductInput,
+): Product => {
   return {
     ...product,
     name: patch.name !== undefined ? normalizeName(patch.name) : product.name,
-    category: patch.category !== undefined ? patch.category?.trim() || undefined : product.category,
-    portionSize: patch.portionSize !== undefined ? patch.portionSize : product.portionSize,
-    scaleType: patch.scaleType !== undefined ? patch.scaleType : product.scaleType,
-    scaleUnit: patch.scaleUnit !== undefined ? patch.scaleUnit : product.scaleUnit,
+    category:
+      patch.category !== undefined
+        ? patch.category?.trim() || undefined
+        : product.category,
+    portionSize:
+      patch.portionSize !== undefined ? patch.portionSize : product.portionSize,
+    scaleType:
+      patch.scaleType !== undefined ? patch.scaleType : product.scaleType,
+    scaleUnit:
+      patch.scaleUnit !== undefined ? patch.scaleUnit : product.scaleUnit,
     allowedUnits:
       patch.scaleType !== undefined || patch.scaleUnit !== undefined
         ? deriveAllowedUnits(
@@ -107,7 +124,9 @@ const patchProductRecord = (product: Product, patch: UpdateProductInput): Produc
           )
         : product.allowedUnits,
     caloriesPerBase:
-      patch.caloriesPerBase !== undefined ? patch.caloriesPerBase : product.caloriesPerBase,
+      patch.caloriesPerBase !== undefined
+        ? patch.caloriesPerBase
+        : product.caloriesPerBase,
     proteinPerBase:
       patch.proteinPerBase !== undefined
         ? sanitizeOptionalNumber(patch.proteinPerBase)
@@ -152,26 +171,29 @@ export const useProducts = (): UseProductsResult => {
     };
   }, []);
 
-  const applyChanges = useCallback(async (updater: (prev: Product[]) => Product[]) => {
-    const prev = productsRef.current;
-    const next = updater(prev);
+  const applyChanges = useCallback(
+    async (updater: (prev: Product[]) => Product[]) => {
+      const prev = productsRef.current;
+      const next = updater(prev);
 
-    if (next === prev) {
-      return prev;
-    }
+      if (next === prev) {
+        return prev;
+      }
 
-    productsRef.current = next;
-    setProducts(next);
+      productsRef.current = next;
+      setProducts(next);
 
-    try {
-      await saveProducts(next);
-    } catch (error) {
-      console.error('Failed to save products', error);
-      throw error;
-    }
+      try {
+        await saveProducts(next);
+      } catch (error) {
+        console.error("Failed to save products", error);
+        throw error;
+      }
 
-    return next;
-  }, []);
+      return next;
+    },
+    [],
+  );
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -182,7 +204,7 @@ export const useProducts = (): UseProductsResult => {
         setProducts(stored);
       }
     } catch (error) {
-      console.error('Failed to load products', error);
+      console.error("Failed to load products", error);
     } finally {
       if (isMountedRef.current) {
         setLoading(false);
@@ -200,8 +222,8 @@ export const useProducts = (): UseProductsResult => {
       await applyChanges((prev) => [...prev, newProduct]);
       await enqueue({
         id: `products.create:${newProduct.id}`,
-        resource: 'products',
-        action: 'create',
+        resource: "products",
+        action: "create",
         payload: { id: newProduct.id, name: newProduct.name },
       });
       return newProduct;
@@ -224,12 +246,13 @@ export const useProducts = (): UseProductsResult => {
         return changed ? next : prev;
       });
 
-      const updatedProduct = productsRef.current.find((p) => p.id === id) ?? null;
+      const updatedProduct =
+        productsRef.current.find((p) => p.id === id) ?? null;
       if (updatedProduct) {
         await enqueue({
           id: `products.update:${updatedProduct.id}:${updatedProduct.updatedAt}`,
-          resource: 'products',
-          action: 'update',
+          resource: "products",
+          action: "update",
           payload: { id: updatedProduct.id, name: updatedProduct.name },
         });
       }
@@ -257,8 +280,8 @@ export const useProducts = (): UseProductsResult => {
       if (removed) {
         await enqueue({
           id: `products.delete:${id}:${now()}`,
-          resource: 'products',
-          action: 'delete',
+          resource: "products",
+          action: "delete",
           payload: { id },
         });
       }

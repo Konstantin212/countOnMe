@@ -195,3 +195,124 @@ async def test_requires_authentication(app_client: AsyncClient):
     # Delete
     response = await app_client.delete(f"/v1/products/{uuid.uuid4()}")
     assert response.status_code == 401
+
+    # Search
+    response = await app_client.get("/v1/products/search?q=test")
+    assert response.status_code == 401
+
+    # Check name
+    response = await app_client.get("/v1/products/check-name?name=test")
+    assert response.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_search_returns_results(authenticated_client: tuple[AsyncClient, uuid.UUID]):
+    """GET /v1/products/search?q=... returns a list."""
+    client, _ = authenticated_client
+    marker = uuid.uuid4().hex[:8]
+    product_id = str(uuid.uuid4())
+    await client.post("/v1/products", json={"id": product_id, "name": f"SearchItem{marker}"})
+
+    response = await client.get(f"/v1/products/search?q=SearchItem{marker}")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert isinstance(data, list)
+    assert any(item["id"] == product_id for item in data)
+
+
+@pytest.mark.asyncio
+async def test_search_source_tags(authenticated_client: tuple[AsyncClient, uuid.UUID]):
+    """User items have source='user'; catalog items have source='catalog'."""
+    client, _ = authenticated_client
+    marker = uuid.uuid4().hex[:8]
+    product_id = str(uuid.uuid4())
+    await client.post("/v1/products", json={"id": product_id, "name": f"SourceTag{marker}"})
+
+    response = await client.get(f"/v1/products/search?q=SourceTag{marker}")
+
+    assert response.status_code == 200
+    data = response.json()
+    user_items = [item for item in data if item["id"] == product_id]
+    assert len(user_items) == 1
+    assert user_items[0]["source"] == "user"
+
+
+@pytest.mark.asyncio
+async def test_search_result_includes_macro_keys(authenticated_client: tuple[AsyncClient, uuid.UUID]):
+    """Search results always include protein_per_100g, carbs_per_100g, fat_per_100g keys."""
+    client, _ = authenticated_client
+    marker = uuid.uuid4().hex[:8]
+    product_id = str(uuid.uuid4())
+    await client.post("/v1/products", json={"id": product_id, "name": f"MacroKey{marker}"})
+
+    response = await client.get(f"/v1/products/search?q=MacroKey{marker}")
+
+    assert response.status_code == 200
+    data = response.json()
+    user_items = [item for item in data if item["id"] == product_id]
+    assert len(user_items) == 1
+    item = user_items[0]
+    assert "protein_per_100g" in item
+    assert "carbs_per_100g" in item
+    assert "fat_per_100g" in item
+
+
+@pytest.mark.asyncio
+async def test_search_requires_auth(app_client: AsyncClient):
+    """GET /v1/products/search without token → 401."""
+    response = await app_client.get("/v1/products/search?q=test")
+    assert response.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_search_missing_q(authenticated_client: tuple[AsyncClient, uuid.UUID]):
+    """GET /v1/products/search without q param → 422."""
+    client, _ = authenticated_client
+    response = await client.get("/v1/products/search")
+    assert response.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_check_name_available(authenticated_client: tuple[AsyncClient, uuid.UUID]):
+    """GET /v1/products/check-name?name=X → {"available": true} when name unused."""
+    client, _ = authenticated_client
+
+    response = await client.get("/v1/products/check-name", params={"name": "UniqueName999"})
+
+    assert response.status_code == 200
+    assert response.json() == {"available": True}
+
+
+@pytest.mark.asyncio
+async def test_check_name_taken(authenticated_client: tuple[AsyncClient, uuid.UUID]):
+    """Existing name → {"available": false}."""
+    client, _ = authenticated_client
+
+    await client.post("/v1/products", json={"id": str(uuid.uuid4()), "name": "TakenProduct"})
+
+    response = await client.get("/v1/products/check-name", params={"name": "TakenProduct"})
+
+    assert response.status_code == 200
+    assert response.json() == {"available": False}
+
+
+@pytest.mark.asyncio
+async def test_check_name_case_insensitive(authenticated_client: tuple[AsyncClient, uuid.UUID]):
+    """'chicken' when 'Chicken' exists → {"available": false}."""
+    client, _ = authenticated_client
+
+    await client.post("/v1/products", json={"id": str(uuid.uuid4()), "name": "Chicken"})
+
+    response = await client.get("/v1/products/check-name", params={"name": "chicken"})
+
+    assert response.status_code == 200
+    assert response.json() == {"available": False}
+
+
+@pytest.mark.asyncio
+async def test_check_name_requires_auth(app_client: AsyncClient):
+    """Check-name endpoint requires authentication."""
+    response = await app_client.get("/v1/products/check-name", params={"name": "Test"})
+
+    assert response.status_code == 401

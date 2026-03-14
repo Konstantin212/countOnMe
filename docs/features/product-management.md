@@ -2,59 +2,96 @@
 
 ## Overview
 
-Product management is the foundation of CountOnMe. Users build a personal database of food products with nutritional data (calories, protein, carbs, fat). Products are stored locally first (AsyncStorage) and synchronized to the backend via a deferred sync queue.
+Product management is the foundation of CountOnMe. Users build a personal database of food products with nutritional data (calories, protein, carbs, fat). Products come from two sources: **user-created products** (device-scoped) and **catalog products** (global, read-only). Products are stored locally first (AsyncStorage) and synchronized to the backend via a deferred sync queue.
 
 ## User Flows
 
-### Creating a Product Manually
+### Creating a Custom Product
 
-1. **ProductsListScreen** -- The entry point. Displays all local products in a searchable list. Tap the "+" button to create a new product.
-2. **ProductFormScreen** -- A form for entering product details: name, optional category, scale type, portion size, unit, and macros (calories, protein, carbs, fat per base portion). On submit, the product is saved to AsyncStorage and a `products.create` operation is enqueued for backend sync.
+1. **ProductsListScreen** — Entry point. Displays user-created products only (source="user"). Tap "+" to create.
+2. **ProductFormScreen** — Form for product details: name, category, scale type, portion size, unit, macros. On submit, product saved to AsyncStorage, enqueued for backend sync.
+   - **Name uniqueness check**: debounced 400ms, calls `GET /v1/products/check-name?name=X` to validate the name is not already used by the device. Offline check is skipped silently. Inline error shown if name is taken.
+   - **Auto-favorite on create**: after successful save, product ID is prepended to favorites list in AsyncStorage.
 
-### Importing from Open Food Facts
+### Selecting a Product for a Meal
 
-1. **ProductSearchScreen** -- Users search the Open Food Facts database by product name. Results show product name, brand, and a thumbnail. The search calls `https://world.openfoodfacts.org/cgi/search.pl` with paged results (20 per page).
-2. **ProductConfirmScreen** -- After selecting a result, users review the imported data before saving. Calories and macros are extracted from the `nutriments` field (per 100g values). Users can adjust values before confirming. The product is then saved locally through the same path as manual creation.
+1. **SelectProductScreen** (Add Meal flow) — Search and select products. Two tabs: "All" (up to 5 favorites + 10 recents, capped at 15 total) and "Favourited" (starred products only). Tabs visible only when no search active.
+2. **Search integration**:
+   - Debounced 400ms → calls `GET /v1/products/search?q=X&limit=35`
+   - Results are unified: user products first, then catalog products (marked with "Catalog" badge)
+   - User products have `source="user"`, catalog results have `source="catalog"`
+3. **Catalog item selection**:
+   - Tapping a catalog result materializes it as a local user product
+   - Product created with `source="catalog"`, macros copied from default portion
+   - Auto-favorited after materialization
+   - Navigates to AddFood with the new product ID
+4. **User product selection**:
+   - Tapping a user result navigates to AddFood
+   - No automatic favorite (only manual products via ProductForm are auto-favorited)
 
-Barcode lookup is also supported via `getProductByBarcode()`, which calls `https://world.openfoodfacts.org/api/v2/product/{barcode}.json`.
+### Adding to Meal (Recently-Used)
 
-### Editing and Deleting
+1. **AddFoodScreen** — User adds product to draft meal
+   - On "Add" press, product ID is pushed to recents list via `pushProductRecent(productId)`
+   - Prepends ID, deduplicates, caps at 50 items
+   - Recents persist in AsyncStorage and feed the SelectProduct default list
 
-From the **ProductsListScreen**, users can navigate to **ProductDetailsScreen** to view a product's full details, then to **ProductFormScreen** to edit. Deleting a product removes it from the local list and enqueues a `products.delete` operation for backend sync.
+### Viewing Today's Entries
+
+1. **AddMeal screen** — When opened, fetches today's saved food entries for the device
+2. **"Already logged today" section** — Displays saved entries per meal type above the draft items
+   - Read-only display (no remove button)
+   - Grouped by current draft meal type
+   - Only visible when at least one entry exists for that meal type
+
+### Resetting All Data
+
+1. **ProfileScreen** — "Reset all data" button (styled in error color)
+2. Confirmation Alert prevents accidental deletion
+3. On confirm:
+   - Calls `DELETE /v1/data/reset` to soft-delete all food entries for device
+   - Clears `useFoodEntries` in-memory caches
+   - Clears AsyncStorage (note: also clears theme preference and goal settings)
 
 ## Data Model
 
-### Client-Side Product Type
+### Product Type
 
-The `Product` type in `client/src/models/types.ts` carries two sets of nutritional fields:
+The `Product` type in `client/src/models/types.ts` carries nutritional and source information:
 
-**V2 fields (current):**
-- `portionSize` -- The base amount (e.g., 100)
-- `scaleType` -- One of `Solid`, `Liquid`, or `Dry`
-- `scaleUnit` -- The unit for the base portion (e.g., `g`, `ml`, `cup`)
-- `allowedUnits` -- Derived from `scaleType`/`scaleUnit`; the other units in the same scale group
-- `caloriesPerBase`, `proteinPerBase`, `carbsPerBase`, `fatPerBase` -- Macros per `portionSize` of `scaleUnit`
+**Core fields:**
+- `id` (UUID), `name`, `category`
+- `source?: "user" | "catalog"` — optional; undefined treated as "user" for backward compatibility
 
-**Legacy fields (V1, kept for backward compatibility):**
-- `caloriesPer100g`, `proteinPer100g`, `carbsPer100g`, `fatPer100g` -- Always per 100g
+**Nutrition fields (V2, current):**
+- `portionSize`, `scaleType` (Solid/Liquid/Dry), `scaleUnit` (g/ml/cup/etc)
+- `caloriesPerBase`, `proteinPerBase`, `carbsPerBase`, `fatPerBase` — macros per `portionSize` of `scaleUnit`
+- `allowedUnits` — derived from scaleType/scaleUnit; other compatible units
 
-When loading products, the storage layer auto-migrates V1 data to V2 by populating the new fields from the legacy ones (defaulting to `Solid`/`g`/`100`).
+**Nutrition fields (V1, legacy, kept for back-compat):**
+- `caloriesPer100g`, `proteinPer100g`, `carbsPer100g`, `fatPer100g` — always per 100g
+- On load, V1 data auto-migrates to V2 (defaulting to Solid/g/100)
 
-Additional fields: `id` (UUID), `name`, `category`, `createdAt`, `updatedAt`.
+**Timestamps:**
+- `createdAt`, `updatedAt` (ISO 8601)
 
 ### Backend Product Model
 
-The backend `products` table is intentionally simple:
-- `id` (UUID, PK)
-- `device_id` (UUID, FK to `devices`, indexed)
-- `name` (text)
-- `created_at`, `updated_at`, `deleted_at` (from `TimestampMixin`)
+The backend `products` table (device-scoped):
+- `id` (UUID, PK), `device_id` (UUID, FK, indexed), `name` (text)
+- `source?: "user" | "catalog"` — optional, undefined treated as "user"
+- `created_at`, `updated_at`, `deleted_at` (soft delete)
 
-The rich nutritional data lives in the **product_portions** table (see Portions below).
+**Catalog tables** (`catalog_products`, `catalog_portions`):
+- No `device_id` — shared globally
+- `catalog_products`: id, fdc_id (USDA stable ID), name, category, created_at, updated_at
+- `catalog_portions`: id, catalog_product_id, label, base_amount, base_unit, calories, protein, carbs, fat, is_default, gram_weight, created_at, updated_at
+
+Macros in catalog portions are per `base_amount` of `base_unit`. Search results compute per 100g via the formula: `round(value / base_amount * 100, 2)`.
 
 ## Scale System
 
-Products use one of three scale types, each with its own unit set:
+Products use one of three scale types with corresponding units:
 
 | Scale Type | Units         | Canonical Base |
 |------------|---------------|----------------|
@@ -62,76 +99,208 @@ Products use one of three scale types, each with its own unit set:
 | Liquid     | ml, l         | milliliters (ml)|
 | Dry        | tsp, tbsp, cup| milliliters (ml)|
 
-Unit conversion happens on both client and backend. The conversion tables are:
+Unit conversion is supported within scale groups. Cross-group conversions (e.g., g to ml) return `null`.
 
-**Mass:** mg = 0.001g, g = 1g, kg = 1000g
-**Volume:** ml = 1ml, l = 1000ml, tsp = 5ml, tbsp = 15ml, cup = 240ml
+## Favorites and Recents (Local Only)
 
-Cross-group conversions (e.g., grams to milliliters) are not supported and return `null`.
+Two local-only lists in AsyncStorage:
 
-## Portions (Backend Sub-Resource)
+- **Favorites** (`productFavourites`) — Array of product IDs, ordered by most-recent-favorite-first. Persisted under `@countOnMe/products-favourites/v1`.
+  - Manual toggle via star icon in SelectProduct
+  - Auto-added when creating a product via ProductFormScreen
+  - Auto-added when selecting a catalog result
+- **Recents** (`productRecents`) — Array of product IDs, ordered newest-first. Persisted under `@countOnMe/products-recents/v1`.
+  - Auto-updated when product added to meal (via `pushProductRecent` in AddFoodScreen)
+  - Capped at 50 items
+  - Filtered out of favorites when rendering SelectProduct default list
 
-Each product can have multiple **portions** in the backend. Portions carry the actual nutritional data used for calorie calculation.
-
-### Portion Fields
-- `id`, `device_id`, `product_id` -- Identity and scoping
-- `label` -- Human-readable name (e.g., "100g", "1 cup")
-- `base_amount` -- Numeric amount (e.g., 100)
-- `base_unit` -- Unit enum (e.g., `g`)
-- `calories`, `protein`, `carbs`, `fat` -- Macros for `base_amount` of `base_unit`
-- `is_default` -- Boolean; exactly one portion per product should be the default
-
-### Portion Endpoints
-- `GET /v1/products/{product_id}/portions` -- List portions for a product
-- `POST /v1/products/{product_id}/portions` -- Create a portion
-- `GET /v1/portions/{portion_id}` -- Get a specific portion
-- `PATCH /v1/portions/{portion_id}` -- Update a portion
-- `DELETE /v1/portions/{portion_id}` -- Soft-delete a portion
-
-When the food tracking flow needs a portion (e.g., to create a food entry), the client auto-creates a default portion from the product's local nutritional data if none exists.
+Both are simple ID arrays. No backend sync for these; lost on device reinstall.
 
 ## Hook: useProducts
 
-The `useProducts` hook in `client/src/hooks/useProducts.ts` is the primary interface for product CRUD:
+The `useProducts` hook in `client/src/hooks/useProducts.ts` is the primary interface:
 
-**State:** `products` (array), `loading` (boolean)
+**State:**
+- `products` — array of local products
+- `loading` — boolean
 
 **Actions:**
-- `refresh()` -- Reloads all products from AsyncStorage
-- `addProduct(input)` -- Creates a new product with a UUID, saves to AsyncStorage, enqueues `products.create` to sync queue
-- `updateProduct(id, patch)` -- Patches a product immutably, saves to AsyncStorage, enqueues `products.update`
-- `deleteProduct(id)` -- Removes from local array, saves to AsyncStorage, enqueues `products.delete`
+- `refresh()` — reloads from AsyncStorage
+- `addProduct(input)` — creates product, saves to AsyncStorage, enqueues `products.create` mutation. Returns the new product.
+- `updateProduct(id, patch)` — patches product immutably, saves, enqueues `products.update`
+- `deleteProduct(id)` — removes from array, saves, enqueues `products.delete`
 
-Input sanitization is applied: negative numbers become 0, names are trimmed (or default to "Untitled product"), and optional numeric fields are validated.
+Input sanitization: negative numbers become 0, names are trimmed (or default to "Untitled product"), optional numeric fields validated.
 
-## Backend Endpoints
+## API Endpoints
 
 All product endpoints require device authentication (Bearer token).
 
-- `GET /v1/products` -- List all products for the authenticated device
-- `POST /v1/products` -- Create a product (accepts optional client-generated `id`)
-- `GET /v1/products/{product_id}` -- Get a single product (404 if wrong device)
-- `PATCH /v1/products/{product_id}` -- Update product name
-- `DELETE /v1/products/{product_id}` -- Soft-delete (sets `deleted_at`)
+### Name Uniqueness Check
 
-All queries are scoped to `device_id`. Attempting to access another device's product returns 404.
+```
+GET /v1/products/check-name?name=Chicken+Breast
+```
 
-## Favourites and Recents
+**Query params:**
+- `name` (required, 1-200 chars) — product name to check
 
-Two local-only lists are stored in AsyncStorage:
+**Response 200:**
+```json
+{
+  "available": true
+}
+```
 
-- **Favourites** (`productFavourites`) -- An array of product IDs that the user has starred. Persisted under `@countOnMe/products-favourites/v1`.
-- **Recents** (`productRecents`) -- An array of product IDs ordered by recent usage. Persisted under `@countOnMe/products-recents/v1`.
+Returns `available: false` if a non-deleted product with the same name (case-insensitive) exists for the device. Returns `available: true` if the name is available. Soft-deleted products are ignored (counted as available).
 
-Both are simple ID arrays loaded and saved via `loadProductFavourites()`/`saveProductFavourites()` and `loadProductRecents()`/`saveProductRecents()` in the storage layer.
+### Product Search (Unified)
 
-## Open Food Facts Integration
+```
+GET /v1/products/search?q=chick&limit=35
+```
 
-The `client/src/services/openFoodFacts.ts` module provides:
+**Query params:**
+- `q` (required, 1-200 chars) — search term (case-insensitive substring match)
+- `limit` (optional, default 35, max 60) — total result cap
 
-- `searchProducts(query, page)` -- Searches by name, returns paginated results with `code`, `product_name`, `brands`, `quantity`, `image_url`, and `nutriments`
-- `getProductByBarcode(barcode)` -- Fetches a single product by barcode
-- `extractCalories(product)` -- Reads `energy-kcal_100g` from nutriments
-- `extractMacros(product)` -- Reads `proteins_100g`, `carbohydrates_100g`, `fat_100g` from nutriments
+**Response 200:**
+```json
+[
+  {
+    "id": "uuid",
+    "name": "Chicken Breast",
+    "source": "user",
+    "calories_per_100g": 165,
+    "protein_per_100g": null,
+    "carbs_per_100g": null,
+    "fat_per_100g": null,
+    "catalog_id": null
+  },
+  {
+    "id": "uuid",
+    "name": "Chicken, cooked",
+    "source": "catalog",
+    "calories_per_100g": 165,
+    "protein_per_100g": 31.4,
+    "carbs_per_100g": 0,
+    "fat_per_100g": 3.6,
+    "catalog_id": "uuid"
+  }
+]
+```
 
-All values from Open Food Facts are per 100g, which maps directly to the legacy product fields and is auto-migrated to V2 on save.
+**Behavior:**
+- Queries user products (device-scoped, non-deleted) for up to 10 matches
+- Queries catalog products for up to 25 matches
+- User results appear first, then catalog results
+- Total returned = up to `limit` (default 35)
+- `source` discriminates user vs catalog
+- `catalog_id` set only for `source="catalog"`
+- Macros (`protein_per_100g`, etc) computed from default portion: `round(value / base_amount * 100, 2)`. For user products, macros are always null.
+
+**Status codes:**
+- 200 — results found (may be empty array)
+- 400 — missing or invalid `q` param
+- 401 — unauthenticated
+- 422 — query validation failed
+
+### List Products
+
+```
+GET /v1/products
+```
+
+**Response 200:**
+Returns all products (user-created, non-deleted) for the authenticated device.
+
+### Create Product
+
+```
+POST /v1/products
+Content-Type: application/json
+
+{
+  "name": "Chicken Breast",
+  "id": "uuid (optional, client-generated)"
+}
+```
+
+**Response 201:**
+Returns the created product.
+
+### Get Product
+
+```
+GET /v1/products/{product_id}
+```
+
+**Response 200:**
+Returns the product. 404 if not found or belongs to another device.
+
+### Update Product
+
+```
+PATCH /v1/products/{product_id}
+Content-Type: application/json
+
+{
+  "name": "Grilled Chicken Breast"
+}
+```
+
+**Response 200:**
+Returns the updated product.
+
+### Delete Product
+
+```
+DELETE /v1/products/{product_id}
+```
+
+**Response 204:**
+Soft-deletes the product (sets `deleted_at`). 404 if not found.
+
+### Reset All Data
+
+```
+DELETE /v1/data/reset
+```
+
+**Response 204:**
+Soft-deletes all food entries for the authenticated device (sets `deleted_at` on all `food_entries` where `device_id = current_device`). Does not delete products. No response body.
+
+**Status codes:**
+- 204 — success
+- 401 — unauthenticated
+
+## Key Files
+
+### Client
+
+- `client/src/screens/ProductFormScreen.tsx` — Product creation/edit form with name uniqueness check, auto-favorite
+- `client/src/screens/AddMealFlow/components/SelectProduct/index.tsx` — Product selection with default list (5 favs + 10 recents), search, catalog results
+- `client/src/screens/AddMealFlow/components/AddFood/index.tsx` — Adds product to meal draft, updates recents
+- `client/src/screens/AddMealFlow/components/AddMeal/index.tsx` — Displays today's saved entries per meal type
+- `client/src/screens/ProductsListScreen.tsx` — Lists user products (filters out catalog source)
+- `client/src/screens/ProfileScreen.tsx` — "Reset all data" button with confirmation
+- `client/src/hooks/useProducts.ts` — Product CRUD and state management
+- `client/src/services/api/products.ts` — API calls: checkProductName, searchProducts
+- `client/src/services/api/data.ts` — API call: resetDeviceData
+- `client/src/storage/storage.ts` — Persistence: loadProductFavourites, saveProductFavourites, loadProductRecents, saveProductRecents, pushProductRecent
+- `client/src/models/types.ts` — Product, ProductSearchResult, ProductSource types
+
+### Backend
+
+- `backend/app/api/routers/products.py` — Endpoints: check-name, search, CRUD
+- `backend/app/api/routers/data.py` — Endpoint: DELETE /v1/data/reset
+- `backend/app/services/products.py` — Service: check_product_name_available, search_products, create_product, get_product, update_product, soft_delete_product
+- `backend/app/services/data.py` — Service: delete_all_food_entries
+- `backend/app/schemas/product.py` — Pydantic models: ProductNameCheckResponse, ProductSearchResultItem
+- `backend/app/models/product.py` — SQLAlchemy Product ORM model
+
+## Related Features
+
+- [`catalog-seeding.md`](catalog-seeding.md) — Global product catalog from USDA data
+- [`food-tracking.md`](food-tracking.md) — Food entries and meal logging
+- [`device-auth.md`](device-auth.md) — Device authentication for all endpoints

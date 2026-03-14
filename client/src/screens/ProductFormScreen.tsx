@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   Alert,
   Pressable,
@@ -21,6 +21,8 @@ import {
   ProductFormData,
 } from "@services/schemas/productFormSchema";
 import { SCALE_TYPES, SCALE_UNITS } from "@services/constants/scaleConstants";
+import { checkProductName } from "@services/api/products";
+import { loadProductFavourites, saveProductFavourites } from "@storage/storage";
 import {
   FormField,
   Input,
@@ -29,6 +31,7 @@ import {
   SwitchField,
   Button,
   SectionTitle,
+  ErrorText,
 } from "@particles/index";
 
 type Props = NativeStackScreenProps<
@@ -41,6 +44,8 @@ const ProductFormScreen = ({ navigation, route }: Props) => {
   const { products, addProduct, updateProduct } = useProducts();
   const { colors } = useTheme();
   const [saving, setSaving] = useState(false);
+  const [nameAvailable, setNameAvailable] = useState<boolean | null>(null);
+  const nameCheckTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const {
     control,
@@ -67,11 +72,16 @@ const ProductFormScreen = ({ navigation, route }: Props) => {
 
   const scaleType = watch("scaleType");
   const includeNutrients = watch("includeNutrients");
+  const nameValue = watch("name");
 
   // Load product data if editing
   useEffect(() => {
     if (isEditing && route.params?.productId) {
       const product = products.find((p) => p.id === route.params?.productId);
+      if (product && product.source === "catalog") {
+        navigation.goBack();
+        return;
+      }
       if (product) {
         setValue("name", product.name);
         setValue("calories", product.caloriesPer100g);
@@ -98,6 +108,44 @@ const ProductFormScreen = ({ navigation, route }: Props) => {
     }
   }, [scaleType, setValue]);
 
+  // Debounced name availability check
+  useEffect(() => {
+    if (nameCheckTimer.current !== null) {
+      clearTimeout(nameCheckTimer.current);
+    }
+
+    const trimmed = nameValue?.trim() ?? "";
+
+    if (!trimmed) {
+      setNameAvailable(null);
+      return;
+    }
+
+    const currentProduct = isEditing
+      ? products.find((p) => p.id === route.params?.productId)
+      : undefined;
+
+    if (isEditing && currentProduct?.name === trimmed) {
+      setNameAvailable(null);
+      return;
+    }
+
+    nameCheckTimer.current = setTimeout(async () => {
+      try {
+        const result = await checkProductName(trimmed);
+        setNameAvailable(result.available);
+      } catch {
+        setNameAvailable(null);
+      }
+    }, 400);
+
+    return () => {
+      if (nameCheckTimer.current !== null) {
+        clearTimeout(nameCheckTimer.current);
+      }
+    };
+  }, [nameValue, isEditing, products, route.params?.productId]);
+
   const onSubmit = async (data: ProductFormData) => {
     setSaving(true);
     try {
@@ -107,12 +155,19 @@ const ProductFormScreen = ({ navigation, route }: Props) => {
         proteinPer100g: data.includeNutrients ? data.protein : undefined,
         carbsPer100g: data.includeNutrients ? data.carbs : undefined,
         fatPer100g: data.includeNutrients ? data.fat : undefined,
+        source: "user" as const,
       };
 
       if (isEditing && route.params?.productId) {
         await updateProduct(route.params.productId, productData);
       } else {
-        await addProduct(productData);
+        const newProduct = await addProduct(productData);
+        try {
+          const existing = await loadProductFavourites();
+          await saveProductFavourites([newProduct.id, ...existing]);
+        } catch {
+          // Auto-favourite failure must not block navigation
+        }
       }
       navigation.goBack();
     } catch (err) {
@@ -127,7 +182,8 @@ const ProductFormScreen = ({ navigation, route }: Props) => {
   };
 
   const isFormValid = Object.keys(errors).length === 0;
-  const isSaveDisabled = saving || (isSubmitted && !isFormValid);
+  const isSaveDisabled =
+    saving || (isSubmitted && !isFormValid) || nameAvailable === false;
 
   const styles = StyleSheet.create({
     container: {
@@ -197,6 +253,7 @@ const ProductFormScreen = ({ navigation, route }: Props) => {
               />
             )}
           />
+          {nameAvailable === false && <ErrorText>Name already used</ErrorText>}
         </FormField>
 
         {/* Product Category */}

@@ -3,6 +3,7 @@ from __future__ import annotations
 from fastapi import APIRouter, FastAPI
 
 from app.api.routers.catalog import router as catalog_router
+from app.api.routers.data import router as data_router
 from app.api.routers.devices import router as devices_router
 from app.api.routers.food_entries import router as food_entries_router
 from app.api.routers.goals import router as goals_router
@@ -28,6 +29,7 @@ def create_app() -> FastAPI:
     v1.include_router(sync_router)
     v1.include_router(weights_router)
     v1.include_router(catalog_router)
+    v1.include_router(data_router)
     app.include_router(v1)
 
     return app

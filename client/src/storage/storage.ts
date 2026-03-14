@@ -4,6 +4,7 @@ import {
   BodyWeightEntry,
   Meal,
   MealItem,
+  MealTypeKey,
   Product,
   UserGoal,
 } from "@models/types";
@@ -13,7 +14,7 @@ const STORAGE_PREFIX = "@countOnMe";
 const STORAGE_VERSION_V1 = "v1";
 const STORAGE_VERSION_V2 = "v2";
 
-const STORAGE_KEYS = {
+export const STORAGE_KEYS = {
   productsV1: `${STORAGE_PREFIX}/products/${STORAGE_VERSION_V1}`,
   mealsV1: `${STORAGE_PREFIX}/meals/${STORAGE_VERSION_V1}`,
   productsV2: `${STORAGE_PREFIX}/products/${STORAGE_VERSION_V2}`,
@@ -23,6 +24,7 @@ const STORAGE_KEYS = {
   productRecents: `${STORAGE_PREFIX}/products-recents/${STORAGE_VERSION_V1}`,
   goal: `${STORAGE_PREFIX}/goal/${STORAGE_VERSION_V1}`,
   bodyWeights: `${STORAGE_PREFIX}/body-weights/${STORAGE_VERSION_V1}`,
+  draftMeal: `${STORAGE_PREFIX}/draft-meal/${STORAGE_VERSION_V1}`,
 } as const;
 
 const parseCollection = <T>(rawValue: string | null): T[] => {
@@ -65,6 +67,7 @@ const migrateProductsV1ToV2 = (productsV1: Product[]): Product[] => {
 
     return {
       ...p,
+      source: p.source ?? ("user" as const),
       scaleType,
       scaleUnit,
       portionSize,
@@ -121,10 +124,23 @@ const migrateMealsV1ToV2 = (mealsV1: Meal[]): Meal[] => {
   });
 };
 
+const patchProductSource = async (loaded: Product[]): Promise<Product[]> => {
+  const needsSourcePatch = loaded.some((p) => p.source === undefined);
+  if (needsSourcePatch) {
+    const patched = loaded.map((p) => ({
+      ...p,
+      source: p.source ?? ("user" as const),
+    }));
+    await saveProducts(patched);
+    return patched;
+  }
+  return loaded;
+};
+
 export const loadProducts = async (): Promise<Product[]> => {
   const v2 = await loadCollection<Product>(STORAGE_KEYS.productsV2);
   if (v2.length > 0) {
-    return v2;
+    return patchProductSource(v2);
   }
 
   const v1 = await loadCollection<Product>(STORAGE_KEYS.productsV1);
@@ -143,9 +159,7 @@ export const loadProducts = async (): Promise<Product[]> => {
 };
 
 export const saveProducts = async (products: Product[]): Promise<void> => {
-  console.log("Saving products to storage, count:", products.length);
   await saveCollection<Product>(STORAGE_KEYS.productsV2, products);
-  console.log("Products saved successfully");
 };
 
 export const loadMeals = async (): Promise<Meal[]> => {
@@ -192,14 +206,18 @@ export const saveProductRecents = async (
   await saveCollection<string>(STORAGE_KEYS.productRecents, productIds);
 };
 
+export const pushProductRecent = async (productId: string): Promise<void> => {
+  const existing = await loadProductRecents();
+  const deduped = [productId, ...existing.filter((id) => id !== productId)];
+  await saveProductRecents(deduped.slice(0, 50));
+};
+
 export const loadThemePreference = async (): Promise<ThemeMode | null> => {
   try {
     const value = await AsyncStorage.getItem(STORAGE_KEYS.theme);
-    console.log("Loaded theme preference from storage:", value);
     if (value === "light" || value === "dark" || value === "system") {
       return value;
     }
-    console.log("No valid theme preference found, using system default");
     return null;
   } catch (error) {
     console.error("Failed to load theme preference", error);
@@ -256,4 +274,56 @@ export const saveBodyWeights = async (
   entries: BodyWeightEntry[],
 ): Promise<void> => {
   await saveCollection<BodyWeightEntry>(STORAGE_KEYS.bodyWeights, entries);
+};
+
+// Local shape that mirrors DraftMealState from context.tsx — avoids circular import.
+type StoredDraftMeal = {
+  mealType: MealTypeKey;
+  itemsByMealType: Record<MealTypeKey, MealItem[]>;
+};
+
+export const loadDraftMeal = async (): Promise<StoredDraftMeal | null> => {
+  try {
+    const rawValue = await AsyncStorage.getItem(STORAGE_KEYS.draftMeal);
+    if (!rawValue) {
+      return null;
+    }
+    return JSON.parse(rawValue) as StoredDraftMeal;
+  } catch (error) {
+    console.error("Failed to load draft meal", error);
+    return null;
+  }
+};
+
+export const saveDraftMeal = async (draft: StoredDraftMeal): Promise<void> => {
+  try {
+    await AsyncStorage.setItem(STORAGE_KEYS.draftMeal, JSON.stringify(draft));
+  } catch (error) {
+    console.error("Failed to save draft meal", error);
+    throw error;
+  }
+};
+
+export const clearDraftMeal = async (): Promise<void> => {
+  try {
+    await AsyncStorage.removeItem(STORAGE_KEYS.draftMeal);
+  } catch (error) {
+    console.error("Failed to clear draft meal", error);
+    throw error;
+  }
+};
+
+export const clearAllFoodData = async (): Promise<void> => {
+  const keysToDelete = [
+    STORAGE_KEYS.productsV1,
+    STORAGE_KEYS.productsV2,
+    STORAGE_KEYS.mealsV1,
+    STORAGE_KEYS.mealsV2,
+    STORAGE_KEYS.productFavourites,
+    STORAGE_KEYS.productRecents,
+    STORAGE_KEYS.goal,
+    STORAGE_KEYS.bodyWeights,
+    STORAGE_KEYS.draftMeal,
+  ];
+  await AsyncStorage.multiRemove(keysToDelete);
 };

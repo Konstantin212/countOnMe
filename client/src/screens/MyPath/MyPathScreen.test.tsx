@@ -24,8 +24,13 @@ vi.mock("@react-navigation/native", () => ({
 vi.mock("react-native-safe-area-context", () => {
   const React = require("react");
   return {
-    SafeAreaView: ({ children, style }: { children: React.ReactNode; style?: unknown }) =>
-      React.createElement("div", { style }, children),
+    SafeAreaView: ({
+      children,
+      style,
+    }: {
+      children: React.ReactNode;
+      style?: unknown;
+    }) => React.createElement("div", { style }, children),
     useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
   };
 });
@@ -92,8 +97,10 @@ vi.mock("react-native-paper", () => {
     FAB,
     Portal: ({ children }: { children: React.ReactNode }) =>
       React.createElement("div", { "data-testid": "portal" }, children),
-    ActivityIndicator: () => React.createElement("div", { "data-testid": "activity-indicator" }),
-    ProgressBar: () => React.createElement("div", { "data-testid": "progress-bar" }),
+    ActivityIndicator: () =>
+      React.createElement("div", { "data-testid": "activity-indicator" }),
+    ProgressBar: () =>
+      React.createElement("div", { "data-testid": "progress-bar" }),
   };
 });
 
@@ -162,19 +169,19 @@ vi.mock("@hooks/useTheme", () => ({
 // ---------------------------------------------------------------------------
 // Mock child components that have their own heavy dependencies
 // ---------------------------------------------------------------------------
-vi.mock("@components/GoalProgressCard", () => ({
+vi.mock("./components/GoalProgressCard", () => ({
   GoalProgressCard: () => null,
 }));
-vi.mock("@components/WeightChart", () => ({
+vi.mock("./components/WeightChart", () => ({
   WeightChart: () => null,
 }));
-vi.mock("@components/CalorieTrendBars", () => ({
+vi.mock("./components/CalorieTrendBars", () => ({
   CalorieTrendBars: () => null,
 }));
-vi.mock("@components/MacroAdherenceCard", () => ({
+vi.mock("./components/MacroAdherenceCard", () => ({
   MacroAdherenceCard: () => null,
 }));
-vi.mock("@components/StreaksCard", () => ({
+vi.mock("./components/StreaksCard", () => ({
   StreaksCard: () => null,
 }));
 

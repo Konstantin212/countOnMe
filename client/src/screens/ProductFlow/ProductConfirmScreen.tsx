@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState } from "react";
 import {
   Alert,
   Pressable,
@@ -7,25 +7,25 @@ import {
   Text,
   TextInput,
   View,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Ionicons } from '@expo/vector-icons';
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { NativeStackScreenProps } from "@react-navigation/native-stack";
+import { Ionicons } from "@expo/vector-icons";
 
-import { ProfileStackParamList } from '@app/navigationTypes';
-import { useProducts } from '@hooks/useProducts';
-import { Scale, SCALE_OPTIONS, toGrams } from '@services/utils/scales';
-import { useTheme } from '@hooks/useTheme';
+import { ProfileStackParamList } from "@app/navigationTypes";
+import { useProducts } from "@hooks/useProducts";
+import { Scale, SCALE_OPTIONS, toGrams } from "@services/utils/scales";
+import { useTheme } from "@hooks/useTheme";
 
-type Props = NativeStackScreenProps<ProfileStackParamList, 'ProductConfirm'>;
+type Props = NativeStackScreenProps<ProfileStackParamList, "ProductConfirm">;
 
 const ProductConfirmScreen = ({ navigation, route }: Props) => {
   const { externalProduct } = route.params;
   const { addProduct } = useProducts();
   const { colors } = useTheme();
 
-  const [amount, setAmount] = useState('100');
-  const [selectedScale, setSelectedScale] = useState<Scale>('g');
+  const [amount, setAmount] = useState("100");
+  const [selectedScale, setSelectedScale] = useState<Scale>("g");
   const [saving, setSaving] = useState(false);
 
   // Determine if we have nutritional data from Open Food Facts
@@ -40,21 +40,21 @@ const ProductConfirmScreen = ({ navigation, route }: Props) => {
 
     // Convert amount to grams
     const gramsAmount = toGrams(numAmount, selectedScale);
-    
+
     // Calculate ratio to 100g
     const ratio = gramsAmount / 100;
 
     return {
       grams: gramsAmount,
       calories: Math.round(externalProduct.caloriesPer100g * ratio),
-      protein: externalProduct.proteinPer100g 
-        ? (externalProduct.proteinPer100g * ratio).toFixed(1) 
+      protein: externalProduct.proteinPer100g
+        ? (externalProduct.proteinPer100g * ratio).toFixed(1)
         : null,
-      carbs: externalProduct.carbsPer100g 
-        ? (externalProduct.carbsPer100g * ratio).toFixed(1) 
+      carbs: externalProduct.carbsPer100g
+        ? (externalProduct.carbsPer100g * ratio).toFixed(1)
         : null,
-      fat: externalProduct.fatPer100g 
-        ? (externalProduct.fatPer100g * ratio).toFixed(1) 
+      fat: externalProduct.fatPer100g
+        ? (externalProduct.fatPer100g * ratio).toFixed(1)
         : null,
     };
   }, [amount, selectedScale, externalProduct, hasNutritionalData]);
@@ -63,7 +63,10 @@ const ProductConfirmScreen = ({ navigation, route }: Props) => {
     const numAmount = parseFloat(amount);
 
     if (!numAmount || numAmount <= 0) {
-      Alert.alert('Invalid Amount', 'Please enter a valid amount greater than 0');
+      Alert.alert(
+        "Invalid Amount",
+        "Please enter a valid amount greater than 0",
+      );
       return;
     }
 
@@ -88,18 +91,18 @@ const ProductConfirmScreen = ({ navigation, route }: Props) => {
         fatPer100g: externalProduct.fatPer100g,
       });
 
-      Alert.alert('Success', 'Product added to your list', [
+      Alert.alert("Success", "Product added to your list", [
         {
-          text: 'OK',
+          text: "OK",
           onPress: () => {
             // Navigate back to products list
-            navigation.navigate('ProductsList');
+            navigation.navigate("ProductsList");
           },
         },
       ]);
     } catch (error) {
-      Alert.alert('Error', 'Failed to save product. Please try again.');
-      console.error('Save product error:', error);
+      Alert.alert("Error", "Failed to save product. Please try again.");
+      console.error("Save product error:", error);
     } finally {
       setSaving(false);
     }
@@ -112,8 +115,8 @@ const ProductConfirmScreen = ({ navigation, route }: Props) => {
       paddingTop: 16,
     },
     header: {
-      flexDirection: 'row',
-      alignItems: 'center',
+      flexDirection: "row",
+      alignItems: "center",
       paddingHorizontal: 16,
       marginBottom: 8,
     },
@@ -125,7 +128,7 @@ const ProductConfirmScreen = ({ navigation, route }: Props) => {
     },
     title: {
       fontSize: 20,
-      fontWeight: '700',
+      fontWeight: "700",
       color: colors.text,
     },
     scrollView: {
@@ -138,9 +141,9 @@ const ProductConfirmScreen = ({ navigation, route }: Props) => {
     },
     sectionTitle: {
       fontSize: 14,
-      fontWeight: '600',
+      fontWeight: "600",
       color: colors.textSecondary,
-      textTransform: 'uppercase',
+      textTransform: "uppercase",
       letterSpacing: 0.5,
       marginBottom: 12,
     },
@@ -157,7 +160,7 @@ const ProductConfirmScreen = ({ navigation, route }: Props) => {
     },
     productName: {
       fontSize: 18,
-      fontWeight: '600',
+      fontWeight: "600",
       color: colors.text,
       marginBottom: 4,
     },
@@ -180,9 +183,9 @@ const ProductConfirmScreen = ({ navigation, route }: Props) => {
       borderColor: colors.border,
     },
     nutrientRow: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
       paddingVertical: 8,
       borderBottomWidth: 1,
       borderBottomColor: colors.border,
@@ -190,24 +193,24 @@ const ProductConfirmScreen = ({ navigation, route }: Props) => {
     nutrientLabel: {
       fontSize: 15,
       color: colors.text,
-      fontWeight: '500',
+      fontWeight: "500",
     },
     nutrientValue: {
       fontSize: 15,
       color: colors.text,
-      fontWeight: '600',
+      fontWeight: "600",
     },
     nutrientValueLarge: {
       fontSize: 24,
       color: colors.success,
-      fontWeight: '700',
+      fontWeight: "700",
     },
     equivalentText: {
       fontSize: 13,
       color: colors.success,
       marginTop: 12,
-      textAlign: 'center',
-      fontWeight: '500',
+      textAlign: "center",
+      fontWeight: "500",
     },
     amountContainer: {
       gap: 12,
@@ -222,7 +225,7 @@ const ProductConfirmScreen = ({ navigation, route }: Props) => {
       color: colors.text,
     },
     scaleButtons: {
-      flexDirection: 'row',
+      flexDirection: "row",
       gap: 8,
     },
     scaleButton: {
@@ -233,7 +236,7 @@ const ProductConfirmScreen = ({ navigation, route }: Props) => {
       borderWidth: 2,
       borderColor: colors.border,
       backgroundColor: colors.cardBackground,
-      alignItems: 'center',
+      alignItems: "center",
     },
     scaleButtonActive: {
       borderColor: colors.primary,
@@ -241,7 +244,7 @@ const ProductConfirmScreen = ({ navigation, route }: Props) => {
     },
     scaleButtonText: {
       fontSize: 16,
-      fontWeight: '600',
+      fontWeight: "600",
       color: colors.textSecondary,
     },
     scaleButtonTextActive: {
@@ -270,7 +273,7 @@ const ProductConfirmScreen = ({ navigation, route }: Props) => {
       backgroundColor: colors.primary,
       padding: 16,
       borderRadius: 8,
-      alignItems: 'center',
+      alignItems: "center",
     },
     saveButtonDisabled: {
       backgroundColor: colors.disabled,
@@ -278,14 +281,17 @@ const ProductConfirmScreen = ({ navigation, route }: Props) => {
     saveButtonText: {
       color: colors.buttonText,
       fontSize: 16,
-      fontWeight: '600',
+      fontWeight: "600",
     },
   });
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+    <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
       <View style={styles.header}>
-        <Pressable onPress={() => navigation.goBack()} style={styles.backButton}>
+        <Pressable
+          onPress={() => navigation.goBack()}
+          style={styles.backButton}
+        >
           <Ionicons name="arrow-back" size={22} color={colors.text} />
         </Pressable>
         <Text style={styles.title}>Confirm Product</Text>
@@ -333,7 +339,8 @@ const ProductConfirmScreen = ({ navigation, route }: Props) => {
                   <Text
                     style={[
                       styles.scaleButtonText,
-                      selectedScale === option.value && styles.scaleButtonTextActive,
+                      selectedScale === option.value &&
+                        styles.scaleButtonTextActive,
                     ]}
                   >
                     {option.label}
@@ -353,24 +360,32 @@ const ProductConfirmScreen = ({ navigation, route }: Props) => {
             <View style={styles.calculatedCard}>
               <View style={styles.nutrientRow}>
                 <Text style={styles.nutrientLabel}>Calories</Text>
-                <Text style={styles.nutrientValueLarge}>{calculatedValues.calories} kcal</Text>
+                <Text style={styles.nutrientValueLarge}>
+                  {calculatedValues.calories} kcal
+                </Text>
               </View>
               {calculatedValues.protein !== null && (
                 <View style={styles.nutrientRow}>
                   <Text style={styles.nutrientLabel}>Protein</Text>
-                  <Text style={styles.nutrientValue}>{calculatedValues.protein} g</Text>
+                  <Text style={styles.nutrientValue}>
+                    {calculatedValues.protein} g
+                  </Text>
                 </View>
               )}
               {calculatedValues.carbs !== null && (
                 <View style={styles.nutrientRow}>
                   <Text style={styles.nutrientLabel}>Carbohydrates</Text>
-                  <Text style={styles.nutrientValue}>{calculatedValues.carbs} g</Text>
+                  <Text style={styles.nutrientValue}>
+                    {calculatedValues.carbs} g
+                  </Text>
                 </View>
               )}
               {calculatedValues.fat !== null && (
                 <View style={styles.nutrientRow}>
                   <Text style={styles.nutrientLabel}>Fat</Text>
-                  <Text style={styles.nutrientValue}>{calculatedValues.fat} g</Text>
+                  <Text style={styles.nutrientValue}>
+                    {calculatedValues.fat} g
+                  </Text>
                 </View>
               )}
               <Text style={styles.equivalentText}>
@@ -410,7 +425,9 @@ const ProductConfirmScreen = ({ navigation, route }: Props) => {
               {externalProduct.fatPer100g !== undefined && (
                 <View style={styles.nutrientRow}>
                   <Text style={styles.nutrientLabel}>Fat</Text>
-                  <Text style={styles.nutrientValue}>{externalProduct.fatPer100g.toFixed(1)} g</Text>
+                  <Text style={styles.nutrientValue}>
+                    {externalProduct.fatPer100g.toFixed(1)} g
+                  </Text>
                 </View>
               )}
             </View>
@@ -420,8 +437,8 @@ const ProductConfirmScreen = ({ navigation, route }: Props) => {
         {/* Info Note */}
         <View style={styles.infoBox}>
           <Text style={styles.infoText}>
-            💡 The product will be saved with reference values per 100g. When building meals, you
-            can specify any amount you want!
+            The product will be saved with reference values per 100g. When
+            building meals, you can specify any amount you want!
           </Text>
         </View>
       </ScrollView>
@@ -433,7 +450,9 @@ const ProductConfirmScreen = ({ navigation, route }: Props) => {
           onPress={handleSave}
           disabled={saving}
         >
-          <Text style={styles.saveButtonText}>{saving ? 'Saving...' : 'Save Product'}</Text>
+          <Text style={styles.saveButtonText}>
+            {saving ? "Saving..." : "Save Product"}
+          </Text>
         </Pressable>
       </View>
     </SafeAreaView>
@@ -441,4 +460,3 @@ const ProductConfirmScreen = ({ navigation, route }: Props) => {
 };
 
 export default ProductConfirmScreen;
-

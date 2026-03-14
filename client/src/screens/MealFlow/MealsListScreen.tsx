@@ -1,16 +1,16 @@
-﻿import React from 'react';
-import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Ionicons } from '@expo/vector-icons';
+import React from "react";
+import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { NativeStackScreenProps } from "@react-navigation/native-stack";
+import { Ionicons } from "@expo/vector-icons";
 
-import { ProfileStackParamList } from '@app/navigationTypes';
-import { useProducts } from '@hooks/useProducts';
-import { useMeals } from '@hooks/useMeals';
-import { Meal } from '@models/types';
-import { useTheme } from '@hooks/useTheme';
+import { ProfileStackParamList } from "@app/navigationTypes";
+import { useProducts } from "@hooks/useProducts";
+import { useMeals } from "@hooks/useMeals";
+import { Meal } from "@models/types";
+import { useTheme } from "@hooks/useTheme";
 
-type Props = NativeStackScreenProps<ProfileStackParamList, 'MealsList'>;
+type Props = NativeStackScreenProps<ProfileStackParamList, "MealsList">;
 
 const MealsListScreen = ({ navigation }: Props) => {
   const { products } = useProducts();
@@ -26,30 +26,37 @@ const MealsListScreen = ({ navigation }: Props) => {
 
   const formatDate = (isoDate: string) => {
     const date = new Date(isoDate);
-    const day = date.getDate().toString().padStart(2, '0');
-    const month = (date.getMonth() + 1).toString().padStart(2, '0');
-    const hours = date.getHours().toString().padStart(2, '0');
-    const minutes = date.getMinutes().toString().padStart(2, '0');
+    const day = date.getDate().toString().padStart(2, "0");
+    const month = (date.getMonth() + 1).toString().padStart(2, "0");
+    const hours = date.getHours().toString().padStart(2, "0");
+    const minutes = date.getMinutes().toString().padStart(2, "0");
     return `${day}.${month} ${hours}:${minutes}`;
   };
 
   const renderMealItem = ({ item }: { item: Meal }) => (
     <Pressable
-      style={({ pressed }) => [styles.mealItem, pressed && styles.mealItemPressed]}
-      onPress={() => navigation.navigate('MealDetails', { mealId: item.id })}
+      style={({ pressed }) => [
+        styles.mealItem,
+        pressed && styles.mealItemPressed,
+      ]}
+      onPress={() => navigation.navigate("MealDetails", { mealId: item.id })}
     >
       <View style={styles.mealInfo}>
         <Text style={styles.mealName}>{item.name}</Text>
         <Text style={styles.mealDate}>{formatDate(item.createdAt)}</Text>
       </View>
-      <Text style={styles.mealCalories}>{Math.round(item.totalCalories)} kcal</Text>
+      <Text style={styles.mealCalories}>
+        {Math.round(item.totalCalories)} kcal
+      </Text>
     </Pressable>
   );
 
   const renderEmptyState = () => (
     <View style={styles.emptyContainer}>
       <Text style={styles.emptyText}>No meals yet</Text>
-      <Text style={styles.emptySubtext}>Tap "New Meal" to create your first meal</Text>
+      <Text style={styles.emptySubtext}>
+        Tap "New Meal" to create your first meal
+      </Text>
     </View>
   );
 
@@ -61,8 +68,8 @@ const MealsListScreen = ({ navigation }: Props) => {
       backgroundColor: colors.background,
     },
     header: {
-      flexDirection: 'row',
-      alignItems: 'center',
+      flexDirection: "row",
+      alignItems: "center",
       marginBottom: 16,
     },
     backButton: {
@@ -76,7 +83,7 @@ const MealsListScreen = ({ navigation }: Props) => {
     },
     heading: {
       fontSize: 24,
-      fontWeight: '600',
+      fontWeight: "600",
       color: colors.text,
     },
     addButton: {
@@ -88,7 +95,7 @@ const MealsListScreen = ({ navigation }: Props) => {
     addButtonText: {
       color: colors.buttonText,
       fontSize: 14,
-      fontWeight: '600',
+      fontWeight: "600",
     },
     newButton: {
       backgroundColor: colors.primary,
@@ -99,7 +106,7 @@ const MealsListScreen = ({ navigation }: Props) => {
     newButtonText: {
       color: colors.buttonText,
       fontSize: 14,
-      fontWeight: '600',
+      fontWeight: "600",
     },
     listContent: {
       gap: 12,
@@ -116,9 +123,9 @@ const MealsListScreen = ({ navigation }: Props) => {
       backgroundColor: colors.pressed,
     },
     mealItem: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
       padding: 16,
       borderRadius: 12,
       borderWidth: 1,
@@ -133,13 +140,13 @@ const MealsListScreen = ({ navigation }: Props) => {
     },
     mealName: {
       fontSize: 18,
-      fontWeight: '600',
+      fontWeight: "600",
       color: colors.text,
       marginBottom: 8,
     },
     mealCalories: {
       fontSize: 24,
-      fontWeight: '700',
+      fontWeight: "700",
       color: colors.primary,
       marginBottom: 4,
     },
@@ -149,47 +156,53 @@ const MealsListScreen = ({ navigation }: Props) => {
       marginTop: 4,
     },
     emptyContainer: {
-      alignItems: 'center',
-      justifyContent: 'center',
+      alignItems: "center",
+      justifyContent: "center",
       paddingVertical: 48,
     },
     emptyText: {
       fontSize: 18,
-      fontWeight: '600',
+      fontWeight: "600",
       color: colors.text,
       marginBottom: 8,
     },
     emptySubtext: {
       fontSize: 14,
       color: colors.textSecondary,
-      textAlign: 'center',
+      textAlign: "center",
     },
     loadingText: {
       fontSize: 16,
       color: colors.textSecondary,
-      textAlign: 'center',
+      textAlign: "center",
       marginTop: 32,
     },
   });
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+      <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
         <Text style={styles.loadingText}>Loading meals...</Text>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+    <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
       <View style={styles.header}>
-        <Pressable onPress={() => navigation.goBack()} style={styles.backButton}>
+        <Pressable
+          onPress={() => navigation.goBack()}
+          style={styles.backButton}
+        >
           <Ionicons name="arrow-back" size={22} color={colors.text} />
         </Pressable>
         <View style={styles.headerTitle}>
-        <Text style={styles.heading}>Meals</Text>
+          <Text style={styles.heading}>Meals</Text>
         </View>
-        <Pressable style={styles.newButton} onPress={() => navigation.navigate('MealBuilder')}>
+        <Pressable
+          style={styles.newButton}
+          onPress={() => navigation.navigate("MealBuilder")}
+        >
           <Text style={styles.newButtonText}>+ New Meal</Text>
         </Pressable>
       </View>

@@ -1,17 +1,28 @@
-import React, { useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Ionicons } from '@expo/vector-icons';
+import React, { useState } from "react";
+import {
+  Alert,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { NativeStackScreenProps } from "@react-navigation/native-stack";
+import { Ionicons } from "@expo/vector-icons";
 
-import { ProfileStackParamList } from '@app/navigationTypes';
-import BmiScale from '@components/BmiScale';
-import { useGoal } from '@hooks/useGoal';
-import { useTheme } from '@hooks/useTheme';
-import { BmiCategory, GoalCreateCalculatedRequest } from '@models/types';
-import { Button, FormField, NumericInput } from '@particles/index';
+import { ProfileStackParamList } from "@app/navigationTypes";
+import { useGoal } from "@hooks/useGoal";
+import { useTheme } from "@hooks/useTheme";
+import { BmiCategory, GoalCreateCalculatedRequest } from "@models/types";
+import { Button, FormField, NumericInput } from "@particles/index";
 
-type Props = NativeStackScreenProps<ProfileStackParamList, 'GoalCalculatedResult'>;
+import BmiScale from "./components/BmiScale";
+
+type Props = NativeStackScreenProps<
+  ProfileStackParamList,
+  "GoalCalculatedResult"
+>;
 
 const GoalCalculatedResultScreen = ({ navigation, route }: Props) => {
   const { colors } = useTheme();
@@ -19,7 +30,9 @@ const GoalCalculatedResultScreen = ({ navigation, route }: Props) => {
   const { calculation, inputs } = route.params;
 
   // Customizable values
-  const [proteinPercent, setProteinPercent] = useState(calculation.proteinPercent);
+  const [proteinPercent, setProteinPercent] = useState(
+    calculation.proteinPercent,
+  );
   const [carbsPercent, setCarbsPercent] = useState(calculation.carbsPercent);
   const [fatPercent, setFatPercent] = useState(calculation.fatPercent);
   const [waterMl, setWaterMl] = useState(calculation.waterMl);
@@ -30,17 +43,29 @@ const GoalCalculatedResultScreen = ({ navigation, route }: Props) => {
   const isMacroValid = macroTotal === 100;
 
   // Recalculate grams based on custom percentages
-  const calculateGrams = (calories: number, percent: number, caloriesPerGram: number) => {
+  const calculateGrams = (
+    calories: number,
+    percent: number,
+    caloriesPerGram: number,
+  ) => {
     return Math.round((calories * percent) / 100 / caloriesPerGram);
   };
 
-  const proteinGrams = calculateGrams(calculation.dailyCaloriesKcal, proteinPercent, 4);
-  const carbsGrams = calculateGrams(calculation.dailyCaloriesKcal, carbsPercent, 4);
+  const proteinGrams = calculateGrams(
+    calculation.dailyCaloriesKcal,
+    proteinPercent,
+    4,
+  );
+  const carbsGrams = calculateGrams(
+    calculation.dailyCaloriesKcal,
+    carbsPercent,
+    4,
+  );
   const fatGrams = calculateGrams(calculation.dailyCaloriesKcal, fatPercent, 9);
 
   const handleSave = async () => {
     if (!isMacroValid) {
-      Alert.alert('Error', 'Macro percentages must sum to 100%');
+      Alert.alert("Error", "Macro percentages must sum to 100%");
       return;
     }
 
@@ -60,7 +85,7 @@ const GoalCalculatedResultScreen = ({ navigation, route }: Props) => {
       // Navigate back to profile
       navigation.popToTop();
     } catch (error) {
-      Alert.alert('Error', 'Failed to save goal. Please try again.');
+      Alert.alert("Error", "Failed to save goal. Please try again.");
     } finally {
       setSaving(false);
     }
@@ -68,7 +93,7 @@ const GoalCalculatedResultScreen = ({ navigation, route }: Props) => {
 
   const getDeficitSurplus = () => {
     const diff = calculation.dailyCaloriesKcal - calculation.tdeeKcal;
-    if (diff === 0) return 'maintenance';
+    if (diff === 0) return "maintenance";
     if (diff < 0) return `${Math.abs(diff)} kcal deficit/day`;
     return `${diff} kcal surplus/day`;
   };
@@ -79,8 +104,8 @@ const GoalCalculatedResultScreen = ({ navigation, route }: Props) => {
       backgroundColor: colors.background,
     },
     header: {
-      flexDirection: 'row',
-      alignItems: 'center',
+      flexDirection: "row",
+      alignItems: "center",
       paddingHorizontal: 16,
       paddingVertical: 12,
     },
@@ -89,13 +114,13 @@ const GoalCalculatedResultScreen = ({ navigation, route }: Props) => {
       height: 40,
       borderRadius: 20,
       backgroundColor: colors.cardBackground,
-      alignItems: 'center',
-      justifyContent: 'center',
+      alignItems: "center",
+      justifyContent: "center",
       marginRight: 12,
     },
     headerTitle: {
       fontSize: 24,
-      fontWeight: '700',
+      fontWeight: "700",
       color: colors.text,
     },
     scrollView: {
@@ -107,9 +132,9 @@ const GoalCalculatedResultScreen = ({ navigation, route }: Props) => {
     },
     sectionTitle: {
       fontSize: 14,
-      fontWeight: '600',
+      fontWeight: "600",
       color: colors.textSecondary,
-      textTransform: 'uppercase',
+      textTransform: "uppercase",
       letterSpacing: 0.5,
       marginBottom: 12,
       marginTop: 24,
@@ -122,8 +147,8 @@ const GoalCalculatedResultScreen = ({ navigation, route }: Props) => {
       borderColor: colors.border,
     },
     metabolismRow: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
+      flexDirection: "row",
+      justifyContent: "space-between",
       marginBottom: 8,
     },
     metabolismLabel: {
@@ -132,7 +157,7 @@ const GoalCalculatedResultScreen = ({ navigation, route }: Props) => {
     },
     metabolismValue: {
       fontSize: 15,
-      fontWeight: '600',
+      fontWeight: "600",
       color: colors.text,
     },
     targetsCard: {
@@ -141,11 +166,11 @@ const GoalCalculatedResultScreen = ({ navigation, route }: Props) => {
       padding: 20,
       borderWidth: 2,
       borderColor: colors.primary,
-      alignItems: 'center',
+      alignItems: "center",
     },
     caloriesValue: {
       fontSize: 36,
-      fontWeight: '700',
+      fontWeight: "700",
       color: colors.primary,
     },
     caloriesLabel: {
@@ -157,16 +182,16 @@ const GoalCalculatedResultScreen = ({ navigation, route }: Props) => {
       fontSize: 14,
       color: colors.success,
       marginTop: 8,
-      fontWeight: '500',
+      fontWeight: "500",
     },
     macrosRow: {
-      flexDirection: 'row',
-      justifyContent: 'space-around',
+      flexDirection: "row",
+      justifyContent: "space-around",
       marginTop: 20,
-      width: '100%',
+      width: "100%",
     },
     macroItem: {
-      alignItems: 'center',
+      alignItems: "center",
       paddingHorizontal: 12,
       paddingVertical: 8,
       borderRadius: 8,
@@ -174,7 +199,7 @@ const GoalCalculatedResultScreen = ({ navigation, route }: Props) => {
     },
     macroValue: {
       fontSize: 20,
-      fontWeight: '700',
+      fontWeight: "700",
     },
     macroPercent: {
       fontSize: 12,
@@ -183,19 +208,19 @@ const GoalCalculatedResultScreen = ({ navigation, route }: Props) => {
     },
     macroLabel: {
       fontSize: 12,
-      fontWeight: '600',
+      fontWeight: "600",
       marginTop: 4,
     },
     waterRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
       marginTop: 16,
       gap: 8,
     },
     waterText: {
       fontSize: 16,
-      fontWeight: '600',
+      fontWeight: "600",
       color: colors.text,
     },
     customizeCard: {
@@ -206,15 +231,15 @@ const GoalCalculatedResultScreen = ({ navigation, route }: Props) => {
       borderColor: colors.border,
     },
     macroInputRow: {
-      flexDirection: 'row',
+      flexDirection: "row",
       gap: 12,
     },
     macroInputItem: {
       flex: 1,
     },
     macroTotalRow: {
-      flexDirection: 'row',
-      justifyContent: 'flex-end',
+      flexDirection: "row",
+      justifyContent: "flex-end",
       marginTop: 8,
       paddingTop: 8,
       borderTopWidth: 1,
@@ -222,7 +247,7 @@ const GoalCalculatedResultScreen = ({ navigation, route }: Props) => {
     },
     macroTotalText: {
       fontSize: 14,
-      fontWeight: '600',
+      fontWeight: "600",
     },
     macroTotalValid: {
       color: colors.success,
@@ -234,7 +259,7 @@ const GoalCalculatedResultScreen = ({ navigation, route }: Props) => {
       marginTop: 12,
     },
     footer: {
-      position: 'absolute',
+      position: "absolute",
       bottom: 0,
       left: 0,
       right: 0,
@@ -246,9 +271,12 @@ const GoalCalculatedResultScreen = ({ navigation, route }: Props) => {
   });
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.header}>
-        <Pressable style={styles.backButton} onPress={() => navigation.goBack()}>
+        <Pressable
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+        >
           <Ionicons name="arrow-back" size={20} color={colors.text} />
         </Pressable>
         <Text style={styles.headerTitle}>Your Goal</Text>
@@ -271,11 +299,15 @@ const GoalCalculatedResultScreen = ({ navigation, route }: Props) => {
           <View style={styles.metabolismCard}>
             <View style={styles.metabolismRow}>
               <Text style={styles.metabolismLabel}>BMR (at rest)</Text>
-              <Text style={styles.metabolismValue}>{calculation.bmrKcal} kcal</Text>
+              <Text style={styles.metabolismValue}>
+                {calculation.bmrKcal} kcal
+              </Text>
             </View>
             <View style={[styles.metabolismRow, { marginBottom: 0 }]}>
               <Text style={styles.metabolismLabel}>TDEE (with activity)</Text>
-              <Text style={styles.metabolismValue}>{calculation.tdeeKcal} kcal</Text>
+              <Text style={styles.metabolismValue}>
+                {calculation.tdeeKcal} kcal
+              </Text>
             </View>
           </View>
 
@@ -290,11 +322,15 @@ const GoalCalculatedResultScreen = ({ navigation, route }: Props) => {
 
             <View style={styles.macrosRow}>
               <View style={styles.macroItem}>
-                <Text style={[styles.macroValue, { color: colors.macroProtein }]}>
+                <Text
+                  style={[styles.macroValue, { color: colors.macroProtein }]}
+                >
                   {proteinGrams}g
                 </Text>
                 <Text style={styles.macroPercent}>{proteinPercent}%</Text>
-                <Text style={[styles.macroLabel, { color: colors.macroProtein }]}>
+                <Text
+                  style={[styles.macroLabel, { color: colors.macroProtein }]}
+                >
                   Protein
                 </Text>
               </View>
@@ -312,7 +348,9 @@ const GoalCalculatedResultScreen = ({ navigation, route }: Props) => {
                   {fatGrams}g
                 </Text>
                 <Text style={styles.macroPercent}>{fatPercent}%</Text>
-                <Text style={[styles.macroLabel, { color: colors.macroFat }]}>Fat</Text>
+                <Text style={[styles.macroLabel, { color: colors.macroFat }]}>
+                  Fat
+                </Text>
               </View>
             </View>
 
@@ -362,10 +400,12 @@ const GoalCalculatedResultScreen = ({ navigation, route }: Props) => {
               <Text
                 style={[
                   styles.macroTotalText,
-                  isMacroValid ? styles.macroTotalValid : styles.macroTotalInvalid,
+                  isMacroValid
+                    ? styles.macroTotalValid
+                    : styles.macroTotalInvalid,
                 ]}
               >
-                Total: {macroTotal}% {isMacroValid ? '✓' : '(must be 100%)'}
+                Total: {macroTotal}% {isMacroValid ? "✓" : "(must be 100%)"}
               </Text>
             </View>
 

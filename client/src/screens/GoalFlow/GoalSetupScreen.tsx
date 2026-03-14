@@ -1,14 +1,14 @@
-import React from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Ionicons } from '@expo/vector-icons';
+import React from "react";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { NativeStackScreenProps } from "@react-navigation/native-stack";
+import { Ionicons } from "@expo/vector-icons";
 
-import { ProfileStackParamList } from '@app/navigationTypes';
-import { useGoal } from '@hooks/useGoal';
-import { useTheme } from '@hooks/useTheme';
+import { ProfileStackParamList } from "@app/navigationTypes";
+import { useGoal } from "@hooks/useGoal";
+import { useTheme } from "@hooks/useTheme";
 
-type Props = NativeStackScreenProps<ProfileStackParamList, 'GoalSetup'>;
+type Props = NativeStackScreenProps<ProfileStackParamList, "GoalSetup">;
 
 const GoalSetupScreen = ({ navigation }: Props) => {
   const { colors } = useTheme();
@@ -28,8 +28,8 @@ const GoalSetupScreen = ({ navigation }: Props) => {
       backgroundColor: colors.background,
     },
     header: {
-      flexDirection: 'row',
-      alignItems: 'center',
+      flexDirection: "row",
+      alignItems: "center",
       paddingHorizontal: 16,
       paddingVertical: 12,
     },
@@ -38,13 +38,13 @@ const GoalSetupScreen = ({ navigation }: Props) => {
       height: 40,
       borderRadius: 20,
       backgroundColor: colors.cardBackground,
-      alignItems: 'center',
-      justifyContent: 'center',
+      alignItems: "center",
+      justifyContent: "center",
       marginRight: 12,
     },
     headerTitle: {
       fontSize: 24,
-      fontWeight: '700',
+      fontWeight: "700",
       color: colors.text,
     },
     scrollView: {
@@ -55,10 +55,10 @@ const GoalSetupScreen = ({ navigation }: Props) => {
     },
     questionText: {
       fontSize: 18,
-      fontWeight: '600',
+      fontWeight: "600",
       color: colors.text,
       marginBottom: 20,
-      textAlign: 'center',
+      textAlign: "center",
     },
     optionCard: {
       backgroundColor: colors.cardBackground,
@@ -72,8 +72,8 @@ const GoalSetupScreen = ({ navigation }: Props) => {
       backgroundColor: colors.pressed,
     },
     optionHeader: {
-      flexDirection: 'row',
-      alignItems: 'center',
+      flexDirection: "row",
+      alignItems: "center",
       marginBottom: 8,
     },
     optionIcon: {
@@ -82,7 +82,7 @@ const GoalSetupScreen = ({ navigation }: Props) => {
     },
     optionTitle: {
       fontSize: 18,
-      fontWeight: '600',
+      fontWeight: "600",
       color: colors.text,
     },
     optionDescription: {
@@ -100,23 +100,23 @@ const GoalSetupScreen = ({ navigation }: Props) => {
     },
     currentGoalTitle: {
       fontSize: 14,
-      fontWeight: '600',
+      fontWeight: "600",
       color: colors.textSecondary,
-      textTransform: 'uppercase',
+      textTransform: "uppercase",
       letterSpacing: 0.5,
       marginBottom: 12,
     },
     goalStats: {
-      flexDirection: 'row',
-      justifyContent: 'space-around',
+      flexDirection: "row",
+      justifyContent: "space-around",
       marginBottom: 16,
     },
     goalStat: {
-      alignItems: 'center',
+      alignItems: "center",
     },
     goalStatValue: {
       fontSize: 24,
-      fontWeight: '700',
+      fontWeight: "700",
       color: colors.text,
     },
     goalStatLabel: {
@@ -125,16 +125,16 @@ const GoalSetupScreen = ({ navigation }: Props) => {
       marginTop: 4,
     },
     macroRow: {
-      flexDirection: 'row',
-      justifyContent: 'space-around',
+      flexDirection: "row",
+      justifyContent: "space-around",
       marginBottom: 16,
     },
     macroItem: {
-      alignItems: 'center',
+      alignItems: "center",
     },
     macroValue: {
       fontSize: 16,
-      fontWeight: '600',
+      fontWeight: "600",
     },
     macroLabel: {
       fontSize: 11,
@@ -142,7 +142,7 @@ const GoalSetupScreen = ({ navigation }: Props) => {
       marginTop: 2,
     },
     goalActions: {
-      flexDirection: 'row',
+      flexDirection: "row",
       gap: 12,
     },
     editButton: {
@@ -150,11 +150,11 @@ const GoalSetupScreen = ({ navigation }: Props) => {
       paddingVertical: 12,
       borderRadius: 10,
       backgroundColor: colors.primary,
-      alignItems: 'center',
+      alignItems: "center",
     },
     editButtonText: {
       color: colors.buttonText,
-      fontWeight: '600',
+      fontWeight: "600",
       fontSize: 14,
     },
     deleteButton: {
@@ -162,26 +162,29 @@ const GoalSetupScreen = ({ navigation }: Props) => {
       paddingVertical: 12,
       borderRadius: 10,
       backgroundColor: colors.errorLight,
-      alignItems: 'center',
+      alignItems: "center",
     },
     deleteButtonText: {
       color: colors.error,
-      fontWeight: '600',
+      fontWeight: "600",
       fontSize: 14,
     },
     loadingText: {
       fontSize: 16,
       color: colors.textSecondary,
-      textAlign: 'center',
+      textAlign: "center",
       marginTop: 40,
     },
   });
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.container} edges={['top']}>
+      <SafeAreaView style={styles.container} edges={["top"]}>
         <View style={styles.header}>
-          <Pressable style={styles.backButton} onPress={() => navigation.goBack()}>
+          <Pressable
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
+          >
             <Ionicons name="arrow-back" size={20} color={colors.text} />
           </Pressable>
           <Text style={styles.headerTitle}>My Goal</Text>
@@ -192,9 +195,12 @@ const GoalSetupScreen = ({ navigation }: Props) => {
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.header}>
-        <Pressable style={styles.backButton} onPress={() => navigation.goBack()}>
+        <Pressable
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+        >
           <Ionicons name="arrow-back" size={20} color={colors.text} />
         </Pressable>
         <Text style={styles.headerTitle}>My Goal</Text>
@@ -202,35 +208,43 @@ const GoalSetupScreen = ({ navigation }: Props) => {
 
       <ScrollView style={styles.scrollView}>
         <View style={styles.content}>
-          <Text style={styles.questionText}>How do you want to set your goal?</Text>
+          <Text style={styles.questionText}>
+            How do you want to set your goal?
+          </Text>
 
           {/* Calculate Goal Option */}
           <Pressable
-            style={({ pressed }) => [styles.optionCard, pressed && styles.optionCardPressed]}
-            onPress={() => navigation.navigate('GoalCalculated')}
+            style={({ pressed }) => [
+              styles.optionCard,
+              pressed && styles.optionCardPressed,
+            ]}
+            onPress={() => navigation.navigate("GoalCalculated")}
           >
             <View style={styles.optionHeader}>
               <Text style={styles.optionIcon}>🎯</Text>
               <Text style={styles.optionTitle}>Calculate my goal</Text>
             </View>
             <Text style={styles.optionDescription}>
-              Based on your body metrics and activity level. We'll calculate your BMR,
-              TDEE, and recommend daily calories and macros.
+              Based on your body metrics and activity level. We'll calculate
+              your BMR, TDEE, and recommend daily calories and macros.
             </Text>
           </Pressable>
 
           {/* Manual Goal Option */}
           <Pressable
-            style={({ pressed }) => [styles.optionCard, pressed && styles.optionCardPressed]}
-            onPress={() => navigation.navigate('GoalManual')}
+            style={({ pressed }) => [
+              styles.optionCard,
+              pressed && styles.optionCardPressed,
+            ]}
+            onPress={() => navigation.navigate("GoalManual")}
           >
             <View style={styles.optionHeader}>
               <Text style={styles.optionIcon}>📊</Text>
               <Text style={styles.optionTitle}>I know my calories</Text>
             </View>
             <Text style={styles.optionDescription}>
-              Enter your daily calorie target and macro percentages directly. Best for
-              experienced users who already know their numbers.
+              Enter your daily calorie target and macro percentages directly.
+              Best for experienced users who already know their numbers.
             </Text>
           </Pressable>
 
@@ -241,7 +255,9 @@ const GoalSetupScreen = ({ navigation }: Props) => {
 
               <View style={styles.goalStats}>
                 <View style={styles.goalStat}>
-                  <Text style={styles.goalStatValue}>{goal.dailyCaloriesKcal}</Text>
+                  <Text style={styles.goalStatValue}>
+                    {goal.dailyCaloriesKcal}
+                  </Text>
                   <Text style={styles.goalStatLabel}>kcal/day</Text>
                 </View>
                 <View style={styles.goalStat}>
@@ -252,22 +268,32 @@ const GoalSetupScreen = ({ navigation }: Props) => {
 
               <View style={styles.macroRow}>
                 <View style={styles.macroItem}>
-                  <Text style={[styles.macroValue, { color: colors.macroProtein }]}>
+                  <Text
+                    style={[styles.macroValue, { color: colors.macroProtein }]}
+                  >
                     {goal.proteinGrams}g
                   </Text>
-                  <Text style={styles.macroLabel}>Protein ({goal.proteinPercent}%)</Text>
+                  <Text style={styles.macroLabel}>
+                    Protein ({goal.proteinPercent}%)
+                  </Text>
                 </View>
                 <View style={styles.macroItem}>
-                  <Text style={[styles.macroValue, { color: colors.macroCarb }]}>
+                  <Text
+                    style={[styles.macroValue, { color: colors.macroCarb }]}
+                  >
                     {goal.carbsGrams}g
                   </Text>
-                  <Text style={styles.macroLabel}>Carbs ({goal.carbsPercent}%)</Text>
+                  <Text style={styles.macroLabel}>
+                    Carbs ({goal.carbsPercent}%)
+                  </Text>
                 </View>
                 <View style={styles.macroItem}>
                   <Text style={[styles.macroValue, { color: colors.macroFat }]}>
                     {goal.fatGrams}g
                   </Text>
-                  <Text style={styles.macroLabel}>Fat ({goal.fatPercent}%)</Text>
+                  <Text style={styles.macroLabel}>
+                    Fat ({goal.fatPercent}%)
+                  </Text>
                 </View>
               </View>
 
@@ -275,14 +301,17 @@ const GoalSetupScreen = ({ navigation }: Props) => {
                 <Pressable
                   style={styles.editButton}
                   onPress={() =>
-                    goal.goalType === 'calculated'
-                      ? navigation.navigate('GoalCalculated')
-                      : navigation.navigate('GoalManual')
+                    goal.goalType === "calculated"
+                      ? navigation.navigate("GoalCalculated")
+                      : navigation.navigate("GoalManual")
                   }
                 >
                   <Text style={styles.editButtonText}>Edit Goal</Text>
                 </Pressable>
-                <Pressable style={styles.deleteButton} onPress={handleDeleteGoal}>
+                <Pressable
+                  style={styles.deleteButton}
+                  onPress={handleDeleteGoal}
+                >
                   <Text style={styles.deleteButtonText}>Delete</Text>
                 </Pressable>
               </View>

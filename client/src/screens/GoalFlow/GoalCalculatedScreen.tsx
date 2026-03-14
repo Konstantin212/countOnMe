@@ -1,39 +1,55 @@
-import React, { useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Ionicons } from '@expo/vector-icons';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import React, { useState } from "react";
+import {
+  Alert,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { NativeStackScreenProps } from "@react-navigation/native-stack";
+import { Ionicons } from "@expo/vector-icons";
+import DateTimePicker from "@react-native-community/datetimepicker";
 
-import { ProfileStackParamList } from '@app/navigationTypes';
-import ActivityLevelCard from '@components/ActivityLevelCard';
-import { useGoal } from '@hooks/useGoal';
-import { useTheme } from '@hooks/useTheme';
+import { ProfileStackParamList } from "@app/navigationTypes";
+import { useGoal } from "@hooks/useGoal";
+import { useTheme } from "@hooks/useTheme";
 import {
   ActivityLevel,
   Gender,
   GoalCalculateRequest,
   WeightChangePace,
   WeightGoalType,
-} from '@models/types';
-import { Button, FormField, NumericInput } from '@particles/index';
+} from "@models/types";
+import { Button, FormField, NumericInput } from "@particles/index";
 import {
   ACTIVITY_LEVEL_TIP,
   ACTIVITY_LEVELS,
-} from '@services/constants/activityLevels';
+} from "@services/constants/activityLevels";
 
-type Props = NativeStackScreenProps<ProfileStackParamList, 'GoalCalculated'>;
+import ActivityLevelCard from "./components/ActivityLevelCard";
 
-const WEIGHT_GOAL_OPTIONS: { value: WeightGoalType; label: string; emoji: string }[] = [
-  { value: 'lose', label: 'Lose weight', emoji: '📉' },
-  { value: 'maintain', label: 'Maintain weight', emoji: '⚖️' },
-  { value: 'gain', label: 'Gain weight', emoji: '📈' },
+type Props = NativeStackScreenProps<ProfileStackParamList, "GoalCalculated">;
+
+const WEIGHT_GOAL_OPTIONS: {
+  value: WeightGoalType;
+  label: string;
+  emoji: string;
+}[] = [
+  { value: "lose", label: "Lose weight", emoji: "📉" },
+  { value: "maintain", label: "Maintain weight", emoji: "⚖️" },
+  { value: "gain", label: "Gain weight", emoji: "📈" },
 ];
 
-const PACE_OPTIONS: { value: WeightChangePace; label: string; description: string }[] = [
-  { value: 'slow', label: 'Slow', description: '~0.25 kg/week' },
-  { value: 'moderate', label: 'Moderate', description: '~0.5 kg/week' },
-  { value: 'aggressive', label: 'Aggressive', description: '~0.75 kg/week' },
+const PACE_OPTIONS: {
+  value: WeightChangePace;
+  label: string;
+  description: string;
+}[] = [
+  { value: "slow", label: "Slow", description: "~0.25 kg/week" },
+  { value: "moderate", label: "Moderate", description: "~0.5 kg/week" },
+  { value: "aggressive", label: "Aggressive", description: "~0.75 kg/week" },
 ];
 
 const GoalCalculatedScreen = ({ navigation }: Props) => {
@@ -41,39 +57,44 @@ const GoalCalculatedScreen = ({ navigation }: Props) => {
   const { calculateGoal, goal } = useGoal();
 
   // Form state
-  const [gender, setGender] = useState<Gender>(goal?.gender || 'male');
+  const [gender, setGender] = useState<Gender>(goal?.gender || "male");
   const [birthDate, setBirthDate] = useState<Date>(
     goal?.birthDate ? new Date(goal.birthDate) : new Date(1990, 0, 1),
   );
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const [heightCm, setHeightCm] = useState<number | undefined>(goal?.heightCm || undefined);
+  const [heightCm, setHeightCm] = useState<number | undefined>(
+    goal?.heightCm || undefined,
+  );
   const [currentWeightKg, setCurrentWeightKg] = useState<number | undefined>(
     goal?.currentWeightKg || undefined,
   );
   const [activityLevel, setActivityLevel] = useState<ActivityLevel>(
-    goal?.activityLevel || 'moderate',
+    goal?.activityLevel || "moderate",
   );
   const [weightGoalType, setWeightGoalType] = useState<WeightGoalType>(
-    goal?.weightGoalType || 'maintain',
+    goal?.weightGoalType || "maintain",
   );
   const [targetWeightKg, setTargetWeightKg] = useState<number | undefined>(
     goal?.targetWeightKg || undefined,
   );
   const [weightChangePace, setWeightChangePace] = useState<WeightChangePace>(
-    goal?.weightChangePace || 'moderate',
+    goal?.weightChangePace || "moderate",
   );
 
   const [calculating, setCalculating] = useState(false);
 
   const formatDate = (date: Date): string => {
-    return date.toISOString().split('T')[0];
+    return date.toISOString().split("T")[0];
   };
 
   const calculateAge = (birthDate: Date): number => {
     const today = new Date();
     let age = today.getFullYear() - birthDate.getFullYear();
     const monthDiff = today.getMonth() - birthDate.getMonth();
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+    if (
+      monthDiff < 0 ||
+      (monthDiff === 0 && today.getDate() < birthDate.getDate())
+    ) {
       age--;
     }
     return age;
@@ -82,25 +103,28 @@ const GoalCalculatedScreen = ({ navigation }: Props) => {
   const handleCalculate = async () => {
     // Validation
     if (!heightCm || heightCm <= 0) {
-      Alert.alert('Error', 'Please enter your height');
+      Alert.alert("Error", "Please enter your height");
       return;
     }
     if (!currentWeightKg || currentWeightKg <= 0) {
-      Alert.alert('Error', 'Please enter your current weight');
+      Alert.alert("Error", "Please enter your current weight");
       return;
     }
-    if (weightGoalType !== 'maintain' && (!targetWeightKg || targetWeightKg <= 0)) {
-      Alert.alert('Error', 'Please enter your target weight');
+    if (
+      weightGoalType !== "maintain" &&
+      (!targetWeightKg || targetWeightKg <= 0)
+    ) {
+      Alert.alert("Error", "Please enter your target weight");
       return;
     }
 
     const age = calculateAge(birthDate);
     if (age < 13) {
-      Alert.alert('Error', 'You must be at least 13 years old');
+      Alert.alert("Error", "You must be at least 13 years old");
       return;
     }
     if (age > 120) {
-      Alert.alert('Error', 'Please enter a valid birth date');
+      Alert.alert("Error", "Please enter a valid birth date");
       return;
     }
 
@@ -114,20 +138,22 @@ const GoalCalculatedScreen = ({ navigation }: Props) => {
         currentWeightKg,
         activityLevel,
         weightGoalType,
-        targetWeightKg: weightGoalType !== 'maintain' ? targetWeightKg : undefined,
-        weightChangePace: weightGoalType !== 'maintain' ? weightChangePace : undefined,
+        targetWeightKg:
+          weightGoalType !== "maintain" ? targetWeightKg : undefined,
+        weightChangePace:
+          weightGoalType !== "maintain" ? weightChangePace : undefined,
       };
 
       const calculation = await calculateGoal(request);
 
-      navigation.navigate('GoalCalculatedResult', {
+      navigation.navigate("GoalCalculatedResult", {
         calculation,
         inputs: request,
       });
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
-      console.error('Goal calculation failed:', error);
-      Alert.alert('Error', `Failed to calculate goal: ${message}`);
+      const message = error instanceof Error ? error.message : "Unknown error";
+      console.error("Goal calculation failed:", error);
+      Alert.alert("Error", `Failed to calculate goal: ${message}`);
     } finally {
       setCalculating(false);
     }
@@ -139,8 +165,8 @@ const GoalCalculatedScreen = ({ navigation }: Props) => {
       backgroundColor: colors.background,
     },
     header: {
-      flexDirection: 'row',
-      alignItems: 'center',
+      flexDirection: "row",
+      alignItems: "center",
       paddingHorizontal: 16,
       paddingVertical: 12,
     },
@@ -149,13 +175,13 @@ const GoalCalculatedScreen = ({ navigation }: Props) => {
       height: 40,
       borderRadius: 20,
       backgroundColor: colors.cardBackground,
-      alignItems: 'center',
-      justifyContent: 'center',
+      alignItems: "center",
+      justifyContent: "center",
       marginRight: 12,
     },
     headerTitle: {
       fontSize: 24,
-      fontWeight: '700',
+      fontWeight: "700",
       color: colors.text,
     },
     scrollView: {
@@ -167,15 +193,15 @@ const GoalCalculatedScreen = ({ navigation }: Props) => {
     },
     sectionTitle: {
       fontSize: 14,
-      fontWeight: '600',
+      fontWeight: "600",
       color: colors.textSecondary,
-      textTransform: 'uppercase',
+      textTransform: "uppercase",
       letterSpacing: 0.5,
       marginBottom: 12,
       marginTop: 16,
     },
     genderRow: {
-      flexDirection: 'row',
+      flexDirection: "row",
       gap: 12,
       marginBottom: 16,
     },
@@ -186,11 +212,11 @@ const GoalCalculatedScreen = ({ navigation }: Props) => {
       backgroundColor: colors.cardBackground,
       borderWidth: 2,
       borderColor: colors.border,
-      alignItems: 'center',
+      alignItems: "center",
     },
     genderButtonSelected: {
       borderColor: colors.primary,
-      backgroundColor: colors.primary + '10',
+      backgroundColor: colors.primary + "10",
     },
     genderEmoji: {
       fontSize: 28,
@@ -198,7 +224,7 @@ const GoalCalculatedScreen = ({ navigation }: Props) => {
     },
     genderLabel: {
       fontSize: 16,
-      fontWeight: '600',
+      fontWeight: "600",
       color: colors.text,
     },
     dateButton: {
@@ -216,11 +242,11 @@ const GoalCalculatedScreen = ({ navigation }: Props) => {
     },
     dateValue: {
       fontSize: 16,
-      fontWeight: '600',
+      fontWeight: "600",
       color: colors.text,
     },
     inputRow: {
-      flexDirection: 'row',
+      flexDirection: "row",
       gap: 12,
       marginBottom: 16,
     },
@@ -228,8 +254,8 @@ const GoalCalculatedScreen = ({ navigation }: Props) => {
       flex: 1,
     },
     tipCard: {
-      flexDirection: 'row',
-      alignItems: 'flex-start',
+      flexDirection: "row",
+      alignItems: "flex-start",
       backgroundColor: colors.infoLight,
       padding: 12,
       borderRadius: 8,
@@ -243,7 +269,7 @@ const GoalCalculatedScreen = ({ navigation }: Props) => {
       lineHeight: 18,
     },
     weightGoalRow: {
-      flexDirection: 'row',
+      flexDirection: "row",
       gap: 8,
       marginBottom: 16,
     },
@@ -255,11 +281,11 @@ const GoalCalculatedScreen = ({ navigation }: Props) => {
       backgroundColor: colors.cardBackground,
       borderWidth: 2,
       borderColor: colors.border,
-      alignItems: 'center',
+      alignItems: "center",
     },
     weightGoalButtonSelected: {
       borderColor: colors.primary,
-      backgroundColor: colors.primary + '10',
+      backgroundColor: colors.primary + "10",
     },
     weightGoalEmoji: {
       fontSize: 20,
@@ -267,12 +293,12 @@ const GoalCalculatedScreen = ({ navigation }: Props) => {
     },
     weightGoalLabel: {
       fontSize: 13,
-      fontWeight: '600',
+      fontWeight: "600",
       color: colors.text,
-      textAlign: 'center',
+      textAlign: "center",
     },
     paceRow: {
-      flexDirection: 'row',
+      flexDirection: "row",
       gap: 8,
       marginBottom: 16,
     },
@@ -284,15 +310,15 @@ const GoalCalculatedScreen = ({ navigation }: Props) => {
       backgroundColor: colors.cardBackground,
       borderWidth: 2,
       borderColor: colors.border,
-      alignItems: 'center',
+      alignItems: "center",
     },
     paceButtonSelected: {
       borderColor: colors.primary,
-      backgroundColor: colors.primary + '10',
+      backgroundColor: colors.primary + "10",
     },
     paceLabel: {
       fontSize: 14,
-      fontWeight: '600',
+      fontWeight: "600",
       color: colors.text,
     },
     paceDesc: {
@@ -301,7 +327,7 @@ const GoalCalculatedScreen = ({ navigation }: Props) => {
       marginTop: 2,
     },
     footer: {
-      position: 'absolute',
+      position: "absolute",
       bottom: 0,
       left: 0,
       right: 0,
@@ -313,9 +339,12 @@ const GoalCalculatedScreen = ({ navigation }: Props) => {
   });
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.header}>
-        <Pressable style={styles.backButton} onPress={() => navigation.goBack()}>
+        <Pressable
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+        >
           <Ionicons name="arrow-back" size={20} color={colors.text} />
         </Pressable>
         <Text style={styles.headerTitle}>Calculate Goal</Text>
@@ -329,15 +358,21 @@ const GoalCalculatedScreen = ({ navigation }: Props) => {
           {/* Gender */}
           <View style={styles.genderRow}>
             <Pressable
-              style={[styles.genderButton, gender === 'male' && styles.genderButtonSelected]}
-              onPress={() => setGender('male')}
+              style={[
+                styles.genderButton,
+                gender === "male" && styles.genderButtonSelected,
+              ]}
+              onPress={() => setGender("male")}
             >
               <Text style={styles.genderEmoji}>👨</Text>
               <Text style={styles.genderLabel}>Male</Text>
             </Pressable>
             <Pressable
-              style={[styles.genderButton, gender === 'female' && styles.genderButtonSelected]}
-              onPress={() => setGender('female')}
+              style={[
+                styles.genderButton,
+                gender === "female" && styles.genderButtonSelected,
+              ]}
+              onPress={() => setGender("female")}
             >
               <Text style={styles.genderEmoji}>👩</Text>
               <Text style={styles.genderLabel}>Female</Text>
@@ -345,7 +380,10 @@ const GoalCalculatedScreen = ({ navigation }: Props) => {
           </View>
 
           {/* Birth Date */}
-          <Pressable style={styles.dateButton} onPress={() => setShowDatePicker(true)}>
+          <Pressable
+            style={styles.dateButton}
+            onPress={() => setShowDatePicker(true)}
+          >
             <Text style={styles.dateLabel}>Birth Date *</Text>
             <Text style={styles.dateValue}>
               {birthDate.toLocaleDateString()} (Age: {calculateAge(birthDate)})
@@ -420,7 +458,8 @@ const GoalCalculatedScreen = ({ navigation }: Props) => {
                 key={option.value}
                 style={[
                   styles.weightGoalButton,
-                  weightGoalType === option.value && styles.weightGoalButtonSelected,
+                  weightGoalType === option.value &&
+                    styles.weightGoalButtonSelected,
                 ]}
                 onPress={() => setWeightGoalType(option.value)}
               >
@@ -431,7 +470,7 @@ const GoalCalculatedScreen = ({ navigation }: Props) => {
           </View>
 
           {/* Target Weight (if lose or gain) */}
-          {weightGoalType !== 'maintain' && (
+          {weightGoalType !== "maintain" && (
             <>
               <FormField>
                 <NumericInput
@@ -454,7 +493,8 @@ const GoalCalculatedScreen = ({ navigation }: Props) => {
                     key={option.value}
                     style={[
                       styles.paceButton,
-                      weightChangePace === option.value && styles.paceButtonSelected,
+                      weightChangePace === option.value &&
+                        styles.paceButtonSelected,
                     ]}
                     onPress={() => setWeightChangePace(option.value)}
                   >
@@ -469,7 +509,11 @@ const GoalCalculatedScreen = ({ navigation }: Props) => {
       </ScrollView>
 
       <View style={styles.footer}>
-        <Button onPress={handleCalculate} loading={calculating} disabled={calculating}>
+        <Button
+          onPress={handleCalculate}
+          loading={calculating}
+          disabled={calculating}
+        >
           Calculate
         </Button>
       </View>

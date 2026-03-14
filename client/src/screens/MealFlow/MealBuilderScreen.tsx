@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from "react";
 import {
   Alert,
   Pressable,
@@ -7,20 +7,20 @@ import {
   Text,
   TextInput,
   View,
-} from 'react-native';
-import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+} from "react-native";
+import { NativeStackScreenProps } from "@react-navigation/native-stack";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
 
-import { ProfileStackParamList } from '@app/navigationTypes';
-import { useProducts } from '@hooks/useProducts';
-import { useMeals } from '@hooks/useMeals';
-import { useTheme } from '@hooks/useTheme';
-import { MealItem } from '@models/types';
-import { calcMealCalories } from '@services/utils/calories';
-import { convertUnit } from '@services/utils/units';
+import { ProfileStackParamList } from "@app/navigationTypes";
+import { useProducts } from "@hooks/useProducts";
+import { useMeals } from "@hooks/useMeals";
+import { useTheme } from "@hooks/useTheme";
+import { MealItem } from "@models/types";
+import { calcMealCalories } from "@services/utils/calories";
+import { convertUnit } from "@services/utils/units";
 
-type Props = NativeStackScreenProps<ProfileStackParamList, 'MealBuilder'>;
+type Props = NativeStackScreenProps<ProfileStackParamList, "MealBuilder">;
 
 const MealBuilderScreen = ({ navigation, route }: Props) => {
   const isEditing = Boolean(route.params?.mealId);
@@ -28,9 +28,11 @@ const MealBuilderScreen = ({ navigation, route }: Props) => {
   const { meals, addMeal, updateMeal } = useMeals(products);
   const { colors } = useTheme();
 
-  const [mealName, setMealName] = useState('');
-  const [selectedProducts, setSelectedProducts] = useState<Map<string, number>>(new Map());
-  const [searchQuery, setSearchQuery] = useState('');
+  const [mealName, setMealName] = useState("");
+  const [selectedProducts, setSelectedProducts] = useState<Map<string, number>>(
+    new Map(),
+  );
+  const [searchQuery, setSearchQuery] = useState("");
   const [saving, setSaving] = useState(false);
 
   const styles = StyleSheet.create({
@@ -40,8 +42,8 @@ const MealBuilderScreen = ({ navigation, route }: Props) => {
       paddingTop: 16,
     },
     header: {
-      flexDirection: 'row',
-      alignItems: 'center',
+      flexDirection: "row",
+      alignItems: "center",
       paddingHorizontal: 16,
       marginBottom: 8,
     },
@@ -53,7 +55,7 @@ const MealBuilderScreen = ({ navigation, route }: Props) => {
     },
     title: {
       fontSize: 20,
-      fontWeight: '700',
+      fontWeight: "700",
       color: colors.text,
     },
     scrollView: {
@@ -66,7 +68,7 @@ const MealBuilderScreen = ({ navigation, route }: Props) => {
     },
     label: {
       fontSize: 14,
-      fontWeight: '600',
+      fontWeight: "600",
       color: colors.textSecondary,
       marginBottom: 8,
     },
@@ -84,18 +86,18 @@ const MealBuilderScreen = ({ navigation, route }: Props) => {
       backgroundColor: colors.infoLight,
       borderBottomWidth: 1,
       borderBottomColor: colors.info,
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
     },
     totalLabel: {
       fontSize: 18,
-      fontWeight: '600',
+      fontWeight: "600",
       color: colors.info,
     },
     totalValue: {
       fontSize: 24,
-      fontWeight: '700',
+      fontWeight: "700",
       color: colors.info,
     },
     productsContainer: {
@@ -109,8 +111,8 @@ const MealBuilderScreen = ({ navigation, route }: Props) => {
       backgroundColor: colors.cardBackground,
     },
     productCheckbox: {
-      flexDirection: 'row',
-      alignItems: 'center',
+      flexDirection: "row",
+      alignItems: "center",
       padding: 12,
     },
     checkbox: {
@@ -120,8 +122,8 @@ const MealBuilderScreen = ({ navigation, route }: Props) => {
       borderColor: colors.border,
       borderRadius: 4,
       marginRight: 12,
-      justifyContent: 'center',
-      alignItems: 'center',
+      justifyContent: "center",
+      alignItems: "center",
     },
     checkboxChecked: {
       backgroundColor: colors.primary,
@@ -130,14 +132,14 @@ const MealBuilderScreen = ({ navigation, route }: Props) => {
     checkmark: {
       color: colors.buttonText,
       fontSize: 16,
-      fontWeight: '700',
+      fontWeight: "700",
     },
     productInfo: {
       flex: 1,
     },
     productName: {
       fontSize: 16,
-      fontWeight: '600',
+      fontWeight: "600",
       color: colors.text,
       marginBottom: 2,
     },
@@ -146,8 +148,8 @@ const MealBuilderScreen = ({ navigation, route }: Props) => {
       color: colors.textSecondary,
     },
     gramsInput: {
-      flexDirection: 'row',
-      alignItems: 'center',
+      flexDirection: "row",
+      alignItems: "center",
       paddingHorizontal: 12,
       paddingBottom: 12,
       paddingLeft: 48,
@@ -166,7 +168,7 @@ const MealBuilderScreen = ({ navigation, route }: Props) => {
       marginLeft: 8,
       fontSize: 16,
       color: colors.textSecondary,
-      fontWeight: '600',
+      fontWeight: "600",
     },
     footer: {
       padding: 16,
@@ -178,7 +180,7 @@ const MealBuilderScreen = ({ navigation, route }: Props) => {
       backgroundColor: colors.primary,
       padding: 16,
       borderRadius: 8,
-      alignItems: 'center',
+      alignItems: "center",
     },
     saveButtonDisabled: {
       backgroundColor: colors.disabled,
@@ -186,25 +188,25 @@ const MealBuilderScreen = ({ navigation, route }: Props) => {
     saveButtonText: {
       color: colors.buttonText,
       fontSize: 16,
-      fontWeight: '600',
+      fontWeight: "600",
     },
     loadingText: {
       fontSize: 16,
       color: colors.textSecondary,
-      textAlign: 'center',
+      textAlign: "center",
       marginTop: 32,
     },
     emptyText: {
       fontSize: 18,
-      fontWeight: '600',
+      fontWeight: "600",
       color: colors.text,
-      textAlign: 'center',
+      textAlign: "center",
       marginTop: 32,
     },
     emptySubtext: {
       fontSize: 14,
       color: colors.textSecondary,
-      textAlign: 'center',
+      textAlign: "center",
       marginTop: 8,
     },
   });
@@ -218,7 +220,10 @@ const MealBuilderScreen = ({ navigation, route }: Props) => {
         const itemsMap = new Map<string, number>();
         meal.items.forEach((item) => {
           // This builder screen currently only supports mass input in grams.
-          const grams = item.unit === 'g' ? item.amount : convertUnit(item.amount, item.unit, 'g');
+          const grams =
+            item.unit === "g"
+              ? item.amount
+              : convertUnit(item.amount, item.unit, "g");
           if (grams !== null) {
             itemsMap.set(item.productId, grams);
           }
@@ -239,11 +244,13 @@ const MealBuilderScreen = ({ navigation, route }: Props) => {
 
   // Calculate live total
   const totalCalories = useMemo(() => {
-    const items: MealItem[] = Array.from(selectedProducts.entries()).map(([productId, grams]) => ({
-      productId,
-      amount: grams,
-      unit: 'g',
-    }));
+    const items: MealItem[] = Array.from(selectedProducts.entries()).map(
+      ([productId, grams]) => ({
+        productId,
+        amount: grams,
+        unit: "g",
+      }),
+    );
     return calcMealCalories(items, products);
   }, [selectedProducts, products]);
 
@@ -265,7 +272,7 @@ const MealBuilderScreen = ({ navigation, route }: Props) => {
       const next = new Map(prev);
       if (!Number.isNaN(grams) && grams > 0) {
         next.set(productId, grams);
-      } else if (value === '' || value === '0') {
+      } else if (value === "" || value === "0") {
         // Allow empty or 0 for editing, but treat as 0
         next.set(productId, 0);
       }
@@ -276,7 +283,7 @@ const MealBuilderScreen = ({ navigation, route }: Props) => {
   const handleSave = async () => {
     // Validation
     if (!mealName.trim()) {
-      Alert.alert('Error', 'Please enter a meal name');
+      Alert.alert("Error", "Please enter a meal name");
       return;
     }
 
@@ -285,11 +292,14 @@ const MealBuilderScreen = ({ navigation, route }: Props) => {
       .map(([productId, grams]) => ({
         productId,
         amount: grams,
-        unit: 'g',
+        unit: "g",
       }));
 
     if (items.length === 0) {
-      Alert.alert('Error', 'Please select at least one product with amount > 0');
+      Alert.alert(
+        "Error",
+        "Please select at least one product with amount > 0",
+      );
       return;
     }
 
@@ -306,13 +316,13 @@ const MealBuilderScreen = ({ navigation, route }: Props) => {
           items,
         });
         // Navigate to details after creating
-        navigation.replace('MealDetails', { mealId: newMeal.id });
+        navigation.replace("MealDetails", { mealId: newMeal.id });
         return;
       }
       navigation.goBack();
     } catch (error) {
-      Alert.alert('Error', 'Failed to save meal. Please try again.');
-      console.error('Save meal error:', error);
+      Alert.alert("Error", "Failed to save meal. Please try again.");
+      console.error("Save meal error:", error);
     } finally {
       setSaving(false);
     }
@@ -320,7 +330,7 @@ const MealBuilderScreen = ({ navigation, route }: Props) => {
 
   if (productsLoading) {
     return (
-      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+      <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
         <Text style={styles.loadingText}>Loading products...</Text>
       </SafeAreaView>
     );
@@ -328,20 +338,25 @@ const MealBuilderScreen = ({ navigation, route }: Props) => {
 
   if (products.length === 0) {
     return (
-      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+      <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
         <Text style={styles.emptyText}>No products available.</Text>
-        <Text style={styles.emptySubtext}>Please add products first in the Products tab.</Text>
+        <Text style={styles.emptySubtext}>
+          Please add products first in the Products tab.
+        </Text>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+    <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
       <View style={styles.header}>
-        <Pressable onPress={() => navigation.goBack()} style={styles.backButton}>
+        <Pressable
+          onPress={() => navigation.goBack()}
+          style={styles.backButton}
+        >
           <Ionicons name="arrow-back" size={22} color={colors.text} />
         </Pressable>
-        <Text style={styles.title}>{isEditing ? 'Edit Meal' : 'New Meal'}</Text>
+        <Text style={styles.title}>{isEditing ? "Edit Meal" : "New Meal"}</Text>
       </View>
 
       <ScrollView style={styles.scrollView} keyboardShouldPersistTaps="handled">
@@ -360,7 +375,9 @@ const MealBuilderScreen = ({ navigation, route }: Props) => {
         {/* Total Calories Display */}
         <View style={styles.totalSection}>
           <Text style={styles.totalLabel}>Total Calories</Text>
-          <Text style={styles.totalValue}>{Math.round(totalCalories)} kcal</Text>
+          <Text style={styles.totalValue}>
+            {Math.round(totalCalories)} kcal
+          </Text>
         </View>
 
         {/* Search Products */}
@@ -387,12 +404,19 @@ const MealBuilderScreen = ({ navigation, route }: Props) => {
                   style={styles.productCheckbox}
                   onPress={() => handleToggleProduct(product.id)}
                 >
-                  <View style={[styles.checkbox, isSelected && styles.checkboxChecked]}>
+                  <View
+                    style={[
+                      styles.checkbox,
+                      isSelected && styles.checkboxChecked,
+                    ]}
+                  >
                     {isSelected && <Text style={styles.checkmark}>✓</Text>}
                   </View>
                   <View style={styles.productInfo}>
                     <Text style={styles.productName}>{product.name}</Text>
-                    <Text style={styles.productMeta}>{product.caloriesPer100g} kcal / 100g</Text>
+                    <Text style={styles.productMeta}>
+                      {product.caloriesPer100g} kcal / 100g
+                    </Text>
                   </View>
                 </Pressable>
 
@@ -401,7 +425,9 @@ const MealBuilderScreen = ({ navigation, route }: Props) => {
                     <TextInput
                       style={styles.gramsField}
                       value={String(grams)}
-                      onChangeText={(value) => handleGramsChange(product.id, value)}
+                      onChangeText={(value) =>
+                        handleGramsChange(product.id, value)
+                      }
                       keyboardType="numeric"
                       placeholder="100"
                       placeholderTextColor={colors.textTertiary}
@@ -422,7 +448,9 @@ const MealBuilderScreen = ({ navigation, route }: Props) => {
           onPress={handleSave}
           disabled={saving}
         >
-          <Text style={styles.saveButtonText}>{saving ? 'Saving...' : 'Save Meal'}</Text>
+          <Text style={styles.saveButtonText}>
+            {saving ? "Saving..." : "Save Meal"}
+          </Text>
         </Pressable>
       </View>
     </SafeAreaView>

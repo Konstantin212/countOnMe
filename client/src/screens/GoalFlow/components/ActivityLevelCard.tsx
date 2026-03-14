@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import React, { useState } from "react";
+import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 
-import { useTheme } from '@hooks/useTheme';
-import { ActivityLevel } from '@models/types';
-import { ActivityLevelInfo } from '@services/constants/activityLevels';
+import { useTheme } from "@hooks/useTheme";
+import { ActivityLevel } from "@models/types";
+import { ActivityLevelInfo } from "@services/constants/activityLevels";
 
 interface ActivityLevelCardProps {
   level: ActivityLevelInfo;
@@ -31,14 +31,14 @@ export const ActivityLevelCard = ({
       marginBottom: 8,
       borderWidth: 2,
       borderColor: selected ? colors.primary : colors.border,
-      overflow: 'hidden',
+      overflow: "hidden",
     },
     cardSelected: {
-      backgroundColor: colors.primary + '08',
+      backgroundColor: colors.primary + "08",
     },
     header: {
-      flexDirection: 'row',
-      alignItems: 'center',
+      flexDirection: "row",
+      alignItems: "center",
       padding: 16,
     },
     radioOuter: {
@@ -47,8 +47,8 @@ export const ActivityLevelCard = ({
       borderRadius: 12,
       borderWidth: 2,
       borderColor: selected ? colors.primary : colors.border,
-      alignItems: 'center',
-      justifyContent: 'center',
+      alignItems: "center",
+      justifyContent: "center",
       marginRight: 12,
     },
     radioInner: {
@@ -66,7 +66,7 @@ export const ActivityLevelCard = ({
     },
     label: {
       fontSize: 16,
-      fontWeight: '600',
+      fontWeight: "600",
       color: colors.text,
       marginBottom: 2,
     },
@@ -93,7 +93,7 @@ export const ActivityLevelCard = ({
     },
     examplesTitle: {
       fontSize: 13,
-      fontWeight: '600',
+      fontWeight: "600",
       color: colors.textSecondary,
       marginBottom: 6,
     },
@@ -106,7 +106,10 @@ export const ActivityLevelCard = ({
   });
 
   return (
-    <Pressable onPress={onSelect} style={[styles.card, selected && styles.cardSelected]}>
+    <Pressable
+      onPress={onSelect}
+      style={[styles.card, selected && styles.cardSelected]}
+    >
       <View style={styles.header}>
         {/* Radio button */}
         <View style={styles.radioOuter}>
@@ -125,7 +128,7 @@ export const ActivityLevelCard = ({
         {/* Expand button */}
         <Pressable onPress={toggleExpand} style={styles.expandButton}>
           <Ionicons
-            name={expanded ? 'chevron-up' : 'chevron-down'}
+            name={expanded ? "chevron-up" : "chevron-down"}
             size={20}
             color={colors.iconSecondary}
           />

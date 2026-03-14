@@ -211,11 +211,11 @@ export const GoalProgressCard = ({
 
       <View style={styles.weightRow}>
         <Text style={styles.weightText}>
-          {latestWeight ? `${latestWeight.toFixed(1)} kg` : "—"}
+          {latestWeight ? `${latestWeight.toFixed(1)} kg` : "\u2014"}
         </Text>
-        <Text style={styles.arrow}>→</Text>
+        <Text style={styles.arrow}>{"\u2192"}</Text>
         <Text style={styles.weightText}>
-          {goal.targetWeightKg?.toFixed(1) ?? "—"} kg
+          {goal.targetWeightKg?.toFixed(1) ?? "\u2014"} kg
         </Text>
       </View>
 

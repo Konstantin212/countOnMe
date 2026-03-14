@@ -26,17 +26,21 @@ import {
   deriveGoalPace,
   calculateWeightDelta,
 } from "@services/utils/insights";
-import { GoalProgressCard } from "@components/GoalProgressCard";
-import { WeightChart } from "@components/WeightChart";
-import { CalorieTrendBars } from "@components/CalorieTrendBars";
-import { MacroAdherenceCard } from "@components/MacroAdherenceCard";
-import { StreaksCard } from "@components/StreaksCard";
-import type { MyPathStackParamList, RootTabParamList } from "@app/navigationTypes";
+import { GoalProgressCard } from "./components/GoalProgressCard";
+import { WeightChart } from "./components/WeightChart";
+import { CalorieTrendBars } from "./components/CalorieTrendBars";
+import { MacroAdherenceCard } from "./components/MacroAdherenceCard";
+import { StreaksCard } from "./components/StreaksCard";
+import type {
+  MyPathStackParamList,
+  RootTabParamList,
+} from "@app/navigationTypes";
 import type { StatsPeriod } from "@models/types";
 
 const MyPathScreen = () => {
   const { colors } = useTheme();
-  const navigation = useNavigation<NativeStackNavigationProp<MyPathStackParamList, "MyPath">>();
+  const navigation =
+    useNavigation<NativeStackNavigationProp<MyPathStackParamList, "MyPath">>();
   const insets = useSafeAreaInsets();
   const isFocused = useIsFocused();
   const [fabOpen, setFabOpen] = useState(false);

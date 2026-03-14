@@ -1,17 +1,17 @@
-import React, { useMemo } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+import React, { useMemo } from "react";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { NativeStackScreenProps } from "@react-navigation/native-stack";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
 
-import { ProfileStackParamList } from '@app/navigationTypes';
-import { useProducts } from '@hooks/useProducts';
-import { useMeals } from '@hooks/useMeals';
-import { useTheme } from '@hooks/useTheme';
-import MealItemRow from '@components/MealItemRow';
-import { convertUnit } from '@services/utils/units';
+import { ProfileStackParamList } from "@app/navigationTypes";
+import { useProducts } from "@hooks/useProducts";
+import { useMeals } from "@hooks/useMeals";
+import { useTheme } from "@hooks/useTheme";
+import MealItemRow from "./components/MealItemRow";
+import { convertUnit } from "@services/utils/units";
 
-type Props = NativeStackScreenProps<ProfileStackParamList, 'MealDetails'>;
+type Props = NativeStackScreenProps<ProfileStackParamList, "MealDetails">;
 
 const MealDetailsScreen = ({ navigation, route }: Props) => {
   const { products } = useProducts();
@@ -25,8 +25,8 @@ const MealDetailsScreen = ({ navigation, route }: Props) => {
       paddingTop: 16,
     },
     topBar: {
-      flexDirection: 'row',
-      alignItems: 'center',
+      flexDirection: "row",
+      alignItems: "center",
       paddingHorizontal: 16,
       marginBottom: 8,
       gap: 12,
@@ -38,7 +38,7 @@ const MealDetailsScreen = ({ navigation, route }: Props) => {
     },
     topBarTitle: {
       fontSize: 20,
-      fontWeight: '700',
+      fontWeight: "700",
       color: colors.text,
     },
     scrollView: {
@@ -51,7 +51,7 @@ const MealDetailsScreen = ({ navigation, route }: Props) => {
     },
     mealName: {
       fontSize: 24,
-      fontWeight: '700',
+      fontWeight: "700",
       color: colors.text,
       marginBottom: 4,
     },
@@ -66,17 +66,17 @@ const MealDetailsScreen = ({ navigation, route }: Props) => {
       borderRadius: 12,
       borderWidth: 1,
       borderColor: colors.info,
-      alignItems: 'center',
+      alignItems: "center",
     },
     totalLabel: {
       fontSize: 16,
-      fontWeight: '600',
+      fontWeight: "600",
       color: colors.info,
       marginBottom: 8,
     },
     totalValue: {
       fontSize: 36,
-      fontWeight: '700',
+      fontWeight: "700",
       color: colors.info,
     },
     itemsSection: {
@@ -84,14 +84,14 @@ const MealDetailsScreen = ({ navigation, route }: Props) => {
     },
     sectionTitle: {
       fontSize: 18,
-      fontWeight: '600',
+      fontWeight: "600",
       color: colors.text,
       marginBottom: 12,
     },
     noItemsText: {
       fontSize: 14,
       color: colors.textSecondary,
-      textAlign: 'center',
+      textAlign: "center",
       paddingVertical: 24,
     },
     footer: {
@@ -104,29 +104,29 @@ const MealDetailsScreen = ({ navigation, route }: Props) => {
       backgroundColor: colors.primary,
       padding: 16,
       borderRadius: 8,
-      alignItems: 'center',
+      alignItems: "center",
     },
     editButtonText: {
       color: colors.buttonText,
       fontSize: 16,
-      fontWeight: '600',
+      fontWeight: "600",
     },
     notFoundContainer: {
       flex: 1,
-      justifyContent: 'center',
-      alignItems: 'center',
+      justifyContent: "center",
+      alignItems: "center",
       padding: 32,
     },
     notFoundText: {
       fontSize: 20,
-      fontWeight: '600',
+      fontWeight: "600",
       color: colors.text,
       marginBottom: 8,
     },
     notFoundSubtext: {
       fontSize: 14,
       color: colors.textSecondary,
-      textAlign: 'center',
+      textAlign: "center",
       marginBottom: 24,
     },
     backButton: {
@@ -138,7 +138,7 @@ const MealDetailsScreen = ({ navigation, route }: Props) => {
     backButtonText: {
       color: colors.buttonText,
       fontSize: 16,
-      fontWeight: '600',
+      fontWeight: "600",
     },
   });
 
@@ -155,11 +155,13 @@ const MealDetailsScreen = ({ navigation, route }: Props) => {
         if (!product) return null;
 
         const baseAmount = product.portionSize ?? 100;
-        const baseUnit = (product.scaleUnit ?? 'g') as any;
+        const baseUnit = (product.scaleUnit ?? "g") as any;
         const calPerBase = product.caloriesPerBase ?? product.caloriesPer100g;
         const converted = convertUnit(item.amount, item.unit as any, baseUnit);
         const itemCalories =
-          converted === null || baseAmount <= 0 || calPerBase <= 0 ? 0 : (calPerBase * converted) / baseAmount;
+          converted === null || baseAmount <= 0 || calPerBase <= 0
+            ? 0
+            : (calPerBase * converted) / baseAmount;
 
         return {
           productId: item.productId,
@@ -174,27 +176,35 @@ const MealDetailsScreen = ({ navigation, route }: Props) => {
 
   const formatDate = (isoDate: string) => {
     const date = new Date(isoDate);
-    const day = date.getDate().toString().padStart(2, '0');
-    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const day = date.getDate().toString().padStart(2, "0");
+    const month = (date.getMonth() + 1).toString().padStart(2, "0");
     const year = date.getFullYear();
-    const hours = date.getHours().toString().padStart(2, '0');
-    const minutes = date.getMinutes().toString().padStart(2, '0');
+    const hours = date.getHours().toString().padStart(2, "0");
+    const minutes = date.getMinutes().toString().padStart(2, "0");
     return `${day}.${month}.${year} at ${hours}:${minutes}`;
   };
 
   if (!meal) {
     return (
-      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+      <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
         <View style={styles.topBar}>
-          <Pressable onPress={() => navigation.goBack()} style={styles.topBarBackButton}>
+          <Pressable
+            onPress={() => navigation.goBack()}
+            style={styles.topBarBackButton}
+          >
             <Ionicons name="arrow-back" size={22} color={colors.text} />
           </Pressable>
           <Text style={styles.topBarTitle}>Meal</Text>
         </View>
         <View style={styles.notFoundContainer}>
           <Text style={styles.notFoundText}>Meal not found</Text>
-          <Text style={styles.notFoundSubtext}>This meal may have been deleted.</Text>
-          <Pressable style={styles.backButton} onPress={() => navigation.goBack()}>
+          <Text style={styles.notFoundSubtext}>
+            This meal may have been deleted.
+          </Text>
+          <Pressable
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
+          >
             <Text style={styles.backButtonText}>Go Back</Text>
           </Pressable>
         </View>
@@ -203,9 +213,12 @@ const MealDetailsScreen = ({ navigation, route }: Props) => {
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+    <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
       <View style={styles.topBar}>
-        <Pressable onPress={() => navigation.goBack()} style={styles.topBarBackButton}>
+        <Pressable
+          onPress={() => navigation.goBack()}
+          style={styles.topBarBackButton}
+        >
           <Ionicons name="arrow-back" size={22} color={colors.text} />
         </Pressable>
         <Text style={styles.topBarTitle}>{meal.name}</Text>
@@ -221,7 +234,9 @@ const MealDetailsScreen = ({ navigation, route }: Props) => {
         {/* Total Calories Card */}
         <View style={styles.totalCard}>
           <Text style={styles.totalLabel}>Total Calories</Text>
-          <Text style={styles.totalValue}>{Math.round(meal.totalCalories)} kcal</Text>
+          <Text style={styles.totalValue}>
+            {Math.round(meal.totalCalories)} kcal
+          </Text>
         </View>
 
         {/* Items List */}
@@ -247,7 +262,9 @@ const MealDetailsScreen = ({ navigation, route }: Props) => {
       <View style={styles.footer}>
         <Pressable
           style={styles.editButton}
-          onPress={() => navigation.navigate('MealBuilder', { mealId: meal.id })}
+          onPress={() =>
+            navigation.navigate("MealBuilder", { mealId: meal.id })
+          }
         >
           <Text style={styles.editButtonText}>Edit Meal</Text>
         </Pressable>
@@ -257,4 +274,3 @@ const MealDetailsScreen = ({ navigation, route }: Props) => {
 };
 
 export default MealDetailsScreen;
-

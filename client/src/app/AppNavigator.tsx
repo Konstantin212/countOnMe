@@ -11,26 +11,26 @@ import {
   MyPathStackParamList,
   ProfileStackParamList,
 } from "./navigationTypes";
-import GoalCalculatedResultScreen from "@screens/GoalCalculatedResultScreen";
-import GoalCalculatedScreen from "@screens/GoalCalculatedScreen";
-import GoalManualScreen from "@screens/GoalManualScreen";
-import GoalSetupScreen from "@screens/GoalSetupScreen";
-import MealBuilderScreen from "@screens/MealBuilderScreen";
-import MealDetailsScreen from "@screens/MealDetailsScreen";
-import MealsListScreen from "@screens/MealsListScreen";
+import GoalCalculatedResultScreen from "@screens/GoalFlow/GoalCalculatedResultScreen";
+import GoalCalculatedScreen from "@screens/GoalFlow/GoalCalculatedScreen";
+import GoalManualScreen from "@screens/GoalFlow/GoalManualScreen";
+import GoalSetupScreen from "@screens/GoalFlow/GoalSetupScreen";
+import MealBuilderScreen from "@screens/MealFlow/MealBuilderScreen";
+import MealDetailsScreen from "@screens/MealFlow/MealDetailsScreen";
+import MealsListScreen from "@screens/MealFlow/MealsListScreen";
 import MyDayScreen from "@screens/MyDayScreen";
-import MyPathScreen from "@screens/MyPathScreen";
-import ProductConfirmScreen from "@screens/ProductConfirmScreen";
-import ProductDetailsScreen from "@screens/ProductDetailsScreen";
-import ProductFormScreen from "@screens/ProductFormScreen";
-import ProductSearchScreen from "@screens/ProductSearchScreen";
-import ProductsListScreen from "@screens/ProductsListScreen";
+import MyPathScreen from "@screens/MyPath/MyPathScreen";
+import ProductConfirmScreen from "@screens/ProductFlow/ProductConfirmScreen";
+import ProductDetailsScreen from "@screens/ProductFlow/ProductDetailsScreen";
+import ProductFormScreen from "@screens/ProductFlow/ProductFormScreen";
+import ProductSearchScreen from "@screens/ProductFlow/ProductSearchScreen";
+import ProductsListScreen from "@screens/ProductFlow/ProductsListScreen";
 import ProfileScreen from "@screens/ProfileScreen";
 import { useTheme } from "@hooks/useTheme";
 import AddMealScreen from "@screens/AddMealFlow/components/AddMeal";
 import SelectProductScreen from "@screens/AddMealFlow/components/SelectProduct";
 import AddFoodScreen from "@screens/AddMealFlow/components/AddFood";
-import MealTypeEntriesScreen from "@screens/MealTypeEntriesScreen";
+import MealTypeEntriesScreen from "@screens/MealFlow/MealTypeEntriesScreen";
 import { DraftMealProvider } from "@screens/AddMealFlow/context";
 
 enableScreens();

@@ -1,27 +1,34 @@
-import React, { useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Ionicons } from '@expo/vector-icons';
+import React, { useState } from "react";
+import {
+  Alert,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { NativeStackScreenProps } from "@react-navigation/native-stack";
+import { Ionicons } from "@expo/vector-icons";
 
-import { ProfileStackParamList } from '@app/navigationTypes';
-import { useGoal } from '@hooks/useGoal';
-import { useTheme } from '@hooks/useTheme';
-import { GoalCreateManualRequest } from '@models/types';
-import { Button, FormField, NumericInput } from '@particles/index';
+import { ProfileStackParamList } from "@app/navigationTypes";
+import { useGoal } from "@hooks/useGoal";
+import { useTheme } from "@hooks/useTheme";
+import { GoalCreateManualRequest } from "@models/types";
+import { Button, FormField, NumericInput } from "@particles/index";
 
-type Props = NativeStackScreenProps<ProfileStackParamList, 'GoalManual'>;
+type Props = NativeStackScreenProps<ProfileStackParamList, "GoalManual">;
 
 const GoalManualScreen = ({ navigation }: Props) => {
   const { colors } = useTheme();
   const { saveManualGoal, goal } = useGoal();
 
   // Form state - pre-fill from existing goal if manual type
-  const existingManualGoal = goal?.goalType === 'manual' ? goal : null;
+  const existingManualGoal = goal?.goalType === "manual" ? goal : null;
 
-  const [dailyCaloriesKcal, setDailyCaloriesKcal] = useState<number | undefined>(
-    existingManualGoal?.dailyCaloriesKcal || undefined,
-  );
+  const [dailyCaloriesKcal, setDailyCaloriesKcal] = useState<
+    number | undefined
+  >(existingManualGoal?.dailyCaloriesKcal || undefined);
   const [proteinPercent, setProteinPercent] = useState<number>(
     existingManualGoal?.proteinPercent || 30,
   );
@@ -41,7 +48,11 @@ const GoalManualScreen = ({ navigation }: Props) => {
   const isMacroValid = macroTotal === 100;
 
   // Calculate grams based on calories and percentages
-  const calculateGrams = (calories: number, percent: number, caloriesPerGram: number) => {
+  const calculateGrams = (
+    calories: number,
+    percent: number,
+    caloriesPerGram: number,
+  ) => {
     return Math.round((calories * percent) / 100 / caloriesPerGram);
   };
 
@@ -58,11 +69,11 @@ const GoalManualScreen = ({ navigation }: Props) => {
   const handleSave = async () => {
     // Validation
     if (!dailyCaloriesKcal || dailyCaloriesKcal <= 0) {
-      Alert.alert('Error', 'Please enter your daily calorie target');
+      Alert.alert("Error", "Please enter your daily calorie target");
       return;
     }
     if (!isMacroValid) {
-      Alert.alert('Error', 'Macro percentages must sum to 100%');
+      Alert.alert("Error", "Macro percentages must sum to 100%");
       return;
     }
 
@@ -82,7 +93,7 @@ const GoalManualScreen = ({ navigation }: Props) => {
       // Navigate back to profile
       navigation.popToTop();
     } catch (error) {
-      Alert.alert('Error', 'Failed to save goal. Please try again.');
+      Alert.alert("Error", "Failed to save goal. Please try again.");
     } finally {
       setSaving(false);
     }
@@ -94,8 +105,8 @@ const GoalManualScreen = ({ navigation }: Props) => {
       backgroundColor: colors.background,
     },
     header: {
-      flexDirection: 'row',
-      alignItems: 'center',
+      flexDirection: "row",
+      alignItems: "center",
       paddingHorizontal: 16,
       paddingVertical: 12,
     },
@@ -104,13 +115,13 @@ const GoalManualScreen = ({ navigation }: Props) => {
       height: 40,
       borderRadius: 20,
       backgroundColor: colors.cardBackground,
-      alignItems: 'center',
-      justifyContent: 'center',
+      alignItems: "center",
+      justifyContent: "center",
       marginRight: 12,
     },
     headerTitle: {
       fontSize: 24,
-      fontWeight: '700',
+      fontWeight: "700",
       color: colors.text,
     },
     scrollView: {
@@ -122,9 +133,9 @@ const GoalManualScreen = ({ navigation }: Props) => {
     },
     sectionTitle: {
       fontSize: 14,
-      fontWeight: '600',
+      fontWeight: "600",
       color: colors.textSecondary,
-      textTransform: 'uppercase',
+      textTransform: "uppercase",
       letterSpacing: 0.5,
       marginBottom: 12,
       marginTop: 16,
@@ -137,26 +148,26 @@ const GoalManualScreen = ({ navigation }: Props) => {
       borderColor: colors.border,
     },
     macroInputRow: {
-      flexDirection: 'row',
+      flexDirection: "row",
       gap: 12,
     },
     macroInputItem: {
       flex: 1,
     },
     macroGramsRow: {
-      flexDirection: 'row',
-      justifyContent: 'space-around',
+      flexDirection: "row",
+      justifyContent: "space-around",
       marginTop: 16,
       paddingTop: 16,
       borderTopWidth: 1,
       borderTopColor: colors.border,
     },
     macroGramsItem: {
-      alignItems: 'center',
+      alignItems: "center",
     },
     macroGramsValue: {
       fontSize: 18,
-      fontWeight: '700',
+      fontWeight: "700",
     },
     macroGramsLabel: {
       fontSize: 12,
@@ -164,8 +175,8 @@ const GoalManualScreen = ({ navigation }: Props) => {
       marginTop: 4,
     },
     macroTotalRow: {
-      flexDirection: 'row',
-      justifyContent: 'flex-end',
+      flexDirection: "row",
+      justifyContent: "flex-end",
       marginTop: 12,
       paddingTop: 12,
       borderTopWidth: 1,
@@ -173,7 +184,7 @@ const GoalManualScreen = ({ navigation }: Props) => {
     },
     macroTotalText: {
       fontSize: 14,
-      fontWeight: '600',
+      fontWeight: "600",
     },
     macroTotalValid: {
       color: colors.success,
@@ -187,20 +198,20 @@ const GoalManualScreen = ({ navigation }: Props) => {
       padding: 20,
       borderWidth: 2,
       borderColor: colors.primary,
-      alignItems: 'center',
+      alignItems: "center",
       marginTop: 16,
     },
     previewTitle: {
       fontSize: 12,
-      fontWeight: '600',
+      fontWeight: "600",
       color: colors.textSecondary,
-      textTransform: 'uppercase',
+      textTransform: "uppercase",
       letterSpacing: 0.5,
       marginBottom: 12,
     },
     caloriesValue: {
       fontSize: 36,
-      fontWeight: '700',
+      fontWeight: "700",
       color: colors.primary,
     },
     caloriesLabel: {
@@ -209,13 +220,13 @@ const GoalManualScreen = ({ navigation }: Props) => {
       marginTop: 4,
     },
     macrosPreviewRow: {
-      flexDirection: 'row',
-      justifyContent: 'space-around',
+      flexDirection: "row",
+      justifyContent: "space-around",
       marginTop: 20,
-      width: '100%',
+      width: "100%",
     },
     macroPreviewItem: {
-      alignItems: 'center',
+      alignItems: "center",
       paddingHorizontal: 12,
       paddingVertical: 8,
       borderRadius: 8,
@@ -223,7 +234,7 @@ const GoalManualScreen = ({ navigation }: Props) => {
     },
     macroPreviewValue: {
       fontSize: 18,
-      fontWeight: '700',
+      fontWeight: "700",
     },
     macroPreviewPercent: {
       fontSize: 11,
@@ -232,23 +243,23 @@ const GoalManualScreen = ({ navigation }: Props) => {
     },
     macroPreviewLabel: {
       fontSize: 11,
-      fontWeight: '600',
+      fontWeight: "600",
       marginTop: 4,
     },
     waterPreviewRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
       marginTop: 16,
       gap: 8,
     },
     waterPreviewText: {
       fontSize: 16,
-      fontWeight: '600',
+      fontWeight: "600",
       color: colors.text,
     },
     footer: {
-      position: 'absolute',
+      position: "absolute",
       bottom: 0,
       left: 0,
       right: 0,
@@ -260,9 +271,12 @@ const GoalManualScreen = ({ navigation }: Props) => {
   });
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.header}>
-        <Pressable style={styles.backButton} onPress={() => navigation.goBack()}>
+        <Pressable
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+        >
           <Ionicons name="arrow-back" size={20} color={colors.text} />
         </Pressable>
         <Text style={styles.headerTitle}>Set Goal Manually</Text>
@@ -324,19 +338,31 @@ const GoalManualScreen = ({ navigation }: Props) => {
             {dailyCaloriesKcal && dailyCaloriesKcal > 0 && (
               <View style={styles.macroGramsRow}>
                 <View style={styles.macroGramsItem}>
-                  <Text style={[styles.macroGramsValue, { color: colors.macroProtein }]}>
+                  <Text
+                    style={[
+                      styles.macroGramsValue,
+                      { color: colors.macroProtein },
+                    ]}
+                  >
                     {proteinGrams}g
                   </Text>
                   <Text style={styles.macroGramsLabel}>Protein</Text>
                 </View>
                 <View style={styles.macroGramsItem}>
-                  <Text style={[styles.macroGramsValue, { color: colors.macroCarb }]}>
+                  <Text
+                    style={[
+                      styles.macroGramsValue,
+                      { color: colors.macroCarb },
+                    ]}
+                  >
                     {carbsGrams}g
                   </Text>
                   <Text style={styles.macroGramsLabel}>Carbs</Text>
                 </View>
                 <View style={styles.macroGramsItem}>
-                  <Text style={[styles.macroGramsValue, { color: colors.macroFat }]}>
+                  <Text
+                    style={[styles.macroGramsValue, { color: colors.macroFat }]}
+                  >
                     {fatGrams}g
                   </Text>
                   <Text style={styles.macroGramsLabel}>Fat</Text>
@@ -348,10 +374,12 @@ const GoalManualScreen = ({ navigation }: Props) => {
               <Text
                 style={[
                   styles.macroTotalText,
-                  isMacroValid ? styles.macroTotalValid : styles.macroTotalInvalid,
+                  isMacroValid
+                    ? styles.macroTotalValid
+                    : styles.macroTotalInvalid,
                 ]}
               >
-                Total: {macroTotal}% {isMacroValid ? '✓' : '(must be 100%)'}
+                Total: {macroTotal}% {isMacroValid ? "✓" : "(must be 100%)"}
               </Text>
             </View>
           </View>
@@ -379,29 +407,63 @@ const GoalManualScreen = ({ navigation }: Props) => {
 
               <View style={styles.macrosPreviewRow}>
                 <View style={styles.macroPreviewItem}>
-                  <Text style={[styles.macroPreviewValue, { color: colors.macroProtein }]}>
+                  <Text
+                    style={[
+                      styles.macroPreviewValue,
+                      { color: colors.macroProtein },
+                    ]}
+                  >
                     {proteinGrams}g
                   </Text>
-                  <Text style={styles.macroPreviewPercent}>{proteinPercent}%</Text>
-                  <Text style={[styles.macroPreviewLabel, { color: colors.macroProtein }]}>
+                  <Text style={styles.macroPreviewPercent}>
+                    {proteinPercent}%
+                  </Text>
+                  <Text
+                    style={[
+                      styles.macroPreviewLabel,
+                      { color: colors.macroProtein },
+                    ]}
+                  >
                     Protein
                   </Text>
                 </View>
                 <View style={styles.macroPreviewItem}>
-                  <Text style={[styles.macroPreviewValue, { color: colors.macroCarb }]}>
+                  <Text
+                    style={[
+                      styles.macroPreviewValue,
+                      { color: colors.macroCarb },
+                    ]}
+                  >
                     {carbsGrams}g
                   </Text>
-                  <Text style={styles.macroPreviewPercent}>{carbsPercent}%</Text>
-                  <Text style={[styles.macroPreviewLabel, { color: colors.macroCarb }]}>
+                  <Text style={styles.macroPreviewPercent}>
+                    {carbsPercent}%
+                  </Text>
+                  <Text
+                    style={[
+                      styles.macroPreviewLabel,
+                      { color: colors.macroCarb },
+                    ]}
+                  >
                     Carbs
                   </Text>
                 </View>
                 <View style={styles.macroPreviewItem}>
-                  <Text style={[styles.macroPreviewValue, { color: colors.macroFat }]}>
+                  <Text
+                    style={[
+                      styles.macroPreviewValue,
+                      { color: colors.macroFat },
+                    ]}
+                  >
                     {fatGrams}g
                   </Text>
                   <Text style={styles.macroPreviewPercent}>{fatPercent}%</Text>
-                  <Text style={[styles.macroPreviewLabel, { color: colors.macroFat }]}>
+                  <Text
+                    style={[
+                      styles.macroPreviewLabel,
+                      { color: colors.macroFat },
+                    ]}
+                  >
                     Fat
                   </Text>
                 </View>
@@ -409,7 +471,9 @@ const GoalManualScreen = ({ navigation }: Props) => {
 
               <View style={styles.waterPreviewRow}>
                 <Text>💧</Text>
-                <Text style={styles.waterPreviewText}>{waterMl} ml water/day</Text>
+                <Text style={styles.waterPreviewText}>
+                  {waterMl} ml water/day
+                </Text>
               </View>
             </View>
           )}

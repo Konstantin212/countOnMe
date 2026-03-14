@@ -1,9 +1,9 @@
-import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import React from "react";
+import { StyleSheet, Text, View } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 
-import { useTheme } from '@hooks/useTheme';
-import { BmiCategory } from '@models/types';
+import { useTheme } from "@hooks/useTheme";
+import { BmiCategory } from "@models/types";
 
 interface BmiScaleProps {
   currentBmi: number;
@@ -15,10 +15,10 @@ interface BmiScaleProps {
 }
 
 const BMI_LABELS: Record<BmiCategory, string> = {
-  underweight: 'Underweight',
-  normal: 'Normal weight',
-  overweight: 'Overweight',
-  obese: 'Obese',
+  underweight: "Underweight",
+  normal: "Normal weight",
+  overweight: "Overweight",
+  obese: "Obese",
 };
 
 export const BmiScale = ({
@@ -55,9 +55,9 @@ export const BmiScale = ({
     },
     title: {
       fontSize: 14,
-      fontWeight: '600',
+      fontWeight: "600",
       color: colors.textSecondary,
-      textTransform: 'uppercase',
+      textTransform: "uppercase",
       letterSpacing: 0.5,
       marginBottom: 4,
     },
@@ -67,14 +67,14 @@ export const BmiScale = ({
       marginBottom: 16,
     },
     rangeRow: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
       marginBottom: 8,
     },
     rangeValue: {
       fontSize: 15,
-      fontWeight: '600',
+      fontWeight: "600",
       color: colors.text,
     },
     rangeLabel: {
@@ -82,15 +82,15 @@ export const BmiScale = ({
       color: colors.textSecondary,
     },
     scaleContainer: {
-      flexDirection: 'row',
+      flexDirection: "row",
       height: 12,
       borderRadius: 6,
-      overflow: 'hidden',
-      position: 'relative',
+      overflow: "hidden",
+      position: "relative",
       marginBottom: 8,
     },
     segment: {
-      height: '100%',
+      height: "100%",
     },
     segmentUnderweight: {
       flex: 1,
@@ -109,13 +109,13 @@ export const BmiScale = ({
       backgroundColor: colors.errorLight,
     },
     markerContainer: {
-      position: 'absolute',
+      position: "absolute",
       top: -4,
       width: 20,
       height: 20,
       marginLeft: -10,
-      alignItems: 'center',
-      justifyContent: 'center',
+      alignItems: "center",
+      justifyContent: "center",
     },
     marker: {
       width: 16,
@@ -125,8 +125,8 @@ export const BmiScale = ({
       borderColor: colors.cardBackground,
     },
     labelsRow: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
+      flexDirection: "row",
+      justifyContent: "space-between",
       paddingHorizontal: 4,
       marginBottom: 16,
     },
@@ -135,7 +135,7 @@ export const BmiScale = ({
       color: colors.textSecondary,
     },
     statsContainer: {
-      alignItems: 'center',
+      alignItems: "center",
       marginBottom: 12,
     },
     currentWeight: {
@@ -145,16 +145,16 @@ export const BmiScale = ({
     },
     bmiValue: {
       fontSize: 24,
-      fontWeight: '700',
+      fontWeight: "700",
       marginBottom: 4,
     },
     categoryLabel: {
       fontSize: 16,
-      fontWeight: '600',
+      fontWeight: "600",
     },
     disclaimer: {
-      flexDirection: 'row',
-      alignItems: 'flex-start',
+      flexDirection: "row",
+      alignItems: "flex-start",
       backgroundColor: colors.infoLight,
       padding: 12,
       borderRadius: 8,
@@ -175,9 +175,13 @@ export const BmiScale = ({
 
       {/* Healthy range text */}
       <View style={styles.rangeRow}>
-        <Text style={styles.rangeValue}>{healthyWeightMinKg.toFixed(1)} kg</Text>
+        <Text style={styles.rangeValue}>
+          {healthyWeightMinKg.toFixed(1)} kg
+        </Text>
         <Text style={styles.rangeLabel}>healthy range</Text>
-        <Text style={styles.rangeValue}>{healthyWeightMaxKg.toFixed(1)} kg</Text>
+        <Text style={styles.rangeValue}>
+          {healthyWeightMaxKg.toFixed(1)} kg
+        </Text>
       </View>
 
       {/* Visual scale */}
@@ -190,7 +194,10 @@ export const BmiScale = ({
         {/* Current position marker */}
         <View style={[styles.markerContainer, { left: `${clampedPosition}%` }]}>
           <View
-            style={[styles.marker, { backgroundColor: categoryColors[bmiCategory] }]}
+            style={[
+              styles.marker,
+              { backgroundColor: categoryColors[bmiCategory] },
+            ]}
           />
         </View>
       </View>
@@ -204,21 +211,29 @@ export const BmiScale = ({
 
       {/* Current stats */}
       <View style={styles.statsContainer}>
-        <Text style={styles.currentWeight}>Your weight: {currentWeightKg} kg</Text>
+        <Text style={styles.currentWeight}>
+          Your weight: {currentWeightKg} kg
+        </Text>
         <Text style={[styles.bmiValue, { color: categoryColors[bmiCategory] }]}>
           BMI: {currentBmi.toFixed(1)}
         </Text>
-        <Text style={[styles.categoryLabel, { color: categoryColors[bmiCategory] }]}>
+        <Text
+          style={[styles.categoryLabel, { color: categoryColors[bmiCategory] }]}
+        >
           {BMI_LABELS[bmiCategory]}
         </Text>
       </View>
 
       {/* Disclaimer */}
       <View style={styles.disclaimer}>
-        <Ionicons name="information-circle-outline" size={16} color={colors.info} />
+        <Ionicons
+          name="information-circle-outline"
+          size={16}
+          color={colors.info}
+        />
         <Text style={styles.disclaimerText}>
-          BMI is a general guide. Athletes and muscular individuals may have a higher
-          weight while being healthy.
+          BMI is a general guide. Athletes and muscular individuals may have a
+          higher weight while being healthy.
         </Text>
       </View>
     </View>

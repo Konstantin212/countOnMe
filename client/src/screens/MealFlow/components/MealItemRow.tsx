@@ -1,6 +1,6 @@
-import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-import { useTheme } from '@hooks/useTheme';
+import React from "react";
+import { StyleSheet, Text, View } from "react-native";
+import { useTheme } from "@hooks/useTheme";
 
 interface MealItemRowProps {
   name: string;
@@ -20,7 +20,7 @@ const MealItemRow = ({ name, amount, unit, calories }: MealItemRowProps) => {
     },
     name: {
       fontSize: 16,
-      fontWeight: '600',
+      fontWeight: "600",
       marginBottom: 2,
       color: colors.text,
     },

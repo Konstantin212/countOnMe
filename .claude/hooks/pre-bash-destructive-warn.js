@@ -7,10 +7,13 @@ process.stdin.on("end", () => {
   try {
     const event = JSON.parse(input);
     const command = event.tool_input?.command || "";
-    const upper = command.toUpperCase();
+
+    // Strip quoted strings and heredocs to avoid false positives
+    // from commit messages, echo statements, etc.
+    const stripped = stripQuotedContent(command);
 
     // Block: DELETE FROM without WHERE (data loss risk)
-    if (/DELETE\s+FROM\s+/i.test(command) && !/WHERE/i.test(command)) {
+    if (/DELETE\s+FROM\s+/i.test(stripped) && !/WHERE/i.test(stripped)) {
       process.stdout.write(
         JSON.stringify({
           decision: "block",
@@ -21,7 +24,7 @@ process.stdin.on("end", () => {
     }
 
     // Block: DROP DATABASE
-    if (/DROP\s+DATABASE/i.test(command)) {
+    if (/DROP\s+DATABASE/i.test(stripped)) {
       process.stdout.write(
         JSON.stringify({
           decision: "block",
@@ -33,25 +36,25 @@ process.stdin.on("end", () => {
 
     // Escalate: other destructive SQL commands
     if (
-      /DROP\s+TABLE/i.test(command) ||
-      /TRUNCATE\s/i.test(command) ||
-      /DROP\s+COLUMN/i.test(command)
+      /DROP\s+TABLE/i.test(stripped) ||
+      /TRUNCATE\s/i.test(stripped) ||
+      /DROP\s+COLUMN/i.test(stripped)
     ) {
       process.stdout.write(
         JSON.stringify({
           decision: "ask",
-          reason: `Destructive SQL operation detected: ${command.substring(0, 100)}`,
+          reason: `Destructive SQL operation detected: ${stripped.substring(0, 100)}`,
         })
       );
       process.exit(0);
     }
 
     // Escalate: git clean (removes untracked files)
-    if (/git\s+clean/.test(command)) {
+    if (/git\s+clean/.test(stripped)) {
       process.stdout.write(
         JSON.stringify({
           decision: "ask",
-          reason: `git clean removes untracked files. Command: ${command}`,
+          reason: `git clean removes untracked files. Command: ${stripped.trim().substring(0, 100)}`,
         })
       );
       process.exit(0);
@@ -60,3 +63,16 @@ process.stdin.on("end", () => {
     // Skip on parse errors
   }
 });
+
+function stripQuotedContent(cmd) {
+  // Remove heredoc content: $(cat <<'EOF' ... EOF) or $(cat <<EOF ... EOF)
+  let result = cmd.replace(
+    /\$\(cat\s+<<'?(\w+)'?[\s\S]*?\1\s*\)/g,
+    ""
+  );
+  // Remove double-quoted strings (handling escaped quotes)
+  result = result.replace(/"(?:[^"\\]|\\.)*"/g, '""');
+  // Remove single-quoted strings
+  result = result.replace(/'(?:[^'\\]|\\.)*'/g, "''");
+  return result;
+}

@@ -112,35 +112,16 @@ Storage (AsyncStorage) / API (fetch wrapper)
 Particles (atoms) + Components (molecules) → UI building blocks
 ```
 
-### Client Folder Structure (ENFORCED — hooks block violations)
+### Client Folder Structure (ENFORCED — a PreToolUse hook blocks violations)
 
-Only these 9 directories are allowed in `client/src/`:
-`app`, `components`, `hooks`, `models`, `particles`, `screens`, `services`, `storage`, `theme`
+Consult **skill: `folder-structure`** for the complete rules. Key constraints for your designs:
+- Only 9 directories allowed in `client/src/`: `app`, `components`, `hooks`, `models`, `particles`, `screens`, `services`, `storage`, `theme`
+- Each feature = own folder under `screens/` (e.g., `screens/WeightFlow/`)
+- Flow-specific components (1 flow) → `screens/XxxFlow/components/`
+- Shared components (2+ flows) → `components/`
+- Atomic UI primitives → `particles/`
 
-**Flow-based screen organization:**
-```
-screens/
-├── AddMealFlow/           # Each feature = own folder
-│   ├── components/        # Flow-specific components
-│   │   ├── AddFood/
-│   │   └── SelectProduct/
-│   ├── context.tsx        # Flow-level shared state
-│   └── index.tsx
-├── ProductFlow/           # Product CRUD screens
-├── GoalFlow/              # Goal setup wizard
-├── MealFlow/              # Meal list + details
-│   └── components/        # Flow-specific (EditEntryModal, etc.)
-├── MyPath/                # Analytics dashboard
-│   └── components/        # Flow-specific (charts, cards)
-└── ProfileScreen.tsx      # Standalone screens at root
-```
-
-**Component placement rules (critical for design proposals):**
-- **1 flow only** → `screens/XxxFlow/components/Name.tsx`
-- **2+ flows** → `components/Name.tsx` (promote to shared)
-- **No business logic, pure UI** → `particles/Name.tsx`
-
-When designing new features, you MUST specify which components are flow-specific vs shared. The fe-developer and a PreToolUse hook enforce this.
+**Your design proposals MUST specify** for each new component whether it's flow-specific, shared, or a particle. The fe-developer and fe-reviewer enforce this.
 
 ### Backend Architecture Layers
 ```
@@ -241,6 +222,7 @@ Hand off to `planner` agent for implementation phases.
 ## Skill References
 
 For detailed patterns, consult these skills in `.claude/skills/`:
+- `folder-structure` — Enforced folder structure and component placement rules
 - `backend-patterns` — FastAPI/SQLAlchemy architecture
 - `coding-standarts` — Universal coding standards
 - `postgress-patterns` — Database design and optimization

@@ -141,41 +141,14 @@ Verification: [exact commands to run after this phase]
 
 ### Folder Structure (ENFORCED — a PreToolUse hook blocks violations)
 
-Only these 9 directories allowed in `client/src/`:
-```
-client/src/
-├── app/           # Navigation setup
-├── components/    # Shared UI components (used in 2+ flows)
-├── hooks/         # Custom React hooks (state + side effects)
-├── models/        # TypeScript types (prefer single types.ts)
-├── particles/     # Atomic UI primitives (no business logic)
-├── screens/       # Screen components — organized by flow
-├── services/      # API, utils, schemas, constants
-├── storage/       # AsyncStorage + device identity
-└── theme/         # Colors, theming
-```
+Consult **skill: `folder-structure`** for the complete rules. Key constraints for your plans:
+- Only 9 directories allowed in `client/src/`
+- Each feature = own folder under `screens/` (e.g., `screens/XxxFlow/`)
+- Flow-specific components (1 flow) → `screens/XxxFlow/components/`
+- Shared components (2+ flows) → `components/`
+- Atomic UI primitives → `particles/`
 
-**Flow-based screen organization (CRITICAL for planning):**
-```
-screens/
-├── AddMealFlow/           # Each feature = own folder
-│   ├── components/        # Flow-specific components
-│   ├── context.tsx        # Flow-level shared state
-│   └── index.tsx
-├── ProductFlow/
-├── GoalFlow/
-│   └── components/
-├── MealFlow/
-│   └── components/
-├── MyPath/
-│   └── components/
-└── ProfileScreen.tsx      # Standalone screens at root
-```
-
-**Component placement rules — plans MUST specify this for each new component:**
-- **1 flow only** → `screens/XxxFlow/components/Name.tsx`
-- **2+ flows** → `components/Name.tsx` (shared)
-- **Pure UI, no logic** → `particles/Name.tsx`
+**Plans MUST specify** for each new component whether it's flow-specific, shared, or a particle.
 
 ```
 backend/app/
@@ -219,6 +192,7 @@ backend/app/
 ## Skill References
 
 When planning, consult these skill files for detailed patterns:
+- `folder-structure` — Enforced folder structure and component placement rules
 - `project-guidlane-example` — CountOnMe architecture overview, file structure, code patterns
 - `backend-patterns` — FastAPI/SQLAlchemy patterns for backend planning
 - `react-native-patterns` — React Native/Expo patterns for frontend planning

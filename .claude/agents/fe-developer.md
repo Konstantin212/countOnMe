@@ -127,60 +127,17 @@ cd client && pnpm run verify
 - Meals stack: MealsList → MealBuilder (add/edit) → MealDetails
 - Param lists must be typed for safety
 
-## Folder Structure (ENFORCED — a PreToolUse hook blocks violations)
+## Folder Structure & Component Placement
 
-### Allowed directories in `client/src/`
-Only these 9 top-level directories are permitted:
-`app`, `components`, `hooks`, `models`, `particles`, `screens`, `services`, `storage`, `theme`
+**IMPORTANT**: A PreToolUse hook enforces the folder structure — files in wrong locations will be blocked.
 
-### Flow-Based Screen Organization (CRITICAL)
-Each feature/flow gets its own folder under `screens/`:
-```
-screens/
-├── AddMealFlow/           # One flow = one folder
-│   ├── components/        # Flow-specific components (NOT reusable)
-│   │   ├── AddFood/
-│   │   ├── AddMeal/
-│   │   └── SelectProduct/
-│   ├── context.tsx        # Flow-level shared state
-│   └── index.tsx          # Entry screen
-├── ProductFlow/
-│   ├── ProductsListScreen.tsx
-│   ├── ProductFormScreen.tsx
-│   └── ProductDetailsScreen.tsx
-├── GoalFlow/
-│   ├── components/        # Flow-specific components
-│   └── GoalSetupScreen.tsx
-├── MyPath/
-│   ├── components/        # Flow-specific components
-│   └── MyPathScreen.tsx
-└── ProfileScreen.tsx      # Standalone screens at root level
-```
-
-### Component Placement Rule
-- **Flow-specific component** (used in 1 flow only) → `screens/XxxFlow/components/Name.tsx`
-- **Shared component** (used in 2+ flows) → `components/Name.tsx`
-- **Atomic UI primitive** (no business logic) → `particles/Name.tsx`
-
-When a flow-specific component starts being used in a second flow, **promote it** to `components/`.
-
-### File Naming & Location
-
-| Type | Path | Naming |
-|------|------|--------|
-| Flow folder | `screens/FeatureFlow/` | PascalCase + `Flow` suffix |
-| Flow component | `screens/FeatureFlow/components/Name.tsx` | PascalCase |
-| Flow context | `screens/FeatureFlow/context.tsx` | camelCase |
-| Shared component | `components/Name.tsx` | PascalCase |
-| Screen | `screens/FeatureFlow/NameScreen.tsx` | PascalCase + `Screen` suffix |
-| Standalone screen | `screens/NameScreen.tsx` | PascalCase (no flow needed) |
-| Hook | `hooks/useName.ts` | camelCase with `use` prefix |
-| Utility | `services/utils/name.ts` | camelCase |
-| Schema | `services/schemas/nameSchema.ts` | camelCase |
-| Type | `models/types.ts` | Add to existing file |
-| Test | Co-located `*.test.ts(x)` next to source | Same name + `.test` |
-| Particle | `particles/Name.tsx` | PascalCase, export from `index.ts` |
-| Constants | `services/constants.ts` | UPPER_SNAKE_CASE values |
+Consult **skill: `folder-structure`** for the complete rules. Key points:
+- Only 9 directories allowed in `client/src/`: `app`, `components`, `hooks`, `models`, `particles`, `screens`, `services`, `storage`, `theme`
+- Each feature = own folder under `screens/` (e.g., `screens/ProductFlow/`)
+- Flow-specific components (1 flow) → `screens/XxxFlow/components/`
+- Shared components (2+ flows) → `components/`
+- Atomic UI primitives → `particles/`
+- Hooks must be prefixed with `use`, particles must be PascalCase
 
 ## Naming Conventions
 
@@ -249,6 +206,7 @@ Examples of what to record:
 ## Skill References
 
 For detailed patterns and code examples, see:
+- skill: `folder-structure` — Enforced folder structure and component placement rules
 - skill: `react-native-patterns` — Components, hooks, navigation, styling, testing
 - skill: `coding-standarts` — Universal TypeScript standards and principles
 - skill: `tdd-workflow` — Vitest testing patterns, TDD cycle, coverage requirements

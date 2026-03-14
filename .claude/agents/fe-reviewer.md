@@ -75,28 +75,13 @@ Use the structured report format defined below.
 ## CountOnMe-Specific Checks
 
 ### Flow-Based Folder Structure (HIGH — enforced by hook)
-Every feature/flow owns a folder under `screens/`. Components go in the right place:
-```
-screens/
-├── AddMealFlow/           # Each feature = own folder
-│   ├── components/        # Flow-specific components (used ONLY in this flow)
-│   ├── context.tsx        # Flow-level shared state
-│   └── index.tsx
-├── ProductFlow/
-├── GoalFlow/
-├── MealFlow/
-│   └── components/
-└── ProfileScreen.tsx      # Standalone screens at root
-```
 
-**Review checklist:**
-- New flow → must have its own folder under `screens/` (e.g., `screens/WeightFlow/`)
-- Flow-specific component (used in 1 flow) → must be inside `screens/XxxFlow/components/`
-- Shared component (used in 2+ flows) → must be in `components/` (not duplicated in each flow)
-- Atomic UI primitive (no business logic) → must be in `particles/`
-- **Flag as HIGH**: component in `components/` that's only imported by one flow (should be demoted to flow-specific)
-- **Flag as HIGH**: component in `screens/XxxFlow/components/` that's imported by another flow (should be promoted to `components/`)
-- **Flag as CRITICAL**: new directory in `client/src/` outside the 9 allowed dirs
+Consult **skill: `folder-structure`** for the complete rules. Key review checks:
+- **CRITICAL**: new directory in `client/src/` outside the 9 allowed dirs
+- **HIGH**: component in `components/` only imported by 1 flow (should demote to flow-specific)
+- **HIGH**: component in `screens/XxxFlow/components/` imported by another flow (should promote to `components/`)
+- **HIGH**: new flow screens not inside a flow folder
+- **MEDIUM**: missing `components/` subfolder for flow-specific components
 
 ### Import Aliases
 ```typescript
@@ -232,6 +217,7 @@ cd client && pnpm run test:coverage        # Coverage report
 ## Skill References
 
 For detailed patterns and code examples, see:
+- skill: `folder-structure` — Enforced folder structure and component placement rules
 - skill: `react-native-patterns` — Components, hooks, navigation, styling, testing
 - skill: `coding-standarts` — Universal TypeScript/Python standards
 - skill: `tdd-workflow` — Vitest testing patterns, TDD cycle

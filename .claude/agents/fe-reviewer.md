@@ -74,6 +74,30 @@ Use the structured report format defined below.
 
 ## CountOnMe-Specific Checks
 
+### Flow-Based Folder Structure (HIGH — enforced by hook)
+Every feature/flow owns a folder under `screens/`. Components go in the right place:
+```
+screens/
+├── AddMealFlow/           # Each feature = own folder
+│   ├── components/        # Flow-specific components (used ONLY in this flow)
+│   ├── context.tsx        # Flow-level shared state
+│   └── index.tsx
+├── ProductFlow/
+├── GoalFlow/
+├── MealFlow/
+│   └── components/
+└── ProfileScreen.tsx      # Standalone screens at root
+```
+
+**Review checklist:**
+- New flow → must have its own folder under `screens/` (e.g., `screens/WeightFlow/`)
+- Flow-specific component (used in 1 flow) → must be inside `screens/XxxFlow/components/`
+- Shared component (used in 2+ flows) → must be in `components/` (not duplicated in each flow)
+- Atomic UI primitive (no business logic) → must be in `particles/`
+- **Flag as HIGH**: component in `components/` that's only imported by one flow (should be demoted to flow-specific)
+- **Flag as HIGH**: component in `screens/XxxFlow/components/` that's imported by another flow (should be promoted to `components/`)
+- **Flag as CRITICAL**: new directory in `client/src/` outside the 9 allowed dirs
+
 ### Import Aliases
 ```typescript
 // ✅ CORRECT: Aliases for cross-folder imports

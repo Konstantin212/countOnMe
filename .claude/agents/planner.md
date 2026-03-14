@@ -139,19 +139,45 @@ Verification: [exact commands to run after this phase]
 - **Immutability**: Always create new objects, never mutate existing ones
 - **Import aliases**: Use `@hooks`, `@services`, `@models`, `@components`, `@screens`, `@particles`, `@storage`, `@theme`, `@app`
 
-### Folder Structure
+### Folder Structure (ENFORCED — a PreToolUse hook blocks violations)
+
+Only these 9 directories allowed in `client/src/`:
 ```
 client/src/
 ├── app/           # Navigation setup
-├── components/    # Shared UI components (molecules)
+├── components/    # Shared UI components (used in 2+ flows)
 ├── hooks/         # Custom React hooks (state + side effects)
-├── models/        # TypeScript types
-├── particles/     # Atomic UI primitives (atoms)
-├── screens/       # Screen components (organisms)
+├── models/        # TypeScript types (prefer single types.ts)
+├── particles/     # Atomic UI primitives (no business logic)
+├── screens/       # Screen components — organized by flow
 ├── services/      # API, utils, schemas, constants
 ├── storage/       # AsyncStorage + device identity
 └── theme/         # Colors, theming
+```
 
+**Flow-based screen organization (CRITICAL for planning):**
+```
+screens/
+├── AddMealFlow/           # Each feature = own folder
+│   ├── components/        # Flow-specific components
+│   ├── context.tsx        # Flow-level shared state
+│   └── index.tsx
+├── ProductFlow/
+├── GoalFlow/
+│   └── components/
+├── MealFlow/
+│   └── components/
+├── MyPath/
+│   └── components/
+└── ProfileScreen.tsx      # Standalone screens at root
+```
+
+**Component placement rules — plans MUST specify this for each new component:**
+- **1 flow only** → `screens/XxxFlow/components/Name.tsx`
+- **2+ flows** → `components/Name.tsx` (shared)
+- **Pure UI, no logic** → `particles/Name.tsx`
+
+```
 backend/app/
 ├── api/           # Routers + dependencies
 │   └── routers/   # Request/response wiring only

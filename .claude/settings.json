@@ -65,6 +65,15 @@
         ]
       },
       {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node D:/cot/countOnMe/.claude/hooks/pre-write-client-structure.js"
+          }
+        ]
+      },
+      {
         "matcher": "Bash",
         "hooks": [
           {

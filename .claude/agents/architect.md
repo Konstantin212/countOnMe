@@ -112,6 +112,36 @@ Storage (AsyncStorage) / API (fetch wrapper)
 Particles (atoms) + Components (molecules) → UI building blocks
 ```
 
+### Client Folder Structure (ENFORCED — hooks block violations)
+
+Only these 9 directories are allowed in `client/src/`:
+`app`, `components`, `hooks`, `models`, `particles`, `screens`, `services`, `storage`, `theme`
+
+**Flow-based screen organization:**
+```
+screens/
+├── AddMealFlow/           # Each feature = own folder
+│   ├── components/        # Flow-specific components
+│   │   ├── AddFood/
+│   │   └── SelectProduct/
+│   ├── context.tsx        # Flow-level shared state
+│   └── index.tsx
+├── ProductFlow/           # Product CRUD screens
+├── GoalFlow/              # Goal setup wizard
+├── MealFlow/              # Meal list + details
+│   └── components/        # Flow-specific (EditEntryModal, etc.)
+├── MyPath/                # Analytics dashboard
+│   └── components/        # Flow-specific (charts, cards)
+└── ProfileScreen.tsx      # Standalone screens at root
+```
+
+**Component placement rules (critical for design proposals):**
+- **1 flow only** → `screens/XxxFlow/components/Name.tsx`
+- **2+ flows** → `components/Name.tsx` (promote to shared)
+- **No business logic, pure UI** → `particles/Name.tsx`
+
+When designing new features, you MUST specify which components are flow-specific vs shared. The fe-developer and a PreToolUse hook enforce this.
+
 ### Backend Architecture Layers
 ```
 Routers (thin) → parse input, call service, return DTO

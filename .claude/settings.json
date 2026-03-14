@@ -56,11 +56,29 @@
         ]
       },
       {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .claude/hooks/pre-write-env-block.js"
+          }
+        ]
+      },
+      {
         "matcher": "Bash",
         "hooks": [
           {
             "type": "command",
             "command": "node .claude/hooks/git-push-warn.js"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .claude/hooks/pre-bash-destructive-warn.js"
           }
         ]
       },
@@ -113,6 +131,69 @@
             "timeout": 15
           }
         ]
+      },
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .claude/hooks/post-edit-ts-any-warn.js"
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .claude/hooks/post-edit-inline-style-warn.js"
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .claude/hooks/post-edit-py-print-warn.js"
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .claude/hooks/post-edit-secret-warn.js"
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .claude/hooks/post-edit-router-sql-warn.js"
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .claude/hooks/post-edit-screen-storage-warn.js"
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .claude/hooks/post-edit-nesting-warn.js"
+          }
+        ]
       }
     ],
     "Stop": [
@@ -121,6 +202,33 @@
           {
             "type": "command",
             "command": "node .claude/hooks/check-console-log.js",
+            "timeout": 30
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .claude/hooks/stop-file-size-check.js",
+            "timeout": 30
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .claude/hooks/stop-function-length-check.js",
+            "timeout": 30
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .claude/hooks/stop-device-scope-check.js",
             "timeout": 30
           }
         ]

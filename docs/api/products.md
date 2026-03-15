@@ -1,7 +1,7 @@
 ---
 type: api
 status: current
-last-updated: 2026-03-14
+last-updated: 2026-03-15
 related-features:
   - product-management
 ---
@@ -64,7 +64,7 @@ Unified search across user products and catalog.
 | `q` | `string` | yes | | Search term (1-200 chars) |
 | `limit` | `int` | no | 35 | Max results (max 60) |
 
-**Response** `200 OK` — `ProductSearchResultItem[]` (user results first, then catalog)
+**Response** `200 OK` — `ProductSearchResultItem[]` (interleaved by relevance: starts-with matches first, then contains matches; alphabetically sorted within each tier)
 
 ## Schemas
 

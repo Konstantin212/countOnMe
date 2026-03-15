@@ -100,6 +100,11 @@ def _compute_macro_per_100g(macro: Decimal | None, base_amount: Decimal) -> floa
     return round(float(macro) / float(base_amount) * 100, 2)
 
 
+def _relevance_rank(name: str, query: str) -> int:
+    """Return 0 for starts-with match, 1 for contains match."""
+    return 0 if name.lower().startswith(query.lower()) else 1
+
+
 async def search_products(
     session: AsyncSession,
     *,
@@ -107,18 +112,14 @@ async def search_products(
     q: str,
     limit: int = 35,
 ) -> list[ProductSearchResultItem]:
-    # Up to 10 user results, remainder filled with catalog results up to total limit.
-    user_limit = min(10, limit)
-    catalog_limit = limit - user_limit
-
     escaped_q = q.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
 
-    # Query 1: user products
+    # Query 1: user products — fetch up to limit candidates from each source
     user_stmt = (
         _not_deleted(select(Product))
         .where(Product.device_id == device_id, Product.name.ilike(f"%{escaped_q}%"))
         .order_by(Product.name.asc())
-        .limit(user_limit)
+        .limit(limit)
     )
     user_res = await session.execute(user_stmt)
     user_products = list(user_res.scalars().all())
@@ -134,9 +135,6 @@ async def search_products(
         for p in user_products
     ]
 
-    if catalog_limit <= 0:
-        return user_results
-
     # Query 2: catalog products with optional default portion
     catalog_stmt = (
         select(CatalogProduct)
@@ -147,7 +145,7 @@ async def search_products(
             )
         )
         .order_by(CatalogProduct.display_name.asc())
-        .limit(catalog_limit)
+        .limit(limit)
     )
     catalog_res = await session.execute(catalog_stmt)
     catalog_products = list(catalog_res.scalars().all())
@@ -183,7 +181,14 @@ async def search_products(
             )
         )
 
-    return user_results + catalog_results
+    # Merge and sort by (relevance_rank, name.lower()), then truncate to limit
+    def _sort_key(item: ProductSearchResultItem) -> tuple[int, str]:
+        search_name = item.display_name or item.name
+        return (_relevance_rank(search_name, q), search_name.lower())
+
+    merged = user_results + catalog_results
+    merged.sort(key=_sort_key)
+    return merged[:limit]
 
 
 async def soft_delete_product(

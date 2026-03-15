@@ -1,7 +1,7 @@
 ---
 type: feature
 status: current
-last-updated: 2026-03-14
+last-updated: 2026-03-15
 related-features:
   - catalog-seeding
   - food-tracking
@@ -27,7 +27,8 @@ Product management is the foundation of CountOnMe. Users build a personal databa
 1. **SelectProductScreen** (Add Meal flow) — Search and select products. Two tabs: "All" (up to 5 favorites + 10 recents, capped at 15 total) and "Favourited" (starred products only). Tabs visible only when no search active.
 2. **Search integration**:
    - Debounced 400ms → calls `GET /v1/products/search?q=X&limit=35`
-   - Results are unified: user products first, then catalog products (marked with "Catalog" badge)
+   - Results are interleaved by relevance (starts-with matches first, then contains matches), sorted alphabetically within each tier
+   - User products show "Favourite" or "Recent" badges when applicable; catalog products show "Catalog" badge
    - User products have `source="user"`, catalog results have `source="catalog"`
 3. **Catalog item selection**:
    - Tapping a catalog result materializes it as a local user product
@@ -200,9 +201,9 @@ GET /v1/products/search?q=chick&limit=35
 ```
 
 **Behavior:**
-- Queries user products (device-scoped, non-deleted) for up to 10 matches
-- Queries catalog products for up to 25 matches
-- User results appear first, then catalog results
+- Queries user products (device-scoped, non-deleted) and catalog products for matches
+- Scores results by relevance: 0 = starts-with match, 1 = contains match
+- Interleaves both sources by relevance rank, then sorts alphabetically within each tier
 - Total returned = up to `limit` (default 35)
 - `source` discriminates user vs catalog
 - `catalog_id` set only for `source="catalog"`

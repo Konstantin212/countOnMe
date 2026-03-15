@@ -315,22 +315,86 @@ async def _make_catalog_product(
 
 
 @pytest.mark.asyncio
-async def test_search_returns_user_first(db_session: AsyncSession):
-    """User products appear before catalog products in results."""
+async def test_search_starts_with_ranks_higher_than_contains(db_session: AsyncSession):
+    """Starts-with matches rank before contains matches regardless of source."""
     marker = uuid.uuid4().hex[:8]
     device = await create_device(db_session)
-    await create_product(db_session, device_id=device.id, name=f"Chicken{marker}")
+    # User product: contains match ("Apple" contains "pple")
+    await create_product(db_session, device_id=device.id, name=f"Apple{marker}")
+    # Catalog product: starts-with match ("pple..." starts with "pple")
     await _make_catalog_product(
         db_session,
-        name=f"Chicken Breast{marker}",
-        calories=Decimal("165"),
+        name=f"pple{marker}",
+        display_name=f"pple{marker}",
+        calories=Decimal("52"),
         base_amount=Decimal("100"),
     )
 
-    results = await search_products(db_session, device_id=device.id, q=f"Chicken{marker}")
+    results = await search_products(db_session, device_id=device.id, q=f"pple{marker}")
 
-    assert len(results) >= 1
-    assert results[0].source == "user"
+    assert len(results) == 2
+    # Catalog item starts with "pple" → rank 0; user item contains "pple" → rank 1
+    assert results[0].source == "catalog"
+    assert results[1].source == "user"
+
+
+@pytest.mark.asyncio
+async def test_search_interleaves_by_relevance_not_source(db_session: AsyncSession):
+    """User and catalog results are interleaved by relevance, not grouped by source."""
+    marker = uuid.uuid4().hex[:8]
+    device = await create_device(db_session)
+    # Two user products: one starts-with, one contains
+    await create_product(db_session, device_id=device.id, name=f"Food{marker}Alpha")
+    await create_product(db_session, device_id=device.id, name=f"XFood{marker}Beta")
+    # Two catalog products: one starts-with, one contains
+    await _make_catalog_product(
+        db_session,
+        name=f"Food{marker}Gamma",
+        display_name=f"Food{marker}Gamma",
+        calories=Decimal("100"),
+        base_amount=Decimal("100"),
+    )
+    await _make_catalog_product(
+        db_session,
+        name=f"YFood{marker}Delta",
+        display_name=f"YFood{marker}Delta",
+        calories=Decimal("100"),
+        base_amount=Decimal("100"),
+    )
+
+    results = await search_products(db_session, device_id=device.id, q=f"Food{marker}", limit=10)
+
+    # Starts-with matches (rank 0): Food{marker}Alpha (user), Food{marker}Gamma (catalog)
+    # Contains matches  (rank 1): XFood{marker}Beta (user), YFood{marker}Delta (catalog)
+    starts_with = [r for r in results if not r.name.startswith("X") and not r.name.startswith("Y")]
+    contains = [r for r in results if r.name.startswith("X") or r.name.startswith("Y")]
+    # All starts-with results come before all contains results
+    assert len(starts_with) == 2
+    assert len(contains) == 2
+    starts_with_indices = [results.index(r) for r in starts_with]
+    contains_indices = [results.index(r) for r in contains]
+    assert max(starts_with_indices) < min(contains_indices)
+
+
+@pytest.mark.asyncio
+async def test_search_total_truncated_to_limit(db_session: AsyncSession):
+    """Results are truncated to limit after merging both sources."""
+    marker = uuid.uuid4().hex[:8]
+    device = await create_device(db_session)
+    for i in range(4):
+        await create_product(db_session, device_id=device.id, name=f"Food{marker}{i}")
+    for i in range(4):
+        await _make_catalog_product(
+            db_session,
+            name=f"Food{marker}Cat{i}",
+            display_name=f"Food{marker}Cat{i}",
+            calories=Decimal("100"),
+            base_amount=Decimal("100"),
+        )
+
+    results = await search_products(db_session, device_id=device.id, q=f"Food{marker}", limit=5)
+
+    assert len(results) == 5
 
 
 @pytest.mark.asyncio

@@ -232,7 +232,7 @@ const SelectProductScreen = ({ navigation }: Props) => {
     rowBrand: { color: colors.textSecondary, fontSize: 12, marginTop: 2 },
     rowMeta: { color: colors.textSecondary, fontSize: 12 },
     star: { padding: 6 },
-    catalogBadge: {
+    badge: {
       fontSize: 11,
       color: colors.textSecondary,
       opacity: 0.7,
@@ -301,9 +301,10 @@ const SelectProductScreen = ({ navigation }: Props) => {
   const renderSearchRow = ({ item }: { item: ProductSearchResult }) => {
     if (item.source === "user") {
       const product = productMap.get(item.id);
-      if (product) {
-        return renderUserRow({ item: product });
-      }
+      const name = product?.name ?? item.name;
+      const kcal = product?.caloriesPer100g ?? item.caloriesPer100g;
+      const isRecent = recentSet.has(item.id);
+      const isFavourite = favouriteSet.has(item.id);
       return (
         <Pressable
           onPress={() => {
@@ -314,13 +315,34 @@ const SelectProductScreen = ({ navigation }: Props) => {
           testID={`search-row-${item.id}`}
         >
           <View style={styles.rowContent}>
-            <Text style={styles.rowName}>{item.name}</Text>
+            <Text style={styles.rowName}>{name}</Text>
             <Text style={styles.rowMeta}>
-              {item.caloriesPer100g != null
-                ? `${item.caloriesPer100g} kcal / 100g`
-                : ""}
+              {kcal != null ? `${kcal} kcal / 100g` : ""}
             </Text>
+            {isFavourite ? (
+              <Text style={styles.badge}>Favourite</Text>
+            ) : isRecent ? (
+              <Text style={styles.badge}>Recent</Text>
+            ) : null}
           </View>
+          <Pressable
+            style={styles.star}
+            onPress={() => toggleFavourite(item.id)}
+            hitSlop={8}
+            testID={`favourite-btn-${item.id}`}
+          >
+            <Ionicons
+              name={
+                isFavourite
+                  ? "star"
+                  : isRecent
+                    ? "refresh-circle-outline"
+                    : "star-outline"
+              }
+              size={20}
+              color={isFavourite ? colors.warning : colors.textSecondary}
+            />
+          </Pressable>
         </Pressable>
       );
     }
@@ -344,7 +366,7 @@ const SelectProductScreen = ({ navigation }: Props) => {
               ? `${item.caloriesPer100g} kcal / 100g`
               : ""}
           </Text>
-          <Text style={styles.catalogBadge}>Catalog</Text>
+          <Text style={styles.badge}>Catalog</Text>
         </View>
       </Pressable>
     );

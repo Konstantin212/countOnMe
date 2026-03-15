@@ -32,6 +32,15 @@ module.exports = {
     web: {
       favicon: './assets/favicon.png',
     },
+    plugins: [
+      [
+        'expo-camera',
+        {
+          cameraPermission:
+            'CountOnMe needs camera access to scan barcodes.',
+        },
+      ],
+    ],
     extra: {
       // Pass env vars to the app
       apiUrl: process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000',

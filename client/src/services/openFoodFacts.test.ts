@@ -95,6 +95,7 @@ describe("openFoodFacts", () => {
 
       expect(mockFetch).toHaveBeenCalledWith(
         expect.stringContaining("/api/v2/product/123.json"),
+        expect.objectContaining({ signal: expect.any(AbortSignal) }),
       );
       expect(result).toEqual(mockProduct);
     });

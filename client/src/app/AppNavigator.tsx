@@ -31,6 +31,7 @@ import AddMealScreen from "@screens/AddMealFlow/components/AddMeal";
 import SelectProductScreen from "@screens/AddMealFlow/components/SelectProduct";
 import AddFoodScreen from "@screens/AddMealFlow/components/AddFood";
 import MealTypeEntriesScreen from "@screens/MealFlow/MealTypeEntriesScreen";
+import BarcodeScannerScreen from "@screens/BarcodeFlow/BarcodeScannerScreen";
 import { DraftMealProvider } from "@screens/AddMealFlow/context";
 
 enableScreens();
@@ -91,6 +92,11 @@ const ProfileStackNavigator = () => {
         name="ProductConfirm"
         component={ProductConfirmScreen}
         options={{ title: "Confirm Product" }}
+      />
+      <ProfileStack.Screen
+        name="BarcodeScanner"
+        component={BarcodeScannerScreen}
+        options={{ title: "Scan Barcode", headerShown: false }}
       />
       <ProfileStack.Screen
         name="MealsList"
@@ -157,6 +163,16 @@ const MyDayStackNavigator = () => {
           component={MealTypeEntriesScreen}
         />
         <MyDayStack.Screen name="ProductForm" component={ProductFormScreen} />
+        <MyDayStack.Screen
+          name="BarcodeScanner"
+          component={BarcodeScannerScreen}
+          options={{ title: "Scan Barcode", headerShown: false }}
+        />
+        <MyDayStack.Screen
+          name="ProductConfirm"
+          component={ProductConfirmScreen}
+          options={{ title: "Confirm Product" }}
+        />
       </MyDayStack.Navigator>
     </DraftMealProvider>
   );

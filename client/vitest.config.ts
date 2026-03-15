@@ -32,6 +32,9 @@ export default defineConfig({
       ),
     },
   },
+  define: {
+    __DEV__: true,
+  },
   esbuild: {
     jsx: "automatic",
     jsxImportSource: "react",

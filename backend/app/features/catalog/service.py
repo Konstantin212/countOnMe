@@ -80,4 +80,26 @@ async def get_catalog_product(
         .where(CatalogProduct.id == catalog_product_id)
     )
     result = await session.execute(stmt)
+    return result.scalars().first()
+
+
+async def get_catalog_product_by_barcode(
+    session: AsyncSession,
+    *,
+    barcode: str,
+) -> CatalogProduct | None:
+    """Return a catalog product matching the given barcode, or None.
+
+    Eager-loads portions. Products with NULL barcode are never matched.
+    No device scoping — catalog is global.
+    """
+    stmt = (
+        select(CatalogProduct)
+        .options(selectinload(CatalogProduct.portions))
+        .where(
+            CatalogProduct.barcode == barcode,
+            CatalogProduct.barcode.is_not(None),
+        )
+    )
+    result = await session.execute(stmt)
     return result.scalar_one_or_none()

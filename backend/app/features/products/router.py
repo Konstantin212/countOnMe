@@ -41,7 +41,9 @@ async def products_create(
     device_id: uuid.UUID = Depends(get_current_device_id),
     session: AsyncSession = Depends(get_session),
 ) -> ProductResponse:
-    return await create_product(session, device_id=device_id, name=body.name, product_id=body.id)
+    return await create_product(
+        session, device_id=device_id, name=body.name, product_id=body.id, barcode=body.barcode
+    )
 
 
 @router.get("/check-name", response_model=ProductNameCheckResponse)
@@ -84,7 +86,7 @@ async def products_update(
     session: AsyncSession = Depends(get_session),
 ) -> ProductResponse:
     product = await update_product(
-        session, device_id=device_id, product_id=product_id, name=body.name
+        session, device_id=device_id, product_id=product_id, name=body.name, barcode=body.barcode
     )
     if product is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")

@@ -63,12 +63,17 @@ export const searchProducts = async (query: string, page = 1): Promise<SearchRes
 /**
  * Get a specific product by barcode
  */
+const OFF_TIMEOUT_MS = 3000;
+
 export const getProductByBarcode = async (
   barcode: string,
 ): Promise<OpenFoodFactsProduct | null> => {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), OFF_TIMEOUT_MS);
+
   try {
     const url = `${API_BASE_URL}/api/v2/product/${barcode}.json`;
-    const response = await fetch(url);
+    const response = await fetch(url, { signal: controller.signal });
 
     if (!response.ok) {
       return null;
@@ -81,9 +86,10 @@ export const getProductByBarcode = async (
     }
 
     return null;
-  } catch (error) {
-    console.error('Open Food Facts API error:', error);
+  } catch {
     return null;
+  } finally {
+    clearTimeout(timeout);
   }
 };
 

@@ -16,13 +16,36 @@ def _not_deleted(stmt: Select) -> Select:
     return stmt.where(Product.deleted_at.is_(None))
 
 
+async def get_product_by_barcode(
+    session: AsyncSession, *, device_id: uuid.UUID, barcode: str
+) -> Product | None:
+    stmt = _not_deleted(select(Product)).where(
+        Product.device_id == device_id,
+        Product.barcode == barcode,
+    )
+    res = await session.execute(stmt)
+    return res.scalar_one_or_none()
+
+
 async def create_product(
-    session: AsyncSession, *, device_id: uuid.UUID, name: str, product_id: uuid.UUID | None = None
+    session: AsyncSession,
+    *,
+    device_id: uuid.UUID,
+    name: str,
+    product_id: uuid.UUID | None = None,
+    barcode: str | None = None,
 ) -> Product:
-    product = (
-        Product(id=product_id, device_id=device_id, name=name)
-        if product_id
-        else Product(device_id=device_id, name=name)
+    # Barcode dedup: if barcode provided, check for existing product on this device
+    if barcode is not None:
+        existing = await get_product_by_barcode(session, device_id=device_id, barcode=barcode)
+        if existing is not None:
+            return existing
+
+    product = Product(
+        device_id=device_id,
+        name=name,
+        barcode=barcode,
+        **({"id": product_id} if product_id else {}),
     )
     session.add(product)
     await session.commit()
@@ -56,6 +79,7 @@ async def update_product(
     device_id: uuid.UUID,
     product_id: uuid.UUID,
     name: str | None,
+    barcode: str | None = None,
 ) -> Product | None:
     product = await get_product(session, device_id=device_id, product_id=product_id)
     if product is None:
@@ -63,6 +87,8 @@ async def update_product(
 
     if name is not None:
         product.name = name
+    if barcode is not None:
+        product.barcode = barcode
     product.updated_at = datetime.now(UTC)
     session.add(product)
 

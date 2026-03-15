@@ -112,30 +112,65 @@ const SelectProductScreen = ({ navigation }: Props) => {
     return [...favSlot, ...recentSlot];
   }, [tab, favourites, recents, productMap, favouritedList]);
 
-  const runSearch = useCallback(async (q: string) => {
-    setSearchLoading(true);
-    setIsSearchError(false);
-    try {
-      const data = await searchProducts(q, 35);
-      const results: ProductSearchResult[] = data.map((item) => ({
-        id: item.id,
-        name: item.name,
-        source: item.source,
-        caloriesPer100g: item.calories_per_100g,
-        catalogId: item.catalog_id,
-        proteinPer100g: item.protein_per_100g,
-        carbsPer100g: item.carbs_per_100g,
-        fatPer100g: item.fat_per_100g,
-        displayName: item.display_name,
-        brand: item.brand,
-      }));
-      setSearchResults(results);
-    } catch {
-      setIsSearchError(true);
-    } finally {
-      setSearchLoading(false);
-    }
-  }, []);
+  const buildLocalMatches = useCallback(
+    (q: string): ProductSearchResult[] => {
+      const lower = q.toLowerCase();
+      return products
+        .filter((p) => p.name.toLowerCase().includes(lower))
+        .map((p) => ({
+          id: p.id,
+          name: p.name,
+          source: "user" as const,
+          caloriesPer100g: p.caloriesPer100g,
+          catalogId: null,
+          proteinPer100g: p.proteinPer100g ?? null,
+          carbsPer100g: p.carbsPer100g ?? null,
+          fatPer100g: p.fatPer100g ?? null,
+          displayName: p.name,
+          brand: null,
+        }));
+    },
+    [products],
+  );
+
+  const runSearch = useCallback(
+    async (q: string) => {
+      setSearchLoading(true);
+      setIsSearchError(false);
+      try {
+        const data = await searchProducts(q, 35);
+        const apiResults: ProductSearchResult[] = data.map((item) => ({
+          id: item.id,
+          name: item.name,
+          source: item.source,
+          caloriesPer100g: item.calories_per_100g,
+          catalogId: item.catalog_id,
+          proteinPer100g: item.protein_per_100g,
+          carbsPer100g: item.carbs_per_100g,
+          fatPer100g: item.fat_per_100g,
+          displayName: item.display_name,
+          brand: item.brand,
+        }));
+
+        // Merge: local matches first, then API results not already in local set
+        const localMatches = buildLocalMatches(q);
+        const localIds = new Set(localMatches.map((l) => l.id));
+        const uniqueApi = apiResults.filter((r) => !localIds.has(r.id));
+        setSearchResults([...localMatches, ...uniqueApi]);
+      } catch {
+        // API failed — fall back to local-only results
+        const localMatches = buildLocalMatches(q);
+        if (localMatches.length > 0) {
+          setSearchResults(localMatches);
+        } else {
+          setIsSearchError(true);
+        }
+      } finally {
+        setSearchLoading(false);
+      }
+    },
+    [buildLocalMatches],
+  );
 
   useEffect(() => {
     if (searchTimer.current !== null) {
@@ -196,6 +231,11 @@ const SelectProductScreen = ({ navigation }: Props) => {
       backgroundColor: colors.cardBackground,
     },
     title: { fontSize: 20, fontWeight: "700", color: colors.text, flex: 1 },
+    scanButton: {
+      padding: 8,
+      borderRadius: 999,
+      backgroundColor: colors.cardBackground,
+    },
     controls: { paddingHorizontal: 16, gap: 12, paddingBottom: 12 },
     search: {
       borderWidth: 1,
@@ -420,6 +460,14 @@ const SelectProductScreen = ({ navigation }: Props) => {
           <Ionicons name="arrow-back" size={22} color={colors.text} />
         </Pressable>
         <Text style={styles.title}>Select product</Text>
+        <Pressable
+          onPress={() => navigation.navigate("BarcodeScanner")}
+          style={styles.scanButton}
+          testID="scan-barcode-btn"
+          hitSlop={8}
+        >
+          <Ionicons name="barcode-outline" size={24} color={colors.primary} />
+        </Pressable>
       </View>
 
       <View style={styles.controls}>

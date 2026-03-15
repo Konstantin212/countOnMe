@@ -12,16 +12,25 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { Ionicons } from "@expo/vector-icons";
 
-import { ProfileStackParamList } from "@app/navigationTypes";
+import {
+  MyDayStackParamList,
+  ProfileStackParamList,
+} from "@app/navigationTypes";
 import { useProducts } from "@hooks/useProducts";
 import { Scale, SCALE_OPTIONS, toGrams } from "@services/utils/scales";
 import { useTheme } from "@hooks/useTheme";
+import { pushProductRecent } from "@storage/storage";
 
-type Props = NativeStackScreenProps<ProfileStackParamList, "ProductConfirm">;
+type ProfileProps = NativeStackScreenProps<
+  ProfileStackParamList,
+  "ProductConfirm"
+>;
+type MyDayProps = NativeStackScreenProps<MyDayStackParamList, "ProductConfirm">;
+type Props = ProfileProps | MyDayProps;
 
 const ProductConfirmScreen = ({ navigation, route }: Props) => {
   const { externalProduct } = route.params;
-  const { addProduct } = useProducts();
+  const { products, addProduct } = useProducts();
   const { colors } = useTheme();
 
   const [amount, setAmount] = useState("100");
@@ -73,7 +82,7 @@ const ProductConfirmScreen = ({ navigation, route }: Props) => {
     setSaving(true);
     try {
       // Calculate calories per 100g based on the entered amount and scale
-      let caloriesPer100g = externalProduct.caloriesPer100g;
+      const caloriesPer100g = externalProduct.caloriesPer100g;
 
       // If data exists in database, it's already per 100g
       // Otherwise, user would need to enter it manually (but we have it from API)
@@ -83,20 +92,31 @@ const ProductConfirmScreen = ({ navigation, route }: Props) => {
         ? `${externalProduct.name} (${externalProduct.brands})`
         : externalProduct.name;
 
-      await addProduct({
+      const newProduct = await addProduct({
         name: productName,
+        barcode: externalProduct.code,
         caloriesPer100g,
         proteinPer100g: externalProduct.proteinPer100g,
         carbsPer100g: externalProduct.carbsPer100g,
         fatPer100g: externalProduct.fatPer100g,
       });
 
-      Alert.alert("Success", "Product added to your list", [
+      await pushProductRecent(newProduct.id);
+
+      // Check if dedup returned an existing product (barcode already saved)
+      const isExisting = externalProduct.code
+        ? products.some((p) => p.id === newProduct.id)
+        : false;
+
+      const message = isExisting
+        ? "This product is already in your list"
+        : "Product added to your list";
+
+      Alert.alert("Success", message, [
         {
           text: "OK",
           onPress: () => {
-            // Navigate back to products list
-            navigation.navigate("ProductsList");
+            navigation.goBack();
           },
         },
       ]);

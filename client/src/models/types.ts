@@ -169,6 +169,7 @@ export type GoalCreateManualRequest = {
 export type Product = {
   id: string;
   name: string;
+  barcode?: string;
   category?: string;
 
   /**

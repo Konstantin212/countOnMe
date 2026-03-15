@@ -7,6 +7,16 @@ import {
 
 export type ProductFormParams = { productId?: string } | undefined;
 
+export type ExternalProductParam = {
+  code: string;
+  name: string;
+  brands?: string;
+  caloriesPer100g: number;
+  proteinPer100g?: number;
+  carbsPer100g?: number;
+  fatPer100g?: number;
+};
+
 export type MyDayStackParamList = {
   MyDay: undefined;
   AddMeal: undefined;
@@ -14,6 +24,10 @@ export type MyDayStackParamList = {
   AddFood: { productId: string };
   MealTypeEntries: { mealType: MealTypeKey };
   ProductForm: ProductFormParams;
+  BarcodeScanner: undefined;
+  ProductConfirm: {
+    externalProduct: ExternalProductParam;
+  };
 };
 
 export type MyPathStackParamList = {
@@ -27,16 +41,9 @@ export type ProfileStackParamList = {
   ProductForm: ProductFormParams;
   ProductSearch: undefined;
   ProductConfirm: {
-    externalProduct: {
-      code: string;
-      name: string;
-      brands?: string;
-      caloriesPer100g: number;
-      proteinPer100g?: number;
-      carbsPer100g?: number;
-      fatPer100g?: number;
-    };
+    externalProduct: ExternalProductParam;
   };
+  BarcodeScanner: undefined;
   MealsList: undefined;
   MealBuilder: { mealId?: string } | undefined;
   MealDetails: { mealId: string };

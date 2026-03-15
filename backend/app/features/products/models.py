@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import uuid
 
-from sqlalchemy import ForeignKey, Text, func
+from sqlalchemy import ForeignKey, String, Text, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -27,3 +27,5 @@ class Product(Base, TimestampMixin):
     )
 
     name: Mapped[str] = mapped_column(Text, nullable=False)
+
+    barcode: Mapped[str | None] = mapped_column(String, nullable=True, index=True)

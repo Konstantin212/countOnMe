@@ -8,6 +8,7 @@ import { enqueue } from "@storage/syncQueue";
 
 export type NewProductInput = {
   name: string;
+  barcode?: string;
 
   // New (AddMealFlow v2) fields
   category?: string;
@@ -79,6 +80,7 @@ const createProductRecord = (input: NewProductInput): Product => {
   return {
     id: uuid(),
     name: normalizeName(input.name),
+    barcode: input.barcode?.trim() || undefined,
     category: input.category?.trim() || undefined,
     portionSize: input.portionSize,
     scaleType: input.scaleType,
@@ -218,6 +220,29 @@ export const useProducts = (): UseProductsResult => {
 
   const addProduct = useCallback(
     async (input: NewProductInput) => {
+      const barcode = input.barcode?.trim();
+      if (barcode) {
+        const existing = productsRef.current.find(
+          (p) => p.barcode === barcode,
+        );
+        if (existing) {
+          // Update existing product with latest scanned data
+          const updated = {
+            ...existing,
+            name: input.name,
+            caloriesPer100g: input.caloriesPer100g,
+            proteinPer100g: input.proteinPer100g,
+            carbsPer100g: input.carbsPer100g,
+            fatPer100g: input.fatPer100g,
+            updatedAt: new Date().toISOString(),
+          };
+          await applyChanges((prev) =>
+            prev.map((p) => (p.id === existing.id ? updated : p)),
+          );
+          return updated;
+        }
+      }
+
       const newProduct = createProductRecord(input);
       await applyChanges((prev) => [...prev, newProduct]);
       await enqueue({

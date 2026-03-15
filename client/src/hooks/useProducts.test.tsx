@@ -139,4 +139,63 @@ describe("useProducts", () => {
 
     expect(result.current.products[0].source).toBe("catalog");
   });
+
+  it("addProduct with barcode stores it on the product", async () => {
+    const { result } = await setupHook();
+
+    await act(async () => {
+      await result.current.addProduct({
+        name: "Scanned Product",
+        caloriesPer100g: 200,
+        barcode: "1234567890123",
+      });
+    });
+
+    expect(result.current.products).toHaveLength(1);
+    expect(result.current.products[0].barcode).toBe("1234567890123");
+  });
+
+  it("addProduct with duplicate barcode updates existing product with new data", async () => {
+    const existingProduct: Product = {
+      ...sampleProduct,
+      barcode: "1234567890123",
+      caloriesPer100g: 100,
+    };
+    const { result } = await setupHook([existingProduct]);
+
+    let returned: Product | undefined;
+    await act(async () => {
+      returned = await result.current.addProduct({
+        name: "Updated Scan",
+        caloriesPer100g: 999,
+        barcode: "1234567890123",
+      });
+    });
+
+    // Should not create a new product
+    expect(result.current.products).toHaveLength(1);
+    // Should return the same product ID
+    expect(returned?.id).toBe(existingProduct.id);
+    // Should have updated data
+    expect(returned?.name).toBe("Updated Scan");
+    expect(returned?.caloriesPer100g).toBe(999);
+  });
+
+  it("addProduct without barcode creates normally (no dedup)", async () => {
+    const existingProduct: Product = {
+      ...sampleProduct,
+      barcode: "1234567890123",
+    };
+    const { result } = await setupHook([existingProduct]);
+
+    await act(async () => {
+      await result.current.addProduct({
+        name: "No Barcode Product",
+        caloriesPer100g: 100,
+      });
+    });
+
+    // Should create a new product since no barcode was provided
+    expect(result.current.products).toHaveLength(2);
+  });
 });

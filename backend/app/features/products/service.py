@@ -4,7 +4,7 @@ import uuid
 from datetime import UTC, datetime
 from decimal import Decimal
 
-from sqlalchemy import Select, func, select
+from sqlalchemy import Select, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.features.catalog.models import CatalogPortion, CatalogProduct
@@ -140,8 +140,13 @@ async def search_products(
     # Query 2: catalog products with optional default portion
     catalog_stmt = (
         select(CatalogProduct)
-        .where(CatalogProduct.name.ilike(f"%{escaped_q}%"))
-        .order_by(CatalogProduct.name.asc())
+        .where(
+            or_(
+                CatalogProduct.display_name.ilike(f"%{escaped_q}%"),
+                CatalogProduct.brand.ilike(f"%{escaped_q}%"),
+            )
+        )
+        .order_by(CatalogProduct.display_name.asc())
         .limit(catalog_limit)
     )
     catalog_res = await session.execute(catalog_stmt)
@@ -173,6 +178,8 @@ async def search_products(
                 carbs_per_100g=carbs_per_100g,
                 fat_per_100g=fat_per_100g,
                 catalog_id=cp.id,
+                display_name=cp.display_name,
+                brand=cp.brand,
             )
         )
 

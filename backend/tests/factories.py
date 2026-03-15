@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.enums import MealType, Unit
 from app.features.auth.models import Device
 from app.features.auth.service import issue_device_token
+from app.features.catalog.models import CatalogPortion, CatalogProduct
 from app.features.goals.models import UserGoal
 from app.features.meals.models import FoodEntry
 from app.features.portions.models import ProductPortion
@@ -159,3 +160,61 @@ async def create_body_weight(
     await session.flush()
     await session.refresh(weight)
     return weight
+
+
+async def create_catalog_product(
+    session: AsyncSession,
+    *,
+    name: str,
+    source: str = "usda",
+    source_id: str | None = None,
+    display_name: str | None = None,
+    category: str | None = None,
+    brand: str | None = None,
+    barcode: str | None = None,
+) -> CatalogProduct:
+    """Create a test catalog product."""
+    product = CatalogProduct(
+        source=source,
+        source_id=source_id if source_id is not None else uuid.uuid4().hex[:12],
+        name=name,
+        display_name=display_name if display_name is not None else name,
+        category=category,
+        brand=brand,
+        barcode=barcode,
+    )
+    session.add(product)
+    await session.flush()
+    return product
+
+
+async def create_catalog_portion(
+    session: AsyncSession,
+    *,
+    catalog_product_id: uuid.UUID,
+    label: str = "100 g",
+    base_amount: Decimal = Decimal("100"),
+    base_unit: Unit = Unit.g,
+    gram_weight: Decimal | None = Decimal("100"),
+    calories: Decimal = Decimal("0"),
+    protein: Decimal | None = None,
+    carbs: Decimal | None = None,
+    fat: Decimal | None = None,
+    is_default: bool = True,
+) -> CatalogPortion:
+    """Create a test catalog portion."""
+    portion = CatalogPortion(
+        catalog_product_id=catalog_product_id,
+        label=label,
+        base_amount=base_amount,
+        base_unit=base_unit,
+        gram_weight=gram_weight,
+        calories=calories,
+        protein=protein,
+        carbs=carbs,
+        fat=fat,
+        is_default=is_default,
+    )
+    session.add(portion)
+    await session.flush()
+    return portion

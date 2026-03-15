@@ -10,7 +10,7 @@ related-features:
 
 ## Overview
 
-CountOnMe includes a global, read-only product catalog seeded from USDA FoundationFoods JSON data. This catalog provides thousands of pre-defined products (with macro and calorie data) that any device can search and log from without manual product creation.
+CountOnMe includes a global, read-only product catalog seeded from multiple data sources: USDA SR Legacy (7,414 products) and Open Food Facts (4,989 packaged products with barcodes), totalling 12,403 catalog products. This catalog provides pre-defined products that any device can search and log from without manual product creation.
 
 The catalog is stored in separate `catalog_products` and `catalog_portions` tables (no `device_id`), making it accessible to all devices while preserving the device-scoping invariant for user-created products.
 
@@ -24,19 +24,20 @@ From the repository root:
 python seed.py
 ```
 
-This sets the default `DATABASE_URL` and runs the seed script. Works on any OS (Windows, macOS, Linux) without shell compatibility issues.
+This sets the default `DATABASE_URL` and runs the seed script. Seeds both USDA and Open Food Facts by default.
 
 ### Command-Line Options
 
 ```bash
-python seed.py --seeds-dir /path/to/json/files --dry-run
+python seed.py --seeds-dir /path/to/seed/files --sources all --dry-run
 ```
 
 **Options:**
 
-- `--seeds-dir PATH` — Directory containing USDA FoundationFoods `*.json` files. Default: `seeds/`
-- `--db-url URL` — PostgreSQL connection URL. Overrides the `DATABASE_URL` environment variable (useful for non-standard database locations)
-- `--dry-run` — Parse and validate without writing to the database. Prints estimated product count.
+- `--seeds-dir PATH` — Directory containing USDA JSON and OFF CSV files. Default: `seeds/`
+- `--sources {usda,off,all}` — Data sources to seed. Default: `all`
+- `--db-url URL` — PostgreSQL connection URL. Overrides `DATABASE_URL` environment variable
+- `--dry-run` — Parse and validate without writing to the database
 
 ### Direct Invocation
 
@@ -80,103 +81,16 @@ DATABASE_URL=postgresql://user:pass@localhost:5432/countonme
 
 The seed script is **fully idempotent**. It is safe to run multiple times:
 
-1. Products are upserted using the USDA `fdc_id` (stable integer identifier) as the unique key
-2. Product metadata (`name`, `category`) is updated on re-run
-3. **All portions are replaced** (deleted and re-inserted) to reflect the latest USDA data
+1. Products are upserted using the composite key `(source, source_id)` — stable per data source
+2. Product metadata (`display_name`, `brand`, `barcode`, `category`) is updated on re-run
+3. **All portions are replaced** (deleted and re-inserted) to reflect the latest data
 4. No duplicates are created
 
-This means you can safely re-run the seed after a USDA dataset update without corrupting the catalog.
+This means you can safely re-run the seed after a dataset update without corrupting the catalog.
 
 ## API Endpoints
 
-All catalog endpoints require device authentication (token header).
-
-### List Products
-
-```
-GET /v1/catalog/products?search=apple&limit=10&offset=0
-```
-
-**Query Parameters:**
-
-- `search` (optional, max 200 chars) — Case-insensitive substring match on product name
-- `limit` (optional, default 50, max 200) — Number of results per page
-- `offset` (optional, default 0) — Pagination offset
-
-**Response (200 OK):**
-
-```json
-[
-  {
-    "id": "550e8400-e29b-41d4-a716-446655440000",
-    "fdc_id": 167638,
-    "name": "Apple, raw, with skin",
-    "category": "Fruits and Fruit Juices",
-    "default_portion": {
-      "id": "660e8400-e29b-41d4-a716-446655440001",
-      "label": "100 g",
-      "base_amount": "100.000",
-      "base_unit": "g",
-      "gram_weight": "100.000",
-      "calories": "52.000",
-      "protein": "0.260",
-      "carbs": "13.810",
-      "fat": "0.170",
-      "is_default": true
-    }
-  }
-]
-```
-
-### Get Product Details
-
-```
-GET /v1/catalog/products/{catalog_product_id}
-```
-
-**Response (200 OK):**
-
-```json
-{
-  "id": "550e8400-e29b-41d4-a716-446655440000",
-  "fdc_id": 167638,
-  "name": "Apple, raw, with skin",
-  "category": "Fruits and Fruit Juices",
-  "default_portion": { ... },
-  "portions": [
-    {
-      "id": "660e8400-e29b-41d4-a716-446655440001",
-      "label": "100 g",
-      "base_amount": "100.000",
-      "base_unit": "g",
-      "gram_weight": "100.000",
-      "calories": "52.000",
-      "protein": "0.260",
-      "carbs": "13.810",
-      "fat": "0.170",
-      "is_default": true
-    },
-    {
-      "id": "770e8400-e29b-41d4-a716-446655440002",
-      "label": "1 medium, 182 g",
-      "base_amount": "1.000",
-      "base_unit": "cup",
-      "gram_weight": "182.000",
-      "calories": "94.640",
-      "protein": "0.473",
-      "carbs": "25.156",
-      "fat": "0.309",
-      "is_default": false
-    }
-  ]
-}
-```
-
-**Status Codes:**
-
-- `200` — Product found
-- `401` — Missing or invalid device token
-- `404` — Product not found
+See [`docs/api/catalog.md`](../api/catalog.md) for full endpoint reference including request/response schemas and status codes.
 
 ## Data Model
 
@@ -185,14 +99,19 @@ GET /v1/catalog/products/{catalog_product_id}
 | Column | Type | Notes |
 |--------|------|-------|
 | `id` | UUID | Primary key, auto-generated |
-| `fdc_id` | INTEGER | USDA FoundationFoods stable identifier (unique, upsert key) |
-| `name` | TEXT | Product name (from USDA `description` field) |
-| `category` | TEXT | Food category (e.g., "Fruits and Fruit Juices") |
+| `source` | TEXT | Data source: `usda` or `off` |
+| `source_id` | TEXT | Stable ID within source (fdc_id for USDA, barcode for OFF) |
+| `display_name` | TEXT | Consumer-friendly name (cleaned from USDA or OFF) |
+| `brand` | TEXT | Brand name (OFF only, nullable) |
+| `barcode` | TEXT | Barcode (OFF only, nullable, indexed) |
+| `name` | TEXT | Legacy searchable name field (indexed) |
+| `category` | TEXT | Food category (nullable) |
+| `search_vector` | TSVECTOR | PostgreSQL full-text search vector (computed) |
 | `created_at` | TIMESTAMPTZ | Auto-set on insert |
 | `updated_at` | TIMESTAMPTZ | Auto-updated on upsert |
 
-**Indexes:**
-- `fdc_id` (UNIQUE) — Idempotency lookups during seed
+**Unique Constraint:**
+- `(source, source_id)` — Composite key for idempotency
 
 ### catalog_portions Table
 
@@ -202,97 +121,69 @@ GET /v1/catalog/products/{catalog_product_id}
 | `catalog_product_id` | UUID | Foreign key to `catalog_products` |
 | `label` | TEXT | Human-readable portion label (e.g., "1 cup, 182g") |
 | `base_amount` | NUMERIC(12,3) | Portion size (value in `base_unit`) |
-| `base_unit` | Unit enum | Unit type: `g`, `kg`, `mg`, `ml`, `l`, `tsp`, `tbsp`, `cup` |
-| `gram_weight` | NUMERIC(12,3) | Gram equivalent of this portion (for unit conversion) |
+| `base_unit` | Unit enum | Unit type: `g`, `kg`, `mg`, `ml`, `l`, `tsp`, `tbsp`, `cup`, `pcs`, `serving` |
+| `gram_weight` | NUMERIC(12,3) | Gram equivalent (nullable for dimensionless units like `pcs`, `serving`) |
 | `calories` | NUMERIC(12,3) | Total calories in this portion |
-| `protein` | NUMERIC(12,3) | Grams of protein (nullable — not always available) |
+| `protein` | NUMERIC(12,3) | Grams of protein (nullable) |
 | `carbs` | NUMERIC(12,3) | Grams of carbohydrates (nullable) |
 | `fat` | NUMERIC(12,3) | Grams of fat (nullable) |
-| `is_default` | BOOLEAN | True for the canonical portion (always "100 g") |
+| `is_default` | BOOLEAN | True for the canonical portion (typically "100 g") |
 | `created_at` | TIMESTAMPTZ | Auto-set on insert |
 | `updated_at` | TIMESTAMPTZ | Auto-updated on upsert |
 
 **Indexes:**
 - `catalog_product_id` — List portions by product
-- `(catalog_product_id) WHERE is_default = true` (partial unique) — Enforce one default per product
 
-**Note:** Every catalog product has at least one default portion: a synthetic "100 g" portion created during seeding, even if the USDA data contains no explicit portions.
+**Note:** Every catalog product has at least one default portion (typically "100 g"). The `pcs` and `serving` units recover ~85% of portions that were previously dropped due to unsupported USDA units.
 
-## USDA Data Transformation
+## Data Transformation
 
-The seed script performs the following transformations:
+### USDA SR Legacy
 
-### Macro Extraction
+**Macro Extraction:** Nutrients are extracted from `foodNutrients` array: `"Energy"` (kcal), `"Protein"`, `"Carbohydrate, by difference"`, `"Total lipid (fat)"`. Uses Atwater formula if Energy is missing: `(protein × 4) + (carbs × 4) + (fat × 9)`.
 
-Nutrients are extracted from the USDA `foodNutrients` array using these target names:
+**Name Normalization:** `clean_usda_name()` transforms verbose USDA descriptions (e.g., "Chicken, broiler or fryers, breast, skinless...") into consumer-friendly names (e.g., "Chicken breast, braised") by removing noise patterns and cooking metadata.
 
-- `"Total lipid (fat)"` → `fat_g_100g`
-- `"Carbohydrate, by difference"` → `carbs_g_100g`
-- `"Protein"` → `protein_g_100g`
-- `"Energy"` → `kcal_100g`
+**Unit Support:** Portions map USDA units to the enum: `g`, `kg`, `mg`, `ml`, `l`, `tsp`, `tbsp`, `cup`, `pcs` (countable items), `serving`. Unmapped units (e.g., `oz`, `lb`) are skipped; portions with no `gramWeight` are also skipped. A synthetic 100g portion is always created.
 
-Values are rounded to 3 decimal places.
+**Filtering:** Products are skipped if `fdc_id` is missing, description is empty, `kcal_100g` ≤ 0 (e.g., water, spices), or category is "Supplements" or "Baby Foods". This ensures only valid, quantifiable consumer foods enter the catalog.
 
-### Calorie Calculation
+### Open Food Facts
 
-Calories per 100g are calculated as follows:
+**Source:** Pre-filtered CSV from `prepare_off_data.py`, which reduces the 4.4 GB Parquet to ~5,000 rows.
 
-1. If `"Energy"` is present in the nutrient data, use that value directly
-2. Otherwise, use the **Atwater formula**: `(protein × 4) + (carbs × 4) + (fat × 9)`
+**Columns:** barcode, product_name, brands, categories, energy_kcal_100g, and macro data. Branded products provide `display_name`, `brand`, and `barcode` for retail lookups.
 
-Fallback is necessary because USDA sometimes omits the direct energy value.
+**Units:** OFF portions use `pcs` (items) or `serving` (reference servings), enabling countable and pre-portioned products.
 
-### Unit Normalization
+## Search Strategy
 
-USDA portion units are mapped to the `Unit` enum:
+The service uses a hybrid approach for fast, relevant results:
 
-| USDA Unit | Normalized |
-|-----------|------------|
-| gram, g | g |
-| kilogram, kg | kg |
-| milligram, mg | mg |
-| milliliter, ml, millilitre | ml |
-| liter, l, litre | l |
-| teaspoon, tsp | tsp |
-| tablespoon, tbsp | tbsp |
-| cup | cup |
+- **len(search) ≥ 3:** single `OR` query combining PostgreSQL `tsvector` match and `display_name ILIKE`; results ordered by `ts_rank` descending so tsvector matches rank higher
+- **len(search) < 3:** ILIKE on `display_name` directly, ordered alphabetically
+- **No search:** Order by `display_name` ascending
 
-Units not in this mapping (e.g., `oz`, `lb`) are **skipped**. The synthetic 100g portion is always created regardless.
-
-### Portion Label Building
-
-Portion labels are constructed from USDA data as:
-
-```
-"{base_amount} {measure_unit}, {modifier}"
-```
-
-For example:
-- `"1 cup"` (from `value=1, abbreviation="cup"`)
-- `"1 medium, 182 g"` (from `value=1, modifier="medium", gramWeight=182`)
-
-### Filtering Criteria
-
-Products are **skipped** (not seeded) if:
-
-- `fdc_id` is missing or zero
-- `description` is empty
-- Calculated `kcal_100g` is zero or negative (e.g., pure oils and non-nutritive foods with Energy=0 in USDA data)
-
-This ensures only valid, quantifiable foods enter the catalog. Note that some USDA entries (e.g., pure oils) have Energy=0 and are intentionally excluded; use the gram weight and macro data to calculate their nutritional value manually if needed.
+The `search_vector` is computed automatically from `display_name`, `brand`, and `category`.
 
 ## Technical Details
 
-**Database Library:** The seed script uses `asyncpg` (not psycopg) for efficient async PostgreSQL connections. This allows the script to be run standalone without importing app dependencies that require environment configuration.
+**Database Library:** The seed script uses `asyncpg` (not psycopg) for async PostgreSQL. This allows the script to run standalone without importing app dependencies that require environment configuration.
+
+**Seeder Architecture:** The script uses an orchestrator pattern with source-specific seeder classes (`UsdaSeeder`, `OffSeeder`) that inherit from `AbstractSeeder`. Each seeder handles parsing, validation, and database upserts independently, allowing parallel or sequential execution.
 
 ## Key Files
 
-- `backend/scripts/seed_catalog.py` — Main seeding script (USDA JSON parsing, batch insert with idempotency, asyncpg connection)
-- `backend/app/features/catalog/router.py` — FastAPI router (`GET /v1/catalog/products`, `GET /v1/catalog/products/{id}`)
-- `backend/app/features/catalog/service.py` — Service layer (list with search, get by id, default portion lookup)
-- `backend/app/features/catalog/schemas.py` — Pydantic response schemas
-- `backend/app/features/catalog/models.py` — SQLAlchemy ORM models for products and portions
-- `seed.py` — Cross-platform Python wrapper at repo root (sets default DATABASE_URL automatically)
+- `backend/scripts/seed_catalog.py` — Orchestrator (asyncpg connection, CLI, source delegation)
+- `backend/scripts/seeders/base.py` — AbstractSeeder, shared utilities (unit normalization, macro extraction)
+- `backend/scripts/seeders/usda.py` — USDA SR Legacy seeder (JSON parsing, name cleaning, batch insert)
+- `backend/scripts/seeders/off.py` — Open Food Facts seeder (CSV parsing, branded products)
+- `backend/scripts/seeders/name_cleaner.py` — USDA name normalization (verbose → consumer-friendly)
+- `backend/scripts/prepare_off_data.py` — Parquet filter utility (reduces 4.4 GB to 5,000-row CSV)
+- `backend/app/features/catalog/models.py` — CatalogProduct, CatalogPortion ORM models
+- `backend/app/features/catalog/service.py` — Query logic (tsvector search, get by id)
+- `backend/app/features/catalog/router.py` — FastAPI endpoints
+- `seed.py` — Cross-platform wrapper at repo root (sets DATABASE_URL, calls seed_catalog)
 
 ## Related Features
 

@@ -23,10 +23,26 @@ describe("units utilities", () => {
       expect(UNIT_GROUPS.cup).toBe("volume");
     });
 
-    it("contains all 8 unit types", () => {
+    it("maps all count units to count group", () => {
+      expect(UNIT_GROUPS.pcs).toBe("count");
+      expect(UNIT_GROUPS.serving).toBe("count");
+    });
+
+    it("contains all 10 unit types", () => {
       const keys = Object.keys(UNIT_GROUPS);
-      expect(keys).toHaveLength(8);
-      expect(keys).toEqual(["mg", "g", "kg", "ml", "l", "tsp", "tbsp", "cup"]);
+      expect(keys).toHaveLength(10);
+      expect(keys).toEqual([
+        "mg",
+        "g",
+        "kg",
+        "ml",
+        "l",
+        "tsp",
+        "tbsp",
+        "cup",
+        "pcs",
+        "serving",
+      ]);
     });
   });
 
@@ -43,6 +59,11 @@ describe("units utilities", () => {
       expect(getUnitGroup("tsp")).toBe("volume");
       expect(getUnitGroup("tbsp")).toBe("volume");
       expect(getUnitGroup("cup")).toBe("volume");
+    });
+
+    it("returns count for count units", () => {
+      expect(getUnitGroup("pcs")).toBe("count");
+      expect(getUnitGroup("serving")).toBe("count");
     });
   });
 
@@ -103,6 +124,16 @@ describe("units utilities", () => {
       expect(compatible).toEqual(
         expect.arrayContaining(["ml", "l", "tsp", "tbsp", "cup"]),
       );
+    });
+
+    it("returns only pcs for pcs (count units are not inter-convertible)", () => {
+      const compatible = getCompatibleUnits("pcs");
+      expect(compatible).toEqual(["pcs"]);
+    });
+
+    it("returns only serving for serving (count units are not inter-convertible)", () => {
+      const compatible = getCompatibleUnits("serving");
+      expect(compatible).toEqual(["serving"]);
     });
   });
 
@@ -206,6 +237,34 @@ describe("units utilities", () => {
     it("converts tsp to cup", () => {
       // 1 tsp = 5ml, 1 cup = 240ml => 1 tsp = 5/240 = 1/48 cup
       expect(convertUnit(48, "tsp", "cup")).toBe(1);
+    });
+  });
+
+  describe("convertUnit - count units", () => {
+    it("returns same value for pcs to pcs", () => {
+      expect(convertUnit(5, "pcs", "pcs")).toBe(5);
+    });
+
+    it("returns same value for serving to serving", () => {
+      expect(convertUnit(2, "serving", "serving")).toBe(2);
+    });
+
+    it("returns null for pcs to serving (not inter-convertible)", () => {
+      expect(convertUnit(3, "pcs", "serving")).toBeNull();
+    });
+
+    it("returns null for serving to pcs (not inter-convertible)", () => {
+      expect(convertUnit(1, "serving", "pcs")).toBeNull();
+    });
+
+    it("returns null for count to mass", () => {
+      expect(convertUnit(2, "pcs", "g")).toBeNull();
+      expect(convertUnit(1, "serving", "kg")).toBeNull();
+    });
+
+    it("returns null for count to volume", () => {
+      expect(convertUnit(2, "pcs", "ml")).toBeNull();
+      expect(convertUnit(1, "serving", "l")).toBeNull();
     });
   });
 

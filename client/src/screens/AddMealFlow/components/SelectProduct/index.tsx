@@ -126,6 +126,8 @@ const SelectProductScreen = ({ navigation }: Props) => {
         proteinPer100g: item.protein_per_100g,
         carbsPer100g: item.carbs_per_100g,
         fatPer100g: item.fat_per_100g,
+        displayName: item.display_name,
+        brand: item.brand,
       }));
       setSearchResults(results);
     } catch {
@@ -161,7 +163,7 @@ const SelectProductScreen = ({ navigation }: Props) => {
     async (item: ProductSearchResult) => {
       try {
         const newProduct = await addProduct({
-          name: item.name,
+          name: item.displayName ?? item.name,
           caloriesPer100g: item.caloriesPer100g ?? 0,
           source: "catalog",
           proteinPer100g: item.proteinPer100g ?? undefined,
@@ -227,6 +229,7 @@ const SelectProductScreen = ({ navigation }: Props) => {
       gap: 12,
     },
     rowName: { flex: 1, color: colors.text, fontWeight: "600" },
+    rowBrand: { color: colors.textSecondary, fontSize: 12, marginTop: 2 },
     rowMeta: { color: colors.textSecondary, fontSize: 12 },
     star: { padding: 6 },
     catalogBadge: {
@@ -332,7 +335,10 @@ const SelectProductScreen = ({ navigation }: Props) => {
         testID={`catalog-row-${item.id}`}
       >
         <View style={styles.rowContent}>
-          <Text style={styles.rowName}>{item.name}</Text>
+          <Text style={styles.rowName}>{item.displayName ?? item.name}</Text>
+          {item.brand ? (
+            <Text style={styles.rowBrand}>{item.brand}</Text>
+          ) : null}
           <Text style={styles.rowMeta}>
             {item.caloriesPer100g != null
               ? `${item.caloriesPer100g} kcal / 100g`

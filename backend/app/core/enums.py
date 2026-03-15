@@ -12,6 +12,8 @@ class Unit(StrEnum):
     tsp = "tsp"
     tbsp = "tbsp"
     cup = "cup"
+    pcs = "pcs"
+    serving = "serving"
 
 
 class MealType(StrEnum):

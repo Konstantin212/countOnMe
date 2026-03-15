@@ -40,3 +40,5 @@ class ProductSearchResultItem(APIModel):
     catalog_id: UUID | None = (
         None  # For catalog items, mirrors id — provided so client can distinguish source without comparing source field.
     )
+    display_name: str | None = None
+    brand: str | None = None

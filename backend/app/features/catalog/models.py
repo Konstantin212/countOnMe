@@ -3,9 +3,20 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 from decimal import Decimal
+from typing import Any
 
-from sqlalchemy import Boolean, Enum, ForeignKey, Integer, Numeric, Text, func
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import (
+    Boolean,
+    Computed,
+    Enum,
+    ForeignKey,
+    Index,
+    Numeric,
+    Text,
+    UniqueConstraint,
+    func,
+)
+from sqlalchemy.dialects.postgresql import TSVECTOR, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.db import Base
@@ -13,9 +24,13 @@ from app.core.enums import Unit
 
 
 class CatalogProduct(Base):
-    """Global (device-independent) product catalog sourced from USDA FDC."""
+    """Global (device-independent) product catalog sourced from multiple data sources."""
 
     __tablename__ = "catalog_products"
+    __table_args__ = (
+        UniqueConstraint("source", "source_id", name="uq_catalog_products_source_source_id"),
+        Index("ix_catalog_products_barcode", "barcode"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
@@ -23,11 +38,23 @@ class CatalogProduct(Base):
         server_default=func.gen_random_uuid(),
     )
 
-    fdc_id: Mapped[int] = mapped_column(Integer, nullable=False, unique=True, index=True)
+    source: Mapped[str] = mapped_column(Text, nullable=False)
+    source_id: Mapped[str] = mapped_column(Text, nullable=False)
+    display_name: Mapped[str] = mapped_column(Text, nullable=False)
+    brand: Mapped[str | None] = mapped_column(Text, nullable=True)
+    barcode: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     name: Mapped[str] = mapped_column(Text, nullable=False, index=True)
 
     category: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    search_vector: Mapped[Any] = mapped_column(  # PostgreSQL tsvector type
+        TSVECTOR,
+        Computed(
+            "to_tsvector('english', coalesce(display_name, '') || ' ' || coalesce(brand, '') || ' ' || coalesce(category, ''))",
+        ),
+        nullable=True,
+    )
 
     created_at: Mapped[datetime] = mapped_column(
         "created_at",

@@ -1,7 +1,6 @@
 import { apiFetch } from "./http";
 import { parseNumeric } from "@services/utils/parsing";
-
-export type Unit = "mg" | "g" | "kg" | "ml" | "l" | "tsp" | "tbsp" | "cup";
+import type { Unit } from "@models/types";
 
 // API response type (Decimal fields come as strings from backend)
 type PortionApiResponse = {

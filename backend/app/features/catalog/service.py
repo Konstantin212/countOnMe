@@ -2,11 +2,16 @@ from __future__ import annotations
 
 import uuid
 
-from sqlalchemy import select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.features.catalog.models import CatalogPortion, CatalogProduct
+
+
+def _escape_like(value: str) -> str:
+    """Escape LIKE special characters (%, _, \\) so they match literally."""
+    return value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
 
 
 def get_default_portion(product: CatalogProduct) -> CatalogPortion | None:
@@ -21,14 +26,43 @@ async def list_catalog_products(
     limit: int,
     offset: int,
 ) -> list[CatalogProduct]:
-    """Return catalog products, optionally filtered by name substring.
+    """Return catalog products, optionally filtered by search query.
 
-    Results are ordered by name ascending. No device scoping — catalog is global.
+    Search strategy:
+    - len(search) >= 3: combined tsvector + ILIKE query (tsvector matches rank higher)
+    - len(search) < 3: use ILIKE on display_name directly
+    - No search: order by display_name ascending
+
+    No device scoping — catalog is global.
     """
     stmt = select(CatalogProduct).options(selectinload(CatalogProduct.portions))
+
     if search:
-        stmt = stmt.where(CatalogProduct.name.ilike(f"%{search}%"))
-    stmt = stmt.order_by(CatalogProduct.name.asc()).limit(limit).offset(offset)
+        search = search.strip()
+
+    if search:
+        escaped = _escape_like(search)
+
+        if len(search) >= 3:
+            # Combined tsvector + ILIKE: tsvector matches rank higher,
+            # ILIKE catches terms that don't stem well.
+            ts_query = func.plainto_tsquery("english", search)
+            stmt = stmt.where(
+                or_(
+                    CatalogProduct.search_vector.op("@@")(ts_query),
+                    CatalogProduct.display_name.ilike(f"%{escaped}%"),
+                )
+            ).order_by(
+                func.ts_rank(CatalogProduct.search_vector, ts_query).desc(),
+            )
+        else:
+            # Short query: ILIKE on display_name directly
+            stmt = stmt.where(CatalogProduct.display_name.ilike(f"%{escaped}%"))
+
+    if not search or len(search) < 3:
+        stmt = stmt.order_by(CatalogProduct.display_name.asc())
+
+    stmt = stmt.limit(limit).offset(offset)
 
     result = await session.execute(stmt)
     return list(result.scalars().all())

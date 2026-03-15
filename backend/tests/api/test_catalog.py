@@ -2,63 +2,18 @@
 
 from __future__ import annotations
 
-import random
 import uuid
 
 import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.features.catalog.models import CatalogPortion, CatalogProduct
-
-
-def _unique_fdc_id() -> int:
-    """Generate a random fdc_id unlikely to collide across test runs."""
-    return random.randint(10_000_000, 99_999_999)  # noqa: S311
+from tests.factories import create_catalog_portion, create_catalog_product
 
 
 def _unique_name(prefix: str) -> str:
     """Return a unique product name for test isolation."""
     return f"{prefix}-{uuid.uuid4().hex[:8]}"
-
-
-async def _insert_catalog_product(
-    session: AsyncSession,
-    *,
-    name: str,
-    fdc_id: int | None = None,
-    category: str | None = None,
-) -> CatalogProduct:
-    product = CatalogProduct(
-        fdc_id=fdc_id if fdc_id is not None else _unique_fdc_id(),
-        name=name,
-        category=category,
-    )
-    session.add(product)
-    await session.flush()
-    return product
-
-
-async def _insert_catalog_portion(
-    session: AsyncSession,
-    *,
-    catalog_product_id: uuid.UUID,
-    label: str = "100 g",
-    calories: float = 200.0,
-    is_default: bool = False,
-) -> CatalogPortion:
-    portion = CatalogPortion(
-        catalog_product_id=catalog_product_id,
-        label=label,
-        base_amount=100.0,
-        base_unit="g",
-        gram_weight=100.0,
-        calories=calories,
-        is_default=is_default,
-    )
-    session.add(portion)
-    await session.flush()
-    return portion
 
 
 @pytest.mark.asyncio
@@ -77,8 +32,8 @@ async def test_list_catalog_products_returns_list(
     marker = uuid.uuid4().hex[:8]
     name_a = f"WholeWheatBread-{marker}"
     name_b = f"CheddarCheese-{marker}"
-    prod_a = await _insert_catalog_product(db_session, name=name_a)
-    prod_b = await _insert_catalog_product(db_session, name=name_b)
+    prod_a = await create_catalog_product(db_session, name=name_a, display_name=name_a)
+    prod_b = await create_catalog_product(db_session, name=name_b, display_name=name_b)
     await db_session.commit()
 
     client, _ = authenticated_client
@@ -97,14 +52,14 @@ async def test_list_catalog_products_search(
     authenticated_client: tuple[AsyncClient, uuid.UUID],
     db_session: AsyncSession,
 ) -> None:
-    """?search= filters results by name."""
+    """?search= filters results by display_name."""
     marker = uuid.uuid4().hex[:8]
     name_greek = f"GreekYogurt-{marker}"
     name_plain = f"PlainYogurt-{marker}"
     name_cheese = f"CheddarCheese-{marker}"
-    p_greek = await _insert_catalog_product(db_session, name=name_greek)
-    p_plain = await _insert_catalog_product(db_session, name=name_plain)
-    await _insert_catalog_product(db_session, name=name_cheese)
+    p_greek = await create_catalog_product(db_session, name=name_greek, display_name=name_greek)
+    p_plain = await create_catalog_product(db_session, name=name_plain, display_name=name_plain)
+    await create_catalog_product(db_session, name=name_cheese, display_name=name_cheese)
     await db_session.commit()
 
     client, _ = authenticated_client
@@ -126,8 +81,10 @@ async def test_list_catalog_products_pagination(
     """limit and offset query params work."""
     marker = uuid.uuid4().hex[:8]
     for i in range(5):
-        await _insert_catalog_product(
-            db_session, name=f"PaginatedAPIItem-{marker}-{i:02d}"
+        await create_catalog_product(
+            db_session,
+            name=f"PaginatedAPIItem-{marker}-{i:02d}",
+            display_name=f"PaginatedAPIItem-{marker}-{i:02d}",
         )
     await db_session.commit()
 
@@ -154,21 +111,22 @@ async def test_get_catalog_product_returns_product_with_portions(
     db_session: AsyncSession,
 ) -> None:
     """GET /catalog/products/{id} returns the product with all its portions."""
-    product = await _insert_catalog_product(
+    product = await create_catalog_product(
         db_session, name=_unique_name("SalmonFillet"), category="Seafood"
     )
-    portion1 = await _insert_catalog_portion(
+    portion1 = await create_catalog_portion(
         db_session,
         catalog_product_id=product.id,
         label="100 g",
-        calories=208.0,
+        calories=208,
         is_default=True,
     )
-    portion2 = await _insert_catalog_portion(
+    portion2 = await create_catalog_portion(
         db_session,
         catalog_product_id=product.id,
         label="1 fillet",
-        calories=416.0,
+        calories=416,
+        is_default=False,
     )
     await db_session.commit()
 
@@ -179,6 +137,8 @@ async def test_get_catalog_product_returns_product_with_portions(
     data = response.json()
     assert data["id"] == str(product.id)
     assert data["category"] == "Seafood"
+    assert data["source"] == "usda"
+    assert data["display_name"] is not None
     portion_ids = {p["id"] for p in data["portions"]}
     assert str(portion1.id) in portion_ids
     assert str(portion2.id) in portion_ids
@@ -204,12 +164,12 @@ async def test_list_catalog_products_default_portion_included(
     """List endpoint includes the default_portion field."""
     marker = uuid.uuid4().hex[:8]
     name = f"Avocado-{marker}"
-    product = await _insert_catalog_product(db_session, name=name)
-    await _insert_catalog_portion(
+    product = await create_catalog_product(db_session, name=name, display_name=name)
+    await create_catalog_portion(
         db_session,
         catalog_product_id=product.id,
         label="100 g",
-        calories=160.0,
+        calories=160,
         is_default=True,
     )
     await db_session.commit()
@@ -224,3 +184,35 @@ async def test_list_catalog_products_default_portion_included(
     assert avocado["default_portion"] is not None
     assert avocado["default_portion"]["label"] == "100 g"
     assert avocado["default_portion"]["is_default"] is True
+
+
+@pytest.mark.asyncio
+async def test_list_catalog_products_response_includes_new_fields(
+    authenticated_client: tuple[AsyncClient, uuid.UUID],
+    db_session: AsyncSession,
+) -> None:
+    """Response includes source, source_id, display_name, brand, barcode."""
+    marker = uuid.uuid4().hex[:8]
+    product = await create_catalog_product(
+        db_session,
+        name=f"TestProduct-{marker}",
+        display_name=f"TestProduct-{marker}",
+        source="off",
+        source_id=f"barcode-{marker}",
+        brand=f"TestBrand-{marker}",
+        barcode=f"1234567890{marker}",
+    )
+    await db_session.commit()
+
+    client, _ = authenticated_client
+    response = await client.get(f"/v1/catalog/products?search=TestProduct-{marker}")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data) >= 1
+    item = next(i for i in data if i["id"] == str(product.id))
+    assert item["source"] == "off"
+    assert item["source_id"] == f"barcode-{marker}"
+    assert item["display_name"] == f"TestProduct-{marker}"
+    assert item["brand"] == f"TestBrand-{marker}"
+    assert item["barcode"] == f"1234567890{marker}"

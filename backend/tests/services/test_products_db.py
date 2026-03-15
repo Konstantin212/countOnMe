@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import random
 import uuid
 from decimal import Decimal
 
@@ -281,10 +280,18 @@ async def _make_catalog_product(
     protein: Decimal | None = None,
     carbs: Decimal | None = None,
     fat: Decimal | None = None,
+    display_name: str | None = None,
+    brand: str | None = None,
 ) -> CatalogProduct:
     """Helper: create a catalog product with an optional default portion."""
-    fdc_id = random.randint(10_000_000, 99_999_999)  # noqa: S311
-    cp = CatalogProduct(fdc_id=fdc_id, name=name)
+    source_id = uuid.uuid4().hex[:12]
+    cp = CatalogProduct(
+        source="usda",
+        source_id=source_id,
+        name=name,
+        display_name=display_name if display_name is not None else name,
+        brand=brand,
+    )
     session.add(cp)
     await session.flush()
     await session.refresh(cp)
@@ -459,3 +466,44 @@ async def test_search_catalog_no_macro_data_null(db_session: AsyncSession):
     assert item.protein_per_100g is None
     assert item.carbs_per_100g is None
     assert item.fat_per_100g is None
+
+
+@pytest.mark.asyncio
+async def test_search_catalog_returns_display_name(db_session: AsyncSession):
+    """display_name field is populated in catalog search results."""
+    marker = uuid.uuid4().hex[:8]
+    device = await create_device(db_session)
+    await _make_catalog_product(
+        db_session,
+        name=f"Chicken, breast, raw {marker}",
+        display_name=f"Chicken breast {marker}",
+        calories=Decimal("165"),
+        base_amount=Decimal("100"),
+    )
+
+    results = await search_products(db_session, device_id=device.id, q=f"Chicken breast {marker}")
+
+    catalog_results = [r for r in results if r.source == "catalog"]
+    assert len(catalog_results) == 1
+    assert catalog_results[0].display_name == f"Chicken breast {marker}"
+
+
+@pytest.mark.asyncio
+async def test_search_catalog_returns_brand(db_session: AsyncSession):
+    """brand field is populated for OFF items in catalog search results."""
+    marker = uuid.uuid4().hex[:8]
+    device = await create_device(db_session)
+    await _make_catalog_product(
+        db_session,
+        name=f"Protein Bar {marker}",
+        display_name=f"Protein Bar {marker}",
+        brand=f"FitBrand-{marker}",
+        calories=Decimal("200"),
+        base_amount=Decimal("100"),
+    )
+
+    results = await search_products(db_session, device_id=device.id, q=f"Protein Bar {marker}")
+
+    catalog_results = [r for r in results if r.source == "catalog"]
+    assert len(catalog_results) == 1
+    assert catalog_results[0].brand == f"FitBrand-{marker}"

@@ -22,8 +22,12 @@ class CatalogPortionResponse(APIModel):
 
 class CatalogProductListItem(APIModel):
     id: UUID
-    fdc_id: int
+    source: str
+    source_id: str
     name: str
+    display_name: str
+    brand: str | None
+    barcode: str | None
     category: str | None
     default_portion: CatalogPortionResponse | None
 

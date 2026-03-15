@@ -1,5 +1,5 @@
 import { apiFetch } from "./http";
-import type { Unit } from "./portions";
+import type { Unit } from "@models/types";
 import { parseNumeric } from "@services/utils/parsing";
 
 export type MealType = "breakfast" | "lunch" | "dinner" | "snacks" | "water";

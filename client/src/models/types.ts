@@ -11,9 +11,21 @@ export type ProductSearchResult = {
   proteinPer100g: number | null;
   carbsPer100g: number | null;
   fatPer100g: number | null;
+  displayName: string | null;
+  brand: string | null;
 };
 
-export type Unit = "mg" | "g" | "kg" | "ml" | "l" | "tsp" | "tbsp" | "cup";
+export type Unit =
+  | "mg"
+  | "g"
+  | "kg"
+  | "ml"
+  | "l"
+  | "tsp"
+  | "tbsp"
+  | "cup"
+  | "pcs"
+  | "serving";
 export type ScaleType = "Liquid" | "Solid" | "Dry";
 
 export type MealTypeKey = "breakfast" | "lunch" | "dinner" | "snacks" | "water";

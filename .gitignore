@@ -95,3 +95,9 @@ htmlcov/
 
 # Alembic
 backend/alembic/versions/__pycache__/
+
+# ----------------------
+# Seed data (large files)
+# ----------------------
+seeds/*.parquet
+seeds/off_products_filtered.csv

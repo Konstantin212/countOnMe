@@ -35,8 +35,12 @@ async def catalog_products_list(
     return [
         CatalogProductListItem(
             id=p.id,
-            fdc_id=p.fdc_id,
+            source=p.source,
+            source_id=p.source_id,
             name=p.name,
+            display_name=p.display_name,
+            brand=p.brand,
+            barcode=p.barcode,
             category=p.category,
             default_portion=CatalogPortionResponse.model_validate(dp) if (dp := get_default_portion(p)) else None,
         )
@@ -57,8 +61,12 @@ async def catalog_products_get(
     dp = get_default_portion(product)
     return CatalogProductResponse(
         id=product.id,
-        fdc_id=product.fdc_id,
+        source=product.source,
+        source_id=product.source_id,
         name=product.name,
+        display_name=product.display_name,
+        brand=product.brand,
+        barcode=product.barcode,
         category=product.category,
         default_portion=CatalogPortionResponse.model_validate(dp) if dp else None,
         portions=[CatalogPortionResponse.model_validate(p) for p in product.portions],

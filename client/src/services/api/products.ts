@@ -52,6 +52,8 @@ export type ProductSearchResultResponse = {
   protein_per_100g: number | null;
   carbs_per_100g: number | null;
   fat_per_100g: number | null;
+  display_name: string | null;
+  brand: string | null;
 };
 
 export const checkProductName = async (

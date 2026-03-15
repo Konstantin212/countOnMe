@@ -49,7 +49,7 @@ async def test_engine() -> AsyncIterator[AsyncEngine]:
         await conn.execute(
             text("""
             DO $$ BEGIN
-                CREATE TYPE unit_enum AS ENUM ('mg', 'g', 'kg', 'ml', 'l', 'tsp', 'tbsp', 'cup');
+                CREATE TYPE unit_enum AS ENUM ('mg', 'g', 'kg', 'ml', 'l', 'tsp', 'tbsp', 'cup', 'pcs', 'serving');
             EXCEPTION
                 WHEN duplicate_object THEN null;
             END $$;

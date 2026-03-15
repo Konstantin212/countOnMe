@@ -32,6 +32,10 @@ For every planning request, follow this exact process:
 - Identify what's in scope and what's explicitly out of scope
 
 ### Step 2: Codebase Reconnaissance
+- Read the documentation first: 
+   - api: \docs\api
+   - implemented features: \docs\features
+   - architecture: \docs\architecture
 - Use Read, Grep, and Glob tools to explore the codebase thoroughly
 - Read affected files to understand current patterns
 - Search for similar implementations to follow established conventions

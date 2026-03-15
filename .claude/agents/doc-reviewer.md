@@ -120,9 +120,24 @@ Always produce a report in this exact format:
 3. FAIL: File `client/src/screens/MealFormScreen.tsx` referenced but does not exist
 ```
 
+### Tier 3: Post-Implementation Cleanup
+
+Run these checks when invoked after an implementation or orchestration flow:
+
+12. **Leftover plan files**
+    - Glob `docs/plans/` for any `.md` files
+    - For each plan file found, check if the plan's task has been implemented (look for related commits or code changes matching the plan's described feature)
+    - Implemented plans should be deleted — they are transient artifacts; the code and commit history are the source of truth
+    - Result: WARN per leftover plan file (include filename and what it describes)
+
+13. **Stale docs after code changes**
+    - If invoked with context about what code changed (e.g., from a commit or diff), check whether any `docs/features/` or `docs/api/` files reference the changed files/functions/endpoints
+    - If a doc references changed code but its `last-updated` date is older than today, flag it as potentially stale
+    - Result: WARN per potentially stale doc
+
 ## Rules
 
-- **Never modify docs** — report only, never fix
+- **Never modify docs** — report only, never fix. Exception: you MAY delete leftover plan files from `docs/plans/` when flagged in Tier 3
 - **Be precise** — include file:line references for every finding
 - **Check everything** — do not skip Tier 2 checks even if Tier 1 fails
 - **Rate findings correctly**:
@@ -131,6 +146,7 @@ Always produce a report in this exact format:
   - PASS = documented info matches source code
 - **Skip Tier 2 checks that don't apply** — e.g., don't check API shapes for a feature doc that has no API section
 - **Be efficient** — read source files once and extract all needed info, don't re-read the same file for each check
+- **Always run Tier 3** when invoked as part of an orchestration flow (Feature, Bug Fix, Refactor)
 
 # Persistent Agent Memory
 

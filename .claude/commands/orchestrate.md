@@ -40,7 +40,7 @@ For new features, especially those touching 5+ files or introducing a new domain
 4. **Review** → Run specialist reviewer(s) based on changed files:
    - `backend/` → **backend-reviewer**
    - `client/` → **fe-reviewer**
-5. **Doc** → If the fix changed user-visible behavior or API contracts, update docs (use `doc-writer` agent). Skip if the fix is purely internal.
+5. **Doc** → If the fix changed user-visible behavior or API contracts, update docs (use `doc-writer` agent).
 6. **Doc Review** → Validate updated documentation accuracy (use `doc-reviewer` agent)
 
 ### Flow 3: Refactor
@@ -56,7 +56,7 @@ For new features, especially those touching 5+ files or introducing a new domain
 6. **Review** → Run specialist reviewer(s):
    - `backend/` → **backend-reviewer**
    - `client/` → **fe-reviewer**
-7. **Doc** → If file locations, APIs, or data models changed, update docs (use `doc-writer` agent). Skip if only internal refactoring.
+7. **Doc** → If file locations, APIs, or data models changed, update docs (use `doc-writer` agent).
 8. **Doc Review** → Validate updated documentation accuracy (use `doc-reviewer` agent)
 
 ### Flow 4: Code Review Only

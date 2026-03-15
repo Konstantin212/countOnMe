@@ -133,7 +133,7 @@ architect → planner → [user approval] →
     (internally: write failing test → fix → verify) →
   verifier → tdd-guide →
   backend-reviewer ∥ fe-reviewer (based on changed files) →
-  doc-writer (if fix changed documented behavior/API) → doc-reviewer
+  doc-writer → doc-reviewer
 ```
 
 #### Flow 3: Refactor
@@ -142,7 +142,7 @@ verifier (baseline) → planner → [user approval] →
   backend-developer ∥ fe-developer (implement changes) →
   refactor-cleaner → verifier → tdd-guide →
   backend-reviewer ∥ fe-reviewer →
-  doc-writer (if file locations/APIs/models changed) → doc-reviewer
+  doc-writer → doc-reviewer
 ```
 
 #### Flow 4: Code Review Only
@@ -159,7 +159,7 @@ architect → [ADR in docs/architecture/] → planner → [user approval]
 #### Flow 6: Small Fix (Single File, Skip Architect)
 ```
 planner (lightweight) → fe-developer or backend-developer →
-  verifier → tdd-guide -> fe-reviewer or backend-reviewer
+  verifier → tdd-guide → fe-reviewer or backend-reviewer
 ```
 
 ### Subagent Delegation
@@ -190,6 +190,7 @@ Hook scripts live in `.claude/hooks/` and fire automatically:
 **PreToolUse** (before tool execution):
 - `block-random-md.js` — Blocks `.md` creation outside `docs/`, `README.md`, `CLAUDE.md`, `.claude/`
 - `git-push-warn.js` — Escalates `git push` to user, blocks `--force` push
+- `pre-commit-doc-review.js` — On `git commit` with staged `docs/` files, warns to run doc-reviewer first; flags leftover plan files
 - `suggest-compact.js` — Suggests `/compact` after 50+ tool calls
 
 **Stop** (after each response):

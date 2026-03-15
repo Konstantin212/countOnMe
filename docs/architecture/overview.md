@@ -1,7 +1,7 @@
 ---
 type: architecture
 status: current
-last-updated: 2026-03-14
+last-updated: 2026-03-15
 related-features: []
 ---
 
@@ -82,7 +82,7 @@ Bottom Tabs
 |   +-- MyPath                 (future: analytics & trends)
 |
 +-- ProfileTab (person icon)
-    +-- ProfileMenu            (settings hub)
+    +-- ProfileScreen           (settings hub)
     +-- ProductsList            (browse all products)
     +-- ProductDetails          (view product + portions)
     +-- ProductForm             (add/edit product)
@@ -163,12 +163,12 @@ Request -> Router -> Service -> SQLAlchemy ORM -> PostgreSQL
                     calculations)
 ```
 
-**Strict separation:**
-- **Routers** (`app/api/routers/`): Parse inputs via Pydantic, call services, return responses. No SQL, no business logic.
-- **Services** (`app/services/`): All business logic, domain rules, query orchestration, and calculations.
-- **Models** (`app/models/`): SQLAlchemy ORM definitions only.
-- **Schemas** (`app/schemas/`): Pydantic request/response models only.
-- **Dependencies** (`app/api/deps.py`): Auth resolution, DB session injection.
+**Strict separation (vertical slice layout):**
+- **Routers** (`app/features/<domain>/router.py`): Parse inputs via Pydantic, call services, return responses. No SQL, no business logic.
+- **Services** (`app/features/<domain>/service.py`): All business logic, domain rules, query orchestration, and calculations.
+- **Models** (`app/features/<domain>/models.py`): SQLAlchemy ORM definitions only.
+- **Schemas** (`app/features/<domain>/schemas.py`): Pydantic request/response models only.
+- **Dependencies** (`app/core/deps.py`): Auth resolution, DB session injection.
 
 ### 4.2 Authentication Model
 
@@ -212,7 +212,7 @@ All routers are mounted under the `/v1` prefix:
 | `portions` | Portion CRUD, enforces exactly one `is_default=true` per product |
 | `food_entries` | Food entry CRUD, validates portion belongs to product and same device |
 | `goals` | Goal CRUD, stores calculated and manual goals |
-| `goal_calculation` | BMR (Mifflin-St Jeor), TDEE, macro splits, BMI, healthy weight range |
+| `goals/calculation` | BMR (Mifflin-St Jeor), TDEE, macro splits, BMI, healthy weight range — at `app/features/goals/calculation.py` |
 | `stats` | Aggregated calorie/macro totals per day and per meal type |
 | `weights` | Body weight record CRUD |
 | `calculation` | Utility calculation functions |
@@ -232,7 +232,7 @@ All domain models (except Device) use `TimestampMixin` which provides `created_a
 
 ### 4.6 Migrations
 
-Six Alembic migrations in order:
+Ten Alembic migrations in order:
 
 | # | Migration | Description |
 |---|-----------|-------------|
@@ -242,6 +242,10 @@ Six Alembic migrations in order:
 | 0004 | `food_entries` | Creates `food_entries` table |
 | 0005 | `body_weights` | Creates `body_weights` table |
 | 0006 | `user_goals` | Creates `user_goals` table |
+| 0007 | `catalog_products` | Creates `catalog_products` table (global read-only catalog) |
+| 0008 | `catalog_portions` | Creates `catalog_portions` table |
+| 0009 | `extend_unit_enum` | Adds `pcs` and `serving` values to `unit_enum` |
+| 0010 | `evolve_catalog_products` | Adds `source`, `source_id`, `display_name`, `brand`, `barcode`, `search_vector` to `catalog_products` |
 
 ## 5. Client-Backend Integration Map
 

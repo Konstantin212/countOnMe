@@ -1,7 +1,7 @@
 ---
 type: feature
 status: current
-last-updated: 2026-03-14
+last-updated: 2026-03-15
 related-features:
   - product-management
   - goal-system
@@ -47,9 +47,9 @@ From this screen, users can:
 The AddMeal flow uses a multi-screen wizard wrapped in a `DraftMealProvider` React context.
 
 **Screen sequence:**
-1. **AddMeal/index.tsx** -- Shows the current draft with items grouped by meal type. Users can switch between meal types (breakfast, lunch, dinner, snacks). Tap "Add Product" to pick a product. Tap "Save" to submit all items.
-2. **SelectProduct/index.tsx** -- Browse/search the local product list. Tap a product to proceed.
-3. **AddFood/index.tsx** -- Enter the amount and unit for the selected product. Confirm to add the item to the draft.
+1. **AddMealFlow/components/AddMeal/index.tsx** -- Shows the current draft with items grouped by meal type. Users can switch between meal types (breakfast, lunch, dinner, snacks). Tap "Add Product" to pick a product. Tap "Save" to submit all items.
+2. **AddMealFlow/components/SelectProduct/index.tsx** -- Browse/search the local product list. Tap a product to proceed.
+3. **AddMealFlow/components/AddFood/index.tsx** -- Enter the amount and unit for the selected product. Confirm to add the item to the draft.
 
 **DraftMealProvider** (in `client/src/screens/AddMealFlow/context.tsx`) holds the draft state:
 - `mealType` -- Currently selected meal type (defaults to `breakfast`)
@@ -130,8 +130,8 @@ Located in `client/src/hooks/useMealTypeEntries.ts`. Manages entries for a speci
 
 **Actions:**
 - `refresh()` -- Fetches, filters, and enriches entries from the backend
-- `updateEntry(entryId, amount, unit)` -- Persists to DB, then updates local state with recalculated macros
-- `deleteEntry(entryId)` -- Persists to DB, then removes from local state
+- `updateEntry(entryId, amount, unit)` -- Persists to DB, then updates local state with recalculated macros. Returns `Promise<boolean>`.
+- `deleteEntry(entryId)` -- Persists to DB, then removes from local state. Returns `Promise<boolean>`.
 
 Uses an LRU portion cache (max 100 entries) to avoid repeated portion API calls.
 

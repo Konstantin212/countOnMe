@@ -70,7 +70,7 @@ Unified search across user products and catalog.
 
 **ProductResponse**: `id`, `name`, `created_at`, `updated_at`
 
-**ProductSearchResultItem**: `id`, `name`, `source` (user/catalog), `calories_per_100g`, `protein_per_100g`, `carbs_per_100g`, `fat_per_100g`, `catalog_id`
+**ProductSearchResultItem**: `id`, `name`, `source` (user/catalog), `calories_per_100g`, `protein_per_100g`, `carbs_per_100g`, `fat_per_100g`, `catalog_id`, `display_name` (nullable), `brand` (nullable)
 
 ## Key Files
 

@@ -94,7 +94,7 @@ The backend `products` table (device-scoped):
 
 **Catalog tables** (`catalog_products`, `catalog_portions`):
 - No `device_id` — shared globally
-- `catalog_products`: id, fdc_id (USDA stable ID), name, category, created_at, updated_at
+- `catalog_products`: id, source_id (provider-specific stable ID), source (discriminator), name, category, created_at, updated_at
 - `catalog_portions`: id, catalog_product_id, label, base_amount, base_unit, calories, protein, carbs, fat, is_default, gram_weight, created_at, updated_at
 
 Macros in catalog portions are per `base_amount` of `base_unit`. Search results compute per 100g via the formula: `round(value / base_amount * 100, 2)`.
@@ -144,145 +144,18 @@ Input sanitization: negative numbers become 0, names are trimmed (or default to 
 
 ## API Endpoints
 
-All product endpoints require device authentication (Bearer token).
+All endpoints require device authentication (Bearer token). See `docs/api/endpoints.md` for full schemas.
 
-### Name Uniqueness Check
-
-```
-GET /v1/products/check-name?name=Chicken+Breast
-```
-
-**Query params:**
-- `name` (required, 1-200 chars) — product name to check
-
-**Response 200:**
-```json
-{
-  "available": true
-}
-```
-
-Returns `available: false` if a non-deleted product with the same name (case-insensitive) exists for the device. Returns `available: true` if the name is available. Soft-deleted products are ignored (counted as available).
-
-### Product Search (Unified)
-
-```
-GET /v1/products/search?q=chick&limit=35
-```
-
-**Query params:**
-- `q` (required, 1-200 chars) — search term (case-insensitive substring match)
-- `limit` (optional, default 35, max 60) — total result cap
-
-**Response 200:**
-```json
-[
-  {
-    "id": "uuid",
-    "name": "Chicken Breast",
-    "source": "user",
-    "calories_per_100g": 165,
-    "protein_per_100g": null,
-    "carbs_per_100g": null,
-    "fat_per_100g": null,
-    "catalog_id": null
-  },
-  {
-    "id": "uuid",
-    "name": "Chicken, cooked",
-    "source": "catalog",
-    "calories_per_100g": 165,
-    "protein_per_100g": 31.4,
-    "carbs_per_100g": 0,
-    "fat_per_100g": 3.6,
-    "catalog_id": "uuid"
-  }
-]
-```
-
-**Behavior:**
-- Queries user products (device-scoped, non-deleted) and catalog products for matches
-- Scores results by relevance: 0 = starts-with match, 1 = contains match
-- Interleaves both sources by relevance rank, then sorts alphabetically within each tier
-- Total returned = up to `limit` (default 35)
-- `source` discriminates user vs catalog
-- `catalog_id` set only for `source="catalog"`
-- Macros (`protein_per_100g`, etc) computed from default portion: `round(value / base_amount * 100, 2)`. For user products, macros are always null.
-
-**Status codes:**
-- 200 — results found (may be empty array)
-- 400 — missing or invalid `q` param
-- 401 — unauthenticated
-- 422 — query validation failed
-
-### List Products
-
-```
-GET /v1/products
-```
-
-**Response 200:**
-Returns all products (user-created, non-deleted) for the authenticated device.
-
-### Create Product
-
-```
-POST /v1/products
-Content-Type: application/json
-
-{
-  "name": "Chicken Breast",
-  "id": "uuid (optional, client-generated)"
-}
-```
-
-**Response 201:**
-Returns the created product.
-
-### Get Product
-
-```
-GET /v1/products/{product_id}
-```
-
-**Response 200:**
-Returns the product. 404 if not found or belongs to another device.
-
-### Update Product
-
-```
-PATCH /v1/products/{product_id}
-Content-Type: application/json
-
-{
-  "name": "Grilled Chicken Breast"
-}
-```
-
-**Response 200:**
-Returns the updated product.
-
-### Delete Product
-
-```
-DELETE /v1/products/{product_id}
-```
-
-**Response 204:**
-Soft-deletes the product (sets `deleted_at`). 404 if not found.
-
-### Reset All Data
-
-```
-DELETE /v1/data/reset
-```
-
-**Response 204:**
-Soft-deletes all food entries for the authenticated device (sets `deleted_at` on all `food_entries` where `device_id = current_device`). Does not delete products. No response body.
-
-**Status codes:**
-- 204 — success
-- 401 — unauthenticated
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET`  | `/v1/products` | List user products (device-scoped, non-deleted) |
+| `POST` | `/v1/products` | Create product (client-generated UUID accepted) → 201 |
+| `GET`  | `/v1/products/{id}` | Get product → 404 if not found or cross-device |
+| `PATCH` | `/v1/products/{id}` | Update product name → 200 |
+| `DELETE` | `/v1/products/{id}` | Soft-delete → 204 |
+| `GET`  | `/v1/products/check-name?name=X` | Check name availability → `{ "available": true/false }` |
+| `GET`  | `/v1/products/search?q=X&limit=35` | Unified search (user + catalog); scores by starts-with then contains; returns `source`, per-100g macros, `catalog_id` |
+| `DELETE` | `/v1/data/reset` | Soft-delete all food entries for device → 204 |
 
 ## Key Files
 

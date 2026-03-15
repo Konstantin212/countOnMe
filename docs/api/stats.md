@@ -1,7 +1,7 @@
 ---
 type: api
 status: current
-last-updated: 2026-03-14
+last-updated: 2026-03-15
 related-features:
   - food-tracking
   - goal-system
@@ -34,7 +34,7 @@ Daily macro totals for a date range.
 | `from` | `date` | yes | Start day (inclusive) |
 | `to` | `date` | yes | End day (inclusive) |
 
-**Response** `200 OK` — `DailyStatsResponse` with `points[]` (one per day with data)
+**Response** `200 OK` — `DailyStatsResponse` with `points[]` (one per day in range, including days with zero data)
 
 ### `GET /v1/stats/weight`
 
@@ -61,4 +61,5 @@ Weight history for a date range.
 
 - `backend/app/features/stats/router.py` — Router
 - `backend/app/features/stats/service.py` — Aggregation queries
+- `backend/app/features/stats/calculation.py` — Macro calculation logic
 - `backend/app/features/stats/schemas.py` — Pydantic schemas

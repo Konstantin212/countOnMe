@@ -1,7 +1,7 @@
 ---
 type: feature
 status: current
-last-updated: 2026-03-14
+last-updated: 2026-03-15
 related-features:
   - food-tracking
   - sync-system
@@ -23,6 +23,7 @@ A calculated goal derives calorie and macro targets from the user's physical pro
 - Birth date
 - Height (cm)
 - Current weight (kg)
+- Target weight (kg, optional) -- desired goal weight
 - Activity level
 - Weight goal (lose/maintain/gain)
 - Weight change pace (for lose/gain goals)
@@ -125,24 +126,11 @@ Gram conversion:
 
 ### Water Intake
 
-Recommended daily water: `weight_kg x 33 ml` (using 33 ml/kg as the middle of the 30-35 ml/kg range).
+Recommended daily water: `weight_kg x 33 ml`.
 
 ### BMI Calculation
 
-`BMI = weight_kg / (height_m)^2`
-
-| Category    | BMI Range   |
-|-------------|-------------|
-| underweight | < 18.5      |
-| normal      | 18.5 - 24.9 |
-| overweight  | 25.0 - 29.9 |
-| obese       | >= 30.0     |
-
-### Healthy Weight Range
-
-Derived from BMI boundaries and the user's height:
-- Minimum: `18.5 x (height_m)^2`
-- Maximum: `24.9 x (height_m)^2`
+`BMI = weight_kg / (height_m)^2`. Categories: underweight < 18.5, normal 18.5–24.9, overweight 25–29.9, obese ≥ 30. Healthy weight range derived from BMI 18.5–24.9 bounds and the user's height.
 
 ## BMI Visualization
 
@@ -176,7 +164,7 @@ All endpoints require device authentication. See `docs/api/goals.md` for full sc
 
 ## Backend Data Model
 
-The `user_goals` table stores identity (`id`, `device_id`), type (`goal_type`: "calculated" or "manual"), body metrics for calculated goals (`gender`, `birth_date`, `height_cm`, `current_weight_kg`, `activity_level`), targets shared by both types (`daily_calories_kcal`, protein/carbs/fat percent and grams, `water_ml`), and timestamps (`created_at`, `updated_at`, `deleted_at`). Only one active goal per device; creating a new goal soft-deletes existing ones.
+The `user_goals` table stores identity (`id`, `device_id`), type (`goal_type`: "calculated" or "manual"), body metrics for calculated goals (`gender`, `birth_date`, `height_cm`, `current_weight_kg`, `activity_level`, `weight_goal_type`, `target_weight_kg`, `weight_change_pace`), targets shared by both types (`daily_calories_kcal`, protein/carbs/fat percent and grams, `water_ml`), and timestamps (`created_at`, `updated_at`, `deleted_at`). Only one active goal per device; creating a new goal soft-deletes existing ones.
 
 ## Local Storage
 

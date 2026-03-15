@@ -1,7 +1,7 @@
 ---
 type: feature
 status: current
-last-updated: 2026-03-14
+last-updated: 2026-03-15
 related-features:
   - sync-system
 ---
@@ -99,7 +99,7 @@ The authentication dependency chain:
 The `POST /v1/devices/register` endpoint is rate-limited to prevent abuse:
 
 - **Limit:** 10 requests per 60 seconds per client IP
-- **Implementation:** In-memory sliding-window counter (`RateLimiter` class in `backend/app/api/rate_limit.py`)
+- **Implementation:** In-memory sliding-window counter (`RateLimiter` class in `backend/app/core/rate_limit.py`)
 - **IP detection:** Uses `X-Forwarded-For` header (first IP) if present, otherwise `request.client.host`
 - **Response on limit:** HTTP 429 (Too Many Requests)
 

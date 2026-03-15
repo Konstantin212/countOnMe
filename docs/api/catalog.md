@@ -1,7 +1,7 @@
 ---
 type: api
 status: current
-last-updated: 2026-03-14
+last-updated: 2026-03-15
 related-features:
   - catalog-seeding
   - product-management
@@ -24,53 +24,19 @@ List catalog products with optional full-text search.
 - `limit` (optional, default 50, max 200) — Number of results
 - `offset` (optional, default 0) — Pagination offset
 
-**Response (200 OK):**
-```json
-[
-  {
-    "id": "550e8400-e29b-41d4-a716-446655440000",
-    "source": "usda",
-    "source_id": "167638",
-    "display_name": "Apple, raw",
-    "brand": null,
-    "barcode": null,
-    "name": "Apple, raw, with skin",
-    "category": "Fruits and Fruit Juices",
-    "default_portion": {
-      "id": "660e8400-e29b-41d4-a716-446655440001",
-      "label": "100 g",
-      "base_amount": "100.000",
-      "base_unit": "g",
-      "gram_weight": "100.000",
-      "calories": "52.000",
-      "protein": "0.260",
-      "carbs": "13.810",
-      "fat": "0.170",
-      "is_default": true
-    }
-  }
-]
-```
+**Response (200 OK):** Array of catalog products with these fields:
+- `id`, `source` (usda/off), `source_id`, `display_name`, `brand` (nullable), `barcode` (nullable)
+- `name`, `category` (nullable), `search_vector`
+- `default_portion` — Default portion with `id`, `label`, `base_amount`, `base_unit`, `gram_weight`, `calories`, `protein`, `carbs`, `fat`, `is_default`
 
 ### `GET /v1/catalog/products/{catalog_product_id}`
 
 Get a single catalog product with all portions.
 
-**Response (200 OK):**
-```json
-{
-  "id": "550e8400-e29b-41d4-a716-446655440000",
-  "source": "usda",
-  "source_id": "167638",
-  "display_name": "Apple, raw",
-  "brand": null,
-  "barcode": null,
-  "name": "Apple, raw, with skin",
-  "category": "Fruits and Fruit Juices",
-  "default_portion": { ... },
-  "portions": [ ... ]
-}
-```
+**Response (200 OK):** Single catalog product with:
+- `id`, `source`, `source_id`, `display_name`, `brand`, `barcode`, `name`, `category`
+- `default_portion` — See structure above
+- `portions[]` — All portions for this product
 
 **Status Codes:**
 - `200` — Product found

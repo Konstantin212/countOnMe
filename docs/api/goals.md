@@ -1,7 +1,7 @@
 ---
 type: api
 status: current
-last-updated: 2026-03-14
+last-updated: 2026-03-15
 related-features:
   - goal-system
 ---
@@ -41,7 +41,7 @@ Get goal by ID. **Errors:** `404`
 
 ### `POST /v1/goals/calculated`
 
-Create goal from body metrics. Inherits calculate fields plus optional `id`, macro percent overrides, `water_ml` override. If all three macro percents provided, must sum to 100.
+Create goal from body metrics. Inherits calculate fields plus optional `id` (UUID), macro percent overrides, `water_ml` override. If all three macro percents provided, must sum to 100.
 
 **Response** `201 Created` — `GoalResponse`
 
@@ -51,6 +51,7 @@ Create manual goal with direct targets.
 
 | Field | Type | Required | Constraints |
 |-------|------|----------|-------------|
+| `id` | `UUID` | no | Client-generated ID |
 | `daily_calories_kcal` | `int` | yes | 1-10000 |
 | `protein_percent` | `int` | yes | 0-100 |
 | `carbs_percent` | `int` | yes | 0-100 |

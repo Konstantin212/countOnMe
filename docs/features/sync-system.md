@@ -1,7 +1,7 @@
 ---
 type: feature
 status: current
-last-updated: 2026-03-14
+last-updated: 2026-03-15
 related-features:
   - device-auth
   - product-management
@@ -38,29 +38,32 @@ Each queued operation has the following shape:
 
 ```typescript
 {
-  id: string;          // Unique identifier (e.g., "products.create:{uuid}")
-  resource: string;    // "products" or "goals"
-  action: string;      // "create", "update", or "delete"
-  payload: any;        // Resource-specific data (e.g., { id, name })
-  createdAt: number;   // Epoch timestamp when enqueued
-  attempts: number;    // Number of flush attempts so far
+  id: string;           // Unique identifier (e.g., "products.create:{uuid}")
+  resource: Resource;   // "products" | "goals" | "body-weights"
+  action: Action;       // "create" | "update" | "delete"
+  payload: any;         // Resource-specific data
+  createdAt: number;    // Epoch timestamp when enqueued
+  attempts: number;     // Number of flush attempts so far
   nextAttemptAt?: number; // Epoch timestamp for next retry (backoff)
-  lastError?: string;  // Error message from last failed attempt
+  lastError?: string;   // Error message from last failed attempt
 }
 ```
 
 ### Supported Resources and Actions
 
-| Resource | Action  | API Call                                | Payload      |
-|----------|---------|----------------------------------------|--------------|
-| products | create  | `POST /v1/products`                    | `{ id, name }` |
-| products | update  | `PATCH /v1/products/{id}`              | `{ id, name }` |
-| products | delete  | `DELETE /v1/products/{id}`             | `{ id }`       |
-| goals    | create  | (No-op: goal already created via API)  | `{ id, goalType }` |
-| goals    | update  | `PATCH /v1/goals/{id}`                 | `{ id, ... }` |
-| goals    | delete  | `DELETE /v1/goals/{id}`                | `{ id }`       |
+| Resource     | Action  | API Call                               | Payload              |
+|--------------|---------|----------------------------------------|----------------------|
+| products     | create  | `POST /v1/products`                    | `{ id, name }`       |
+| products     | update  | `PATCH /v1/products/{id}`              | `{ id, name }`       |
+| products     | delete  | `DELETE /v1/products/{id}`             | `{ id }`             |
+| goals        | create  | (No-op: goal already created via API)  | `{ id, goalType }`   |
+| goals        | update  | `PATCH /v1/goals/{id}`                 | `{ id, ... }`        |
+| goals        | delete  | `DELETE /v1/goals/{id}`                | `{ id }`             |
+| body-weights | create  | `POST /v1/body-weights`                | `{ day, weightKg }`  |
+| body-weights | update  | `PATCH /v1/body-weights/{id}`          | `{ id, weightKg }`   |
+| body-weights | delete  | `DELETE /v1/body-weights/{id}`         | `{ id }`             |
 
-Note: Goal creation operations are no-ops in the sync queue because goals are created directly via API calls in the `useGoal` hook. The queue entry exists primarily as a record and for potential future offline-create support.
+Note: Goal creation operations are no-ops in the sync queue because goals are created directly via API calls in the `useGoal` hook.
 
 ### Enqueue
 
@@ -94,7 +97,7 @@ The `flush()` function processes the queue:
    - Computed `nextAttemptAt` using exponential backoff
    - Stored `lastError` message
 
-5. **Update metadata** -- If all attempted operations succeeded and the queue is empty, clear `lastError` and update `lastSyncAt`
+5. **Update metadata** -- `lastError` is cleared when `succeeded > 0 && queue.length === 0`; `lastSyncAt` is updated when `attempted > 0 && succeeded === attempted` (regardless of remaining queue length)
 
 ### Exponential Backoff
 
@@ -152,29 +155,9 @@ For pulling changes from the backend, there is a cursor-based sync endpoint:
 }
 ```
 
-### Cursor Format
+### Cursor Format and Behavior
 
-The cursor encodes a position in the `(updated_at, id)` space:
-
-```
-{ISO-8601-timestamp}|{UUID}
-```
-
-Example: `2024-01-15T10:30:00Z|550e8400-e29b-41d4-a716-446655440000`
-
-### How It Works
-
-1. For each entity type (products, portions, food entries), the endpoint queries rows where:
-   - `device_id` matches the authenticated device
-   - `updated_at > cursor_timestamp` OR (`updated_at == cursor_timestamp` AND `id > cursor_uuid`)
-2. Results are ordered by `(updated_at ASC, id ASC)` and limited to `limit` rows
-3. The response includes all three entity types in a single call
-4. The `cursor` in the response advances to the maximum `(updated_at, id)` across all returned rows
-5. Clients call again with the new cursor to get the next page; when all three lists are empty, sync is complete
-
-### Sync Response Types
-
-Each entity in the response includes `updated_at` and `deleted_at` fields. A non-null `deleted_at` indicates a soft-deleted row that the client should remove from local storage.
+The cursor encodes a position in the `(updated_at, id)` space: `{ISO-8601-timestamp}|{UUID}`. Each entity type is queried for rows where `device_id` matches and `(updated_at, id)` is greater than the cursor position, ordered `ASC` and limited to `limit` rows. The response cursor advances to the maximum `(updated_at, id)` across all returned rows. Clients page until all three lists are empty. A non-null `deleted_at` in any row indicates a soft-deleted record the client should remove locally.
 
 ## Hook: useSyncStatus
 
@@ -198,30 +181,10 @@ The `isOnline` state is kept up-to-date via a `NetInfo.addEventListener` subscri
 
 ## Data Consistency Model
 
-### Products
-
-Products are primarily managed locally. The backend copy is a secondary representation used for:
-- Food entry creation (entries reference backend product IDs)
-- Cross-session persistence if the local device data is lost
-
-When a product is created/updated/deleted locally, the change is immediately applied to AsyncStorage and a sync operation is enqueued. The backend eventually receives the mutation.
-
-### Goals
-
-Goals use a hybrid approach:
-- On load, the local goal is shown immediately (offline-first)
-- The hook then attempts to fetch the remote goal
-- If the remote goal is available and different, it overwrites the local copy
-- Mutations go to the backend first (via API), then are saved locally and enqueued
-
-### Food Entries
-
-Food entries are strictly backend-first:
-- Creation requires a live backend connection
-- Queries always hit the backend
-- The backend computes stats (macro totals) from entries
-- There is no local cache of food entries (except transient in-memory state in hooks)
-
-### Stats
-
-Stats are computed on-the-fly by the backend by joining food entries with product portions. They are never cached locally.
+| Data Type    | Strategy       | Notes |
+|-------------|----------------|-------|
+| Products    | Local-first    | Written to AsyncStorage immediately; backend sync deferred via queue |
+| Goals       | Hybrid         | Local copy shown first; remote overwrites on fetch; mutations API-first |
+| Body Weights| Local-first    | Written locally; backend sync deferred via queue |
+| Food Entries| Backend-first  | Require live connection; no local cache |
+| Stats       | Backend-only   | Computed on-the-fly; never cached locally |

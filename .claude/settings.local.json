@@ -6,7 +6,8 @@
       "mcp__github__get_me",
       "WebFetch(domain:api.github.com)",
       "WebFetch(domain:raw.githubusercontent.com)",
-      "mcp__github__get_file_contents"
+      "mcp__github__get_file_contents",
+      "mcp__github__issue_write"
     ],
     "deny": [],
     "ask": [],

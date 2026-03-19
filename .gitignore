@@ -106,3 +106,4 @@ backend/alembic/versions/__pycache__/
 # ----------------------
 seeds/*.parquet
 seeds/off_products_filtered.csv
+seeds/FoodData_Central_sr_legacy_food_json_2018-04.json

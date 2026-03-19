@@ -89,16 +89,6 @@ const ProfileStackNavigator = () => {
         options={{ title: "Add Product" }}
       />
       <ProfileStack.Screen
-        name="ProductConfirm"
-        component={ProductConfirmScreen}
-        options={{ title: "Confirm Product" }}
-      />
-      <ProfileStack.Screen
-        name="BarcodeScanner"
-        component={BarcodeScannerScreen}
-        options={{ title: "Scan Barcode", headerShown: false }}
-      />
-      <ProfileStack.Screen
         name="MealsList"
         component={MealsListScreen}
         options={{ title: "My Meals" }}

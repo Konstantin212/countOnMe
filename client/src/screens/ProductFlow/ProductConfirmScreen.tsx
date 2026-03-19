@@ -3,7 +3,6 @@ import {
   Alert,
   Pressable,
   ScrollView,
-  StyleSheet,
   Text,
   TextInput,
   View,
@@ -11,83 +10,139 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { Ionicons } from "@expo/vector-icons";
+import { SegmentedButtons } from "react-native-paper";
 
-import {
-  MyDayStackParamList,
-  ProfileStackParamList,
-} from "@app/navigationTypes";
+import { MyDayStackParamList } from "@app/navigationTypes";
 import { useProducts } from "@hooks/useProducts";
-import { Scale, SCALE_OPTIONS, toGrams } from "@services/utils/scales";
+import { useFoodEntries } from "@hooks/useFoodEntries";
 import { useTheme } from "@hooks/useTheme";
-import { pushProductRecent } from "@storage/storage";
+import { CatalogPortionData } from "@hooks/useBarcodeLookup";
+import { MealTypeKey, Unit } from "@models/types";
+import { Scale, SCALE_OPTIONS, toGrams } from "@services/utils/scales";
+import {
+  calculateNutrition,
+  classifyPortionMode,
+} from "@services/utils/nutrition";
+import { MEAL_TYPE_KEYS, MEAL_TYPE_LABEL } from "@services/constants/mealTypes";
+import { logEvent } from "@services/analytics";
+import {
+  loadProductFavourites,
+  saveProductFavourites,
+  pushProductRecent,
+} from "@storage/storage";
+import { makeConfirmStyles } from "./components/confirmStyles";
 
-type ProfileProps = NativeStackScreenProps<
-  ProfileStackParamList,
-  "ProductConfirm"
->;
-type MyDayProps = NativeStackScreenProps<MyDayStackParamList, "ProductConfirm">;
-type Props = ProfileProps | MyDayProps;
+type Props = NativeStackScreenProps<MyDayStackParamList, "ProductConfirm">;
 
-const ProductConfirmScreen = ({ navigation, route }: Props) => {
-  const { externalProduct } = route.params;
-  const { products, addProduct } = useProducts();
+const TRACKABLE_MEAL_TYPES = MEAL_TYPE_KEYS.filter((k) => k !== "water");
+
+const findDefaultPortionId = (portions: CatalogPortionData[]): string => {
+  const defaultPortion = portions.find((p) => p.isDefault);
+  return defaultPortion?.id ?? portions[0]?.id ?? "";
+};
+
+const findDefaultWeightUnit = (
+  portions: CatalogPortionData[],
+  portionId: string,
+): Scale => {
+  const portion = portions.find((p) => p.id === portionId);
+  if (
+    portion?.baseUnit === "g" ||
+    portion?.baseUnit === "mg" ||
+    portion?.baseUnit === "kg"
+  ) {
+    return portion.baseUnit;
+  }
+  return "g";
+};
+
+// ---------------------------------------------------------------------------
+// Catalog Track Food UI
+// ---------------------------------------------------------------------------
+
+interface CatalogTrackProps {
+  externalProduct: Props["route"]["params"]["externalProduct"];
+  catalogPortions: CatalogPortionData[];
+  navigation: Props["navigation"];
+}
+
+const CatalogTrackScreen = ({
+  externalProduct,
+  catalogPortions,
+  navigation,
+}: CatalogTrackProps) => {
   const { colors } = useTheme();
+  const { products, addProduct } = useProducts();
+  const { saveMealToBackend } = useFoodEntries();
 
-  const [amount, setAmount] = useState("100");
-  const [selectedScale, setSelectedScale] = useState<Scale>("g");
+  const [mealType, setMealType] = useState<MealTypeKey>("breakfast");
+  const [selectedPortionId, setSelectedPortionId] = useState(
+    findDefaultPortionId(catalogPortions),
+  );
+  const [quantity, setQuantity] = useState("1");
+  const [weightAmount, setWeightAmount] = useState("100");
+  const [weightUnit, setWeightUnit] = useState<Scale>(
+    findDefaultWeightUnit(
+      catalogPortions,
+      findDefaultPortionId(catalogPortions),
+    ),
+  );
+  const [isFavourite, setIsFavourite] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  // Determine if we have nutritional data from Open Food Facts
-  const hasNutritionalData = externalProduct.caloriesPer100g > 0;
-
-  // Calculate nutritional values for the selected amount
-  const calculatedValues = useMemo(() => {
-    const numAmount = parseFloat(amount);
-    if (!numAmount || numAmount <= 0 || !hasNutritionalData) {
-      return null;
+  const selectedPortion = useMemo(() => {
+    const found =
+      catalogPortions.find((p) => p.id === selectedPortionId) ??
+      catalogPortions[0];
+    if (!found) {
+      throw new Error("CatalogTrackScreen requires at least one portion");
     }
+    return found;
+  }, [catalogPortions, selectedPortionId]);
 
-    // Convert amount to grams
-    const gramsAmount = toGrams(numAmount, selectedScale);
+  const portionMode = useMemo(
+    () => classifyPortionMode(selectedPortion),
+    [selectedPortion],
+  );
 
-    // Calculate ratio to 100g
-    const ratio = gramsAmount / 100;
+  const nutrition = useMemo(() => {
+    const qty = parseFloat(quantity) || 0;
+    const wt = parseFloat(weightAmount) || 0;
+    return calculateNutrition(
+      selectedPortion,
+      portionMode,
+      qty,
+      wt,
+      weightUnit,
+    );
+  }, [selectedPortion, portionMode, quantity, weightAmount, weightUnit]);
 
-    return {
-      grams: gramsAmount,
-      calories: Math.round(externalProduct.caloriesPer100g * ratio),
-      protein: externalProduct.proteinPer100g
-        ? (externalProduct.proteinPer100g * ratio).toFixed(1)
-        : null,
-      carbs: externalProduct.carbsPer100g
-        ? (externalProduct.carbsPer100g * ratio).toFixed(1)
-        : null,
-      fat: externalProduct.fatPer100g
-        ? (externalProduct.fatPer100g * ratio).toFixed(1)
-        : null,
-    };
-  }, [amount, selectedScale, externalProduct, hasNutritionalData]);
+  const handlePortionSelect = (portionId: string) => {
+    setSelectedPortionId(portionId);
+    const portion = catalogPortions.find((p) => p.id === portionId);
+    if (portion) {
+      const mode = classifyPortionMode(portion);
+      if (mode === "weight") {
+        setWeightUnit(findDefaultWeightUnit(catalogPortions, portionId));
+      }
+    }
+  };
 
-  const handleSave = async () => {
-    const numAmount = parseFloat(amount);
+  const handleTrackFood = async () => {
+    const qty = parseFloat(quantity) || 0;
+    const wt = parseFloat(weightAmount) || 0;
 
-    if (!numAmount || numAmount <= 0) {
-      Alert.alert(
-        "Invalid Amount",
-        "Please enter a valid amount greater than 0",
-      );
+    if (portionMode === "serving" && qty <= 0) {
+      Alert.alert("Invalid Quantity", "Please enter a quantity greater than 0");
+      return;
+    }
+    if (portionMode === "weight" && wt <= 0) {
+      Alert.alert("Invalid Amount", "Please enter an amount greater than 0");
       return;
     }
 
     setSaving(true);
     try {
-      // Calculate calories per 100g based on the entered amount and scale
-      const caloriesPer100g = externalProduct.caloriesPer100g;
-
-      // If data exists in database, it's already per 100g
-      // Otherwise, user would need to enter it manually (but we have it from API)
-
-      // Create the product
       const productName = externalProduct.brands
         ? `${externalProduct.name} (${externalProduct.brands})`
         : externalProduct.name;
@@ -95,387 +150,303 @@ const ProductConfirmScreen = ({ navigation, route }: Props) => {
       const newProduct = await addProduct({
         name: productName,
         barcode: externalProduct.code,
-        caloriesPer100g,
+        caloriesPer100g: externalProduct.caloriesPer100g,
         proteinPer100g: externalProduct.proteinPer100g,
         carbsPer100g: externalProduct.carbsPer100g,
         fatPer100g: externalProduct.fatPer100g,
+        source: "catalog",
       });
+
+      // Always save in grams so backend stats calculation can convert units
+      const entryAmount =
+        portionMode === "serving"
+          ? qty * (selectedPortion.gramWeight ?? selectedPortion.baseAmount)
+          : toGrams(wt, weightUnit);
+
+      const entryUnit: Unit = "g";
+
+      await saveMealToBackend(
+        mealType,
+        [
+          {
+            productId: newProduct.id,
+            amount: entryAmount,
+            unit: entryUnit,
+          },
+        ],
+        [newProduct],
+      );
+
+      if (isFavourite) {
+        const favourites = await loadProductFavourites();
+        await saveProductFavourites([
+          newProduct.id,
+          ...favourites.filter((id) => id !== newProduct.id),
+        ]);
+      }
 
       await pushProductRecent(newProduct.id);
 
-      // Check if dedup returned an existing product (barcode already saved)
-      const isExisting = externalProduct.code
-        ? products.some((p) => p.id === newProduct.id)
-        : false;
+      logEvent("food_tracked_via_barcode", {
+        mealType,
+        portionMode,
+        catalogProductId: externalProduct.catalogProductId,
+        isExisting: products.some((p) => p.id === newProduct.id),
+      });
 
-      const message = isExisting
-        ? "This product is already in your list"
-        : "Product added to your list";
-
-      Alert.alert("Success", message, [
-        {
-          text: "OK",
-          onPress: () => {
-            navigation.goBack();
-          },
-        },
-      ]);
-    } catch (error) {
-      Alert.alert("Error", "Failed to save product. Please try again.");
-      console.error("Save product error:", error);
+      navigation.replace("MyDay");
+    } catch {
+      Alert.alert("Error", "Failed to track food. Please try again.");
     } finally {
       setSaving(false);
     }
   };
 
-  const styles = StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: colors.background,
-      paddingTop: 16,
-    },
-    header: {
-      flexDirection: "row",
-      alignItems: "center",
-      paddingHorizontal: 16,
-      marginBottom: 8,
-    },
-    backButton: {
-      padding: 8,
-      borderRadius: 999,
-      backgroundColor: colors.cardBackground,
-      marginRight: 12,
-    },
-    title: {
-      fontSize: 20,
-      fontWeight: "700",
-      color: colors.text,
-    },
-    scrollView: {
-      flex: 1,
-    },
-    section: {
-      padding: 16,
-      borderBottomWidth: 1,
-      borderBottomColor: colors.border,
-    },
-    sectionTitle: {
-      fontSize: 14,
-      fontWeight: "600",
-      color: colors.textSecondary,
-      textTransform: "uppercase",
-      letterSpacing: 0.5,
-      marginBottom: 12,
-    },
-    sectionSubtitle: {
-      fontSize: 13,
-      color: colors.textSecondary,
-      marginBottom: 12,
-      lineHeight: 18,
-    },
-    infoCard: {
-      backgroundColor: colors.cardBackground,
-      padding: 16,
-      borderRadius: 8,
-    },
-    productName: {
-      fontSize: 18,
-      fontWeight: "600",
-      color: colors.text,
-      marginBottom: 4,
-    },
-    productBrand: {
-      fontSize: 14,
-      color: colors.textSecondary,
-    },
-    calculatedCard: {
-      backgroundColor: colors.successLight,
-      padding: 20,
-      borderRadius: 12,
-      borderWidth: 2,
-      borderColor: colors.success,
-    },
-    nutrientCard: {
-      backgroundColor: colors.infoLight,
-      padding: 16,
-      borderRadius: 8,
-      borderWidth: 1,
-      borderColor: colors.border,
-    },
-    nutrientRow: {
-      flexDirection: "row",
-      justifyContent: "space-between",
-      alignItems: "center",
-      paddingVertical: 8,
-      borderBottomWidth: 1,
-      borderBottomColor: colors.border,
-    },
-    nutrientLabel: {
-      fontSize: 15,
-      color: colors.text,
-      fontWeight: "500",
-    },
-    nutrientValue: {
-      fontSize: 15,
-      color: colors.text,
-      fontWeight: "600",
-    },
-    nutrientValueLarge: {
-      fontSize: 24,
-      color: colors.success,
-      fontWeight: "700",
-    },
-    equivalentText: {
-      fontSize: 13,
-      color: colors.success,
-      marginTop: 12,
-      textAlign: "center",
-      fontWeight: "500",
-    },
-    amountContainer: {
-      gap: 12,
-    },
-    amountInput: {
-      borderWidth: 1,
-      borderColor: colors.border,
-      borderRadius: 8,
-      padding: 12,
-      fontSize: 16,
-      backgroundColor: colors.inputBackground,
-      color: colors.text,
-    },
-    scaleButtons: {
-      flexDirection: "row",
-      gap: 8,
-    },
-    scaleButton: {
-      flex: 1,
-      paddingVertical: 12,
-      paddingHorizontal: 16,
-      borderRadius: 8,
-      borderWidth: 2,
-      borderColor: colors.border,
-      backgroundColor: colors.cardBackground,
-      alignItems: "center",
-    },
-    scaleButtonActive: {
-      borderColor: colors.primary,
-      backgroundColor: colors.primary,
-    },
-    scaleButtonText: {
-      fontSize: 16,
-      fontWeight: "600",
-      color: colors.textSecondary,
-    },
-    scaleButtonTextActive: {
-      color: colors.buttonText,
-    },
-    infoBox: {
-      margin: 16,
-      padding: 16,
-      backgroundColor: colors.warningLight,
-      borderRadius: 8,
-      borderWidth: 1,
-      borderColor: colors.warning,
-    },
-    infoText: {
-      fontSize: 14,
-      color: colors.text,
-      lineHeight: 20,
-    },
-    footer: {
-      padding: 16,
-      borderTopWidth: 1,
-      borderTopColor: colors.border,
-      backgroundColor: colors.background,
-    },
-    saveButton: {
-      backgroundColor: colors.primary,
-      padding: 16,
-      borderRadius: 8,
-      alignItems: "center",
-    },
-    saveButtonDisabled: {
-      backgroundColor: colors.disabled,
-    },
-    saveButtonText: {
-      color: colors.buttonText,
-      fontSize: 16,
-      fontWeight: "600",
-    },
-  });
+  const styles = makeConfirmStyles(colors);
 
   return (
     <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
+      {/* Header */}
       <View style={styles.header}>
         <Pressable
           onPress={() => navigation.goBack()}
           style={styles.backButton}
+          testID="back-button"
         >
           <Ionicons name="arrow-back" size={22} color={colors.text} />
         </Pressable>
-        <Text style={styles.title}>Confirm Product</Text>
+        <Text style={styles.title}>Track Food</Text>
       </View>
 
       <ScrollView style={styles.scrollView} keyboardShouldPersistTaps="handled">
-        {/* Product Info */}
+        {/* Product Info Card */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Product Information</Text>
           <View style={styles.infoCard}>
             <Text style={styles.productName}>{externalProduct.name}</Text>
-            {externalProduct.brands && (
+            {externalProduct.brands ? (
               <Text style={styles.productBrand}>{externalProduct.brands}</Text>
-            )}
+            ) : null}
           </View>
         </View>
 
-        {/* Amount Selector */}
+        {/* Meal Type Selector */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Select Amount</Text>
-          <Text style={styles.sectionSubtitle}>
-            Adjust the amount to see calculated nutritional values
-          </Text>
+          <Text style={styles.sectionTitle}>Meal Type</Text>
+          <SegmentedButtons
+            value={mealType}
+            onValueChange={(value) => {
+              if ((TRACKABLE_MEAL_TYPES as readonly string[]).includes(value)) {
+                setMealType(value as MealTypeKey);
+              }
+            }}
+            buttons={TRACKABLE_MEAL_TYPES.map((k) => ({
+              value: k,
+              label: MEAL_TYPE_LABEL[k],
+            }))}
+          />
+        </View>
 
-          <View style={styles.amountContainer}>
-            <TextInput
-              style={styles.amountInput}
-              value={amount}
-              onChangeText={setAmount}
-              keyboardType="numeric"
-              placeholder="100"
-              placeholderTextColor={colors.textTertiary}
-            />
-
-            <View style={styles.scaleButtons}>
-              {SCALE_OPTIONS.map((option) => (
+        {/* Portion Selector */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Portion</Text>
+          <View style={styles.portionGrid}>
+            {catalogPortions.map((portion) => {
+              const isSelected = portion.id === selectedPortionId;
+              return (
                 <Pressable
-                  key={option.value}
+                  key={portion.id}
                   style={[
-                    styles.scaleButton,
-                    selectedScale === option.value && styles.scaleButtonActive,
+                    styles.portionCard,
+                    isSelected && {
+                      borderColor: colors.primary,
+                      backgroundColor: colors.primaryBg,
+                    },
                   ]}
-                  onPress={() => setSelectedScale(option.value)}
+                  onPress={() => handlePortionSelect(portion.id)}
+                  testID={`portion-card-${portion.id}`}
                 >
                   <Text
                     style={[
-                      styles.scaleButtonText,
-                      selectedScale === option.value &&
-                        styles.scaleButtonTextActive,
+                      styles.portionLabel,
+                      isSelected && { color: colors.primary },
                     ]}
                   >
-                    {option.label}
+                    {portion.label}
+                  </Text>
+                  <Text style={styles.portionCalories}>
+                    {Math.round(portion.calories)} kcal
                   </Text>
                 </Pressable>
-              ))}
-            </View>
+              );
+            })}
           </View>
         </View>
 
-        {/* Calculated Nutritional Values */}
-        {hasNutritionalData && calculatedValues && (
+        {/* Amount Input */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>
+            {portionMode === "serving" ? "How many?" : "Amount"}
+          </Text>
+
+          {portionMode === "serving" ? (
+            <View style={styles.amountContainer}>
+              <TextInput
+                style={styles.amountInput}
+                value={quantity}
+                onChangeText={setQuantity}
+                keyboardType="numeric"
+                placeholder="1"
+                placeholderTextColor={colors.textTertiary}
+                testID="quantity-input"
+              />
+              {parseFloat(quantity) > 0 && (
+                <Text style={styles.amountHint}>
+                  {quantity} x {selectedPortion.label} ={" "}
+                  {Math.round(
+                    parseFloat(quantity) * selectedPortion.baseAmount,
+                  )}
+                  {selectedPortion.baseUnit}
+                </Text>
+              )}
+            </View>
+          ) : (
+            <View style={styles.amountContainer}>
+              <TextInput
+                style={styles.amountInput}
+                value={weightAmount}
+                onChangeText={setWeightAmount}
+                keyboardType="numeric"
+                placeholder="100"
+                placeholderTextColor={colors.textTertiary}
+                testID="weight-amount-input"
+              />
+              <View style={styles.scaleButtons}>
+                {SCALE_OPTIONS.map((option) => (
+                  <Pressable
+                    key={option.value}
+                    style={[
+                      styles.scaleButton,
+                      weightUnit === option.value && styles.scaleButtonActive,
+                    ]}
+                    onPress={() => setWeightUnit(option.value)}
+                    testID={`scale-${option.value}`}
+                  >
+                    <Text
+                      style={[
+                        styles.scaleButtonText,
+                        weightUnit === option.value &&
+                          styles.scaleButtonTextActive,
+                      ]}
+                    >
+                      {option.label}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            </View>
+          )}
+        </View>
+
+        {/* Nutritional Preview */}
+        {nutrition.calories > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>
-              Nutritional Values for {amount} {selectedScale}
-            </Text>
-            <View style={styles.calculatedCard}>
+            <Text style={styles.sectionTitle}>Nutrition</Text>
+            <View style={styles.nutritionCard}>
               <View style={styles.nutrientRow}>
                 <Text style={styles.nutrientLabel}>Calories</Text>
                 <Text style={styles.nutrientValueLarge}>
-                  {calculatedValues.calories} kcal
+                  {Math.round(nutrition.calories)} kcal
                 </Text>
               </View>
-              {calculatedValues.protein !== null && (
-                <View style={styles.nutrientRow}>
-                  <Text style={styles.nutrientLabel}>Protein</Text>
-                  <Text style={styles.nutrientValue}>
-                    {calculatedValues.protein} g
-                  </Text>
-                </View>
-              )}
-              {calculatedValues.carbs !== null && (
-                <View style={styles.nutrientRow}>
-                  <Text style={styles.nutrientLabel}>Carbohydrates</Text>
-                  <Text style={styles.nutrientValue}>
-                    {calculatedValues.carbs} g
-                  </Text>
-                </View>
-              )}
-              {calculatedValues.fat !== null && (
-                <View style={styles.nutrientRow}>
-                  <Text style={styles.nutrientLabel}>Fat</Text>
-                  <Text style={styles.nutrientValue}>
-                    {calculatedValues.fat} g
-                  </Text>
-                </View>
-              )}
-              <Text style={styles.equivalentText}>
-                ≈ {calculatedValues.grams.toFixed(1)} g
-              </Text>
-            </View>
-          </View>
-        )}
-
-        {/* Per 100g Reference Data */}
-        {hasNutritionalData && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Reference Data (per 100g)</Text>
-            <View style={styles.nutrientCard}>
               <View style={styles.nutrientRow}>
-                <Text style={styles.nutrientLabel}>Calories</Text>
+                <Text style={styles.nutrientLabel}>Protein</Text>
                 <Text style={styles.nutrientValue}>
-                  {Math.round(externalProduct.caloriesPer100g)} kcal
+                  {nutrition.protein.toFixed(1)} g
                 </Text>
               </View>
-              {externalProduct.proteinPer100g !== undefined && (
-                <View style={styles.nutrientRow}>
-                  <Text style={styles.nutrientLabel}>Protein</Text>
-                  <Text style={styles.nutrientValue}>
-                    {externalProduct.proteinPer100g.toFixed(1)} g
-                  </Text>
-                </View>
-              )}
-              {externalProduct.carbsPer100g !== undefined && (
-                <View style={styles.nutrientRow}>
-                  <Text style={styles.nutrientLabel}>Carbohydrates</Text>
-                  <Text style={styles.nutrientValue}>
-                    {externalProduct.carbsPer100g.toFixed(1)} g
-                  </Text>
-                </View>
-              )}
-              {externalProduct.fatPer100g !== undefined && (
-                <View style={styles.nutrientRow}>
-                  <Text style={styles.nutrientLabel}>Fat</Text>
-                  <Text style={styles.nutrientValue}>
-                    {externalProduct.fatPer100g.toFixed(1)} g
-                  </Text>
-                </View>
-              )}
+              <View style={styles.nutrientRow}>
+                <Text style={styles.nutrientLabel}>Carbohydrates</Text>
+                <Text style={styles.nutrientValue}>
+                  {nutrition.carbs.toFixed(1)} g
+                </Text>
+              </View>
+              <View style={[styles.nutrientRow, styles.nutrientRowLast]}>
+                <Text style={styles.nutrientLabel}>Fat</Text>
+                <Text style={styles.nutrientValue}>
+                  {nutrition.fat.toFixed(1)} g
+                </Text>
+              </View>
             </View>
           </View>
         )}
 
-        {/* Info Note */}
-        <View style={styles.infoBox}>
-          <Text style={styles.infoText}>
-            The product will be saved with reference values per 100g. When
-            building meals, you can specify any amount you want!
-          </Text>
-        </View>
+        {/* Favourite Toggle */}
+        <Pressable
+          style={styles.favouriteRow}
+          onPress={() => setIsFavourite((prev) => !prev)}
+          testID="favourite-toggle"
+        >
+          <Ionicons
+            name={isFavourite ? "star" : "star-outline"}
+            size={22}
+            color={isFavourite ? colors.warning : colors.textSecondary}
+          />
+          <Text style={styles.favouriteText}>Add to favourites</Text>
+        </Pressable>
       </ScrollView>
 
-      {/* Save Button */}
+      {/* Footer */}
       <View style={styles.footer}>
         <Pressable
-          style={[styles.saveButton, saving && styles.saveButtonDisabled]}
-          onPress={handleSave}
+          style={[styles.trackButton, saving && styles.trackButtonDisabled]}
+          onPress={() => void handleTrackFood()}
           disabled={saving}
+          testID="track-food-button"
         >
-          <Text style={styles.saveButtonText}>
-            {saving ? "Saving..." : "Save Product"}
+          <Text style={styles.trackButtonText}>
+            {saving ? "Saving..." : "Track Food"}
           </Text>
         </Pressable>
       </View>
     </SafeAreaView>
+  );
+};
+
+// ---------------------------------------------------------------------------
+// Main Screen -- branches on catalogPortions
+// ---------------------------------------------------------------------------
+
+const synthesizePortionFromOff = (
+  product: Props["route"]["params"]["externalProduct"],
+): CatalogPortionData[] => [
+  {
+    id: "off-100g",
+    label: "100g",
+    baseAmount: 100,
+    baseUnit: "g",
+    gramWeight: 100,
+    calories: product.caloriesPer100g,
+    protein: product.proteinPer100g ?? null,
+    carbs: product.carbsPer100g ?? null,
+    fat: product.fatPer100g ?? null,
+    isDefault: true,
+  },
+];
+
+const ProductConfirmScreen = ({ navigation, route }: Props) => {
+  const { externalProduct } = route.params;
+  const catalogPortions =
+    Array.isArray(externalProduct.catalogPortions) &&
+    externalProduct.catalogPortions.length > 0
+      ? externalProduct.catalogPortions
+      : synthesizePortionFromOff(externalProduct);
+
+  return (
+    <CatalogTrackScreen
+      externalProduct={externalProduct}
+      catalogPortions={catalogPortions}
+      navigation={navigation}
+    />
   );
 };
 

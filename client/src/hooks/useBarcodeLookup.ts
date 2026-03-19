@@ -10,6 +10,19 @@ import {
   getProductByBarcode,
 } from "@services/openFoodFacts";
 
+export type CatalogPortionData = {
+  id: string;
+  label: string;
+  baseAmount: number;
+  baseUnit: string;
+  gramWeight: number | null;
+  calories: number;
+  protein: number | null;
+  carbs: number | null;
+  fat: number | null;
+  isDefault: boolean;
+};
+
 export type BarcodeLookupResult = {
   code: string;
   name: string;
@@ -19,6 +32,8 @@ export type BarcodeLookupResult = {
   carbsPer100g?: number;
   fatPer100g?: number;
   source: "catalog" | "off";
+  catalogProductId?: string;
+  catalogPortions?: CatalogPortionData[];
 };
 
 export type BarcodeLookupStatus =
@@ -38,8 +53,11 @@ export type UseBarcodeLookupReturn = {
 
 const COOLDOWN_MS = 2000;
 
-const normalizePer100g = (value: number, gramWeight: number): number => {
-  if (gramWeight <= 0) {
+const normalizePer100g = (
+  value: number | null,
+  gramWeight: number | null,
+): number => {
+  if (value === null || gramWeight === null || gramWeight <= 0) {
     return 0;
   }
   return (value / gramWeight) * 100;
@@ -54,6 +72,20 @@ const catalogToResult = (
     return null;
   }
 
+  // catalog.ts already coerces Decimal strings to numbers via parseNumeric
+  const catalogPortions: CatalogPortionData[] = product.portions.map((p) => ({
+    id: p.id,
+    label: p.label,
+    baseAmount: p.base_amount,
+    baseUnit: p.base_unit,
+    gramWeight: p.gram_weight,
+    calories: p.calories,
+    protein: p.protein,
+    carbs: p.carbs,
+    fat: p.fat,
+    isDefault: p.is_default,
+  }));
+
   return {
     code: barcode,
     name: product.display_name,
@@ -63,6 +95,8 @@ const catalogToResult = (
     carbsPer100g: normalizePer100g(portion.carbs, portion.gram_weight),
     fatPer100g: normalizePer100g(portion.fat, portion.gram_weight),
     source: "catalog",
+    catalogProductId: product.id,
+    catalogPortions,
   };
 };
 

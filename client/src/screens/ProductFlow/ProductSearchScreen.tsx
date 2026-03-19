@@ -189,9 +189,6 @@ const ProductSearchScreen = ({ navigation }: Props) => {
       fontSize: 15,
       fontWeight: "600",
     },
-    scanIcon: {
-      marginBottom: 2,
-    },
     searchContainer: {
       padding: 16,
       borderBottomWidth: 1,
@@ -296,19 +293,6 @@ const ProductSearchScreen = ({ navigation }: Props) => {
         </TouchableOpacity>
         <TouchableOpacity style={styles.actionButton} onPress={handleAddMeal}>
           <Text style={styles.actionButtonText}>Add New Meal</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.actionButton}
-          onPress={() => navigation.navigate("BarcodeScanner")}
-          testID="scan-barcode-btn"
-        >
-          <Ionicons
-            name="barcode-outline"
-            size={18}
-            color={colors.buttonText}
-            style={styles.scanIcon}
-          />
-          <Text style={styles.actionButtonText}>Scan Barcode</Text>
         </TouchableOpacity>
       </View>
 

@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+import logging
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db import get_session
@@ -18,6 +19,8 @@ from app.features.catalog.service import (
     get_default_portion,
     list_catalog_products,
 )
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/catalog", tags=["catalog"])
 
@@ -51,7 +54,7 @@ async def catalog_products_list(
 
 @router.get("/products/barcode/{barcode}", response_model=CatalogProductResponse)
 async def catalog_products_get_by_barcode(
-    barcode: str,
+    barcode: str = Path(..., min_length=1, max_length=50),
     _device_id: uuid.UUID = Depends(get_current_device_id),
     session: AsyncSession = Depends(get_session),
 ) -> CatalogProductResponse:

@@ -28,7 +28,7 @@ const makeCatalogResponse = (
   category: "Poultry",
   default_portion: {
     id: "por-1",
-    name: "100g",
+    label: "100g",
     gram_weight: 100,
     calories: 165,
     protein: 31,
@@ -38,7 +38,32 @@ const makeCatalogResponse = (
     base_amount: 100,
     base_unit: "g",
   },
-  portions: [],
+  portions: [
+    {
+      id: "por-1",
+      label: "100g",
+      gram_weight: 100,
+      calories: 165,
+      protein: 31,
+      carbs: 0,
+      fat: 3.6,
+      is_default: true,
+      base_amount: 100,
+      base_unit: "g",
+    },
+    {
+      id: "por-2",
+      label: "1 serving (30g)",
+      gram_weight: 30,
+      calories: 49.5,
+      protein: 9.3,
+      carbs: 0,
+      fat: 1.08,
+      is_default: false,
+      base_amount: 30,
+      base_unit: "g",
+    },
+  ],
   ...overrides,
 });
 
@@ -91,6 +116,25 @@ describe("useBarcodeLookup", () => {
       name: "Chicken Breast, raw",
       source: "catalog",
       caloriesPer100g: 165,
+      catalogProductId: "cat-1",
+    });
+    expect(result.current.result?.catalogPortions).toHaveLength(2);
+    expect(result.current.result?.catalogPortions?.[0]).toMatchObject({
+      id: "por-1",
+      label: "100g",
+      baseAmount: 100,
+      baseUnit: "g",
+      gramWeight: 100,
+      calories: 165,
+      isDefault: true,
+    });
+    expect(result.current.result?.catalogPortions?.[1]).toMatchObject({
+      id: "por-2",
+      label: "1 serving (30g)",
+      baseAmount: 30,
+      baseUnit: "g",
+      gramWeight: 30,
+      isDefault: false,
     });
     // OFF not called when catalog succeeds
     expect(mockGetProductByBarcode).not.toHaveBeenCalled();
@@ -114,6 +158,25 @@ describe("useBarcodeLookup", () => {
       name: "Off Brand Chicken",
       source: "off",
     });
+  });
+
+  it("OFF lookup does not include catalogPortions", async () => {
+    mockGetCatalogProductByBarcode.mockResolvedValue(null);
+    const offProduct = makeOffProduct();
+    mockGetProductByBarcode.mockResolvedValue(offProduct);
+    mockExtractCalories.mockReturnValue(120);
+    mockExtractMacros.mockReturnValue({ protein: 25, carbs: 0, fat: 2 });
+
+    const { result } = renderHook(() => useBarcodeLookup());
+
+    await act(async () => {
+      await result.current.lookup("1234567890123");
+    });
+
+    expect(result.current.status).toBe("found");
+    expect(result.current.result?.source).toBe("off");
+    expect(result.current.result?.catalogProductId).toBeUndefined();
+    expect(result.current.result?.catalogPortions).toBeUndefined();
   });
 
   it("lookup returns not_found when both return null", async () => {
@@ -220,7 +283,7 @@ describe("useBarcodeLookup", () => {
     const catalogProduct = makeCatalogResponse({
       default_portion: {
         id: "por-1",
-        name: "200g serving",
+        label: "200g serving",
         gram_weight: 200,
         calories: 400,
         protein: 60,

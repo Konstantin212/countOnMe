@@ -8,7 +8,8 @@ type AnalyticsEvent =
   | "lookup_succeeded"
   | "lookup_not_found"
   | "lookup_failed"
-  | "user_continued_via_manual_fallback";
+  | "user_continued_via_manual_fallback"
+  | "food_tracked_via_barcode";
 
 export const logEvent = (
   event: AnalyticsEvent,

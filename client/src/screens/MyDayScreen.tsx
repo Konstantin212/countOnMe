@@ -455,7 +455,11 @@ const MyDayScreen = () => {
                 onPress: () => {},
               },
               { icon: "cup-water", label: "Add water", onPress: () => {} },
-              { icon: "barcode-scan", label: "Scan food", onPress: () => {} },
+              {
+                icon: "barcode-scan",
+                label: "Scan food",
+                onPress: () => navigation.navigate("BarcodeScanner"),
+              },
             ]}
             onStateChange={({ open }) => setFabOpen(open)}
             onPress={() => {

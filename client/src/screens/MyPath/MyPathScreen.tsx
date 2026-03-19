@@ -305,7 +305,14 @@ const MyPathScreen = () => {
               onPress: () => {},
             },
             { icon: "cup-water", label: "Add water", onPress: () => {} },
-            { icon: "barcode-scan", label: "Scan food", onPress: () => {} },
+            {
+              icon: "barcode-scan",
+              label: "Scan food",
+              onPress: () =>
+                navigation
+                  .getParent<BottomTabNavigationProp<RootTabParamList>>()
+                  ?.navigate("MyDayTab", { screen: "BarcodeScanner" }),
+            },
           ]}
           onStateChange={({ open }) => setFabOpen(open)}
           onPress={() => {

@@ -6,10 +6,7 @@ import { CameraView, useCameraPermissions } from "expo-camera";
 import { Ionicons } from "@expo/vector-icons";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 
-import {
-  MyDayStackParamList,
-  ProfileStackParamList,
-} from "@app/navigationTypes";
+import { MyDayStackParamList } from "@app/navigationTypes";
 import { useBarcodeLookup } from "@hooks/useBarcodeLookup";
 import { useTheme } from "@hooks/useTheme";
 import { logEvent } from "@services/analytics";
@@ -18,12 +15,7 @@ import LookupStatus from "./components/LookupStatus";
 import ManualFallback from "./components/ManualFallback";
 import ScannerOverlay from "./components/ScannerOverlay";
 
-type MyDayProps = NativeStackScreenProps<MyDayStackParamList, "BarcodeScanner">;
-type ProfileProps = NativeStackScreenProps<
-  ProfileStackParamList,
-  "BarcodeScanner"
->;
-type Props = MyDayProps | ProfileProps;
+type Props = NativeStackScreenProps<MyDayStackParamList, "BarcodeScanner">;
 
 const BARCODE_TYPES = ["ean13", "ean8", "upc_a", "upc_e"] as const;
 
@@ -65,8 +57,7 @@ const BarcodeScannerScreen = ({ navigation }: Props) => {
     if (status === "found" && result && !hasNavigatedRef.current) {
       hasNavigatedRef.current = true;
 
-      // Both stacks have ProductConfirm with identical params, so either nav type works
-      (navigation as MyDayProps["navigation"]).replace("ProductConfirm", {
+      navigation.replace("ProductConfirm", {
         externalProduct: {
           code: result.code,
           name: result.name,
@@ -75,6 +66,8 @@ const BarcodeScannerScreen = ({ navigation }: Props) => {
           proteinPer100g: result.proteinPer100g,
           carbsPer100g: result.carbsPer100g,
           fatPer100g: result.fatPer100g,
+          catalogProductId: result.catalogProductId,
+          catalogPortions: result.catalogPortions,
         },
       });
     }
@@ -102,7 +95,7 @@ const BarcodeScannerScreen = ({ navigation }: Props) => {
 
   const handleEnterManually = useCallback(() => {
     logEvent("user_continued_via_manual_fallback");
-    (navigation as MyDayProps["navigation"]).navigate("ProductForm", {});
+    navigation.navigate("ProductForm", {});
   }, [navigation]);
 
   const handleGoBack = useCallback(() => {

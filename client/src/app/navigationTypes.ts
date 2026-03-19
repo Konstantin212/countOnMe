@@ -1,4 +1,5 @@
 import { NavigatorScreenParams } from "@react-navigation/native";
+import { CatalogPortionData } from "@hooks/useBarcodeLookup";
 import {
   GoalCalculateRequest,
   GoalCalculateResponse,
@@ -15,6 +16,8 @@ export type ExternalProductParam = {
   proteinPer100g?: number;
   carbsPer100g?: number;
   fatPer100g?: number;
+  catalogProductId?: string;
+  catalogPortions?: CatalogPortionData[];
 };
 
 export type MyDayStackParamList = {
@@ -40,10 +43,6 @@ export type ProfileStackParamList = {
   ProductDetails: { productId: string };
   ProductForm: ProductFormParams;
   ProductSearch: undefined;
-  ProductConfirm: {
-    externalProduct: ExternalProductParam;
-  };
-  BarcodeScanner: undefined;
   MealsList: undefined;
   MealBuilder: { mealId?: string } | undefined;
   MealDetails: { mealId: string };

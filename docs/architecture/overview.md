@@ -99,6 +99,8 @@ Bottom Tabs
 
 The MyDay stack is wrapped in a `DraftMealProvider` context that holds in-progress food entries during the add-meal flow.
 
+For detailed client navigation structure, screen-to-screen flows, and param types, see [Navigation Map](navigation-map.md). For hook/component dependency graphs and impact analysis, see [Module Impact Map](module-impact-map.md).
+
 ### 3.2 Hooks (State Management)
 
 Hooks own all state and side effects. Screens never talk to storage or APIs directly.

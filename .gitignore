@@ -32,6 +32,11 @@ Thumbs.db
 .claude/settings.local.json
 
 # ----------------------
+# ChatGPT context (generated, not tracked)
+# ----------------------
+docs/chatgpt-context/
+
+# ----------------------
 # Client (React Native / Expo)
 # ----------------------
 

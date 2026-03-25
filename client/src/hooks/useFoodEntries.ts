@@ -194,7 +194,7 @@ export const useFoodEntries = (): UseFoodEntriesResult => {
             product_id: item.productId,
             portion_id: portionId,
             day: entryDay,
-            meal_type: mealType === "water" ? "snacks" : mealType, // Map water to snacks
+            meal_type: mealType,
             amount: item.amount,
             unit: item.unit,
           };

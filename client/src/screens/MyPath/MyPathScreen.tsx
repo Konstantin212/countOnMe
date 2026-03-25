@@ -302,9 +302,22 @@ const MyPathScreen = () => {
             {
               icon: "package-variant",
               label: "Add product",
-              onPress: () => {},
+              onPress: () =>
+                navigation
+                  .getParent<BottomTabNavigationProp<RootTabParamList>>()
+                  ?.navigate("MyDayTab", { screen: "SelectProduct" }),
             },
-            { icon: "cup-water", label: "Add water", onPress: () => {} },
+            {
+              icon: "cup-water",
+              label: "Add water",
+              onPress: () =>
+                navigation
+                  .getParent<BottomTabNavigationProp<RootTabParamList>>()
+                  ?.navigate("MyDayTab", {
+                    screen: "AddMeal",
+                    params: { mealType: "water" },
+                  }),
+            },
             {
               icon: "barcode-scan",
               label: "Scan food",

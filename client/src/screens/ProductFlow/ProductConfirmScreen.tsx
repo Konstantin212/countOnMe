@@ -34,7 +34,7 @@ import { makeConfirmStyles } from "./components/confirmStyles";
 
 type Props = NativeStackScreenProps<MyDayStackParamList, "ProductConfirm">;
 
-const TRACKABLE_MEAL_TYPES = MEAL_TYPE_KEYS.filter((k) => k !== "water");
+const TRACKABLE_MEAL_TYPES = MEAL_TYPE_KEYS;
 
 const findDefaultPortionId = (portions: CatalogPortionData[]): string => {
   const defaultPortion = portions.find((p) => p.isDefault);

@@ -98,11 +98,11 @@ const MyDayScreen = () => {
   };
 
   // Calculate per-meal-type calories from stats
-  const meals = MEAL_TYPE_KEYS.filter((key) => key !== "water").map((key) => {
+  const meals = MEAL_TYPE_KEYS.map((key) => {
     const mealTotals = getMealTypeTotals(stats, key);
     const calories = Math.round(mealTotals.calories);
-    // Progress is relative to a quarter of daily goal (rough estimate per meal)
-    const mealGoal = calorieGoal / 4;
+    // Progress is relative to a fifth of daily goal (one per meal type)
+    const mealGoal = calorieGoal / 5;
     const progress = Math.min(calories / mealGoal, 1);
 
     return {
@@ -452,9 +452,14 @@ const MyDayScreen = () => {
               {
                 icon: "package-variant",
                 label: "Add product",
-                onPress: () => {},
+                onPress: () => navigation.navigate("SelectProduct"),
               },
-              { icon: "cup-water", label: "Add water", onPress: () => {} },
+              {
+                icon: "cup-water",
+                label: "Add water",
+                onPress: () =>
+                  navigation.navigate("AddMeal", { mealType: "water" }),
+              },
               {
                 icon: "barcode-scan",
                 label: "Scan food",

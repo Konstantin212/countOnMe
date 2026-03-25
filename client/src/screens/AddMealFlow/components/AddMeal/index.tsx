@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Alert,
   Pressable,
@@ -26,7 +26,7 @@ import { useDraftMeal } from "../../context";
 
 type Props = NativeStackScreenProps<MyDayStackParamList, "AddMeal">;
 
-const AddMealScreen = ({ navigation }: Props) => {
+const AddMealScreen = ({ navigation, route }: Props) => {
   const { colors } = useTheme();
   const { products, refresh: refreshProducts } = useProducts();
 
@@ -36,6 +36,13 @@ const AddMealScreen = ({ navigation }: Props) => {
   const [saving, setSaving] = useState(false);
   const [savedEntries, setSavedEntries] = useState<FoodEntry[]>([]);
   const [loadingEntries, setLoadingEntries] = useState(false);
+
+  const initialMealType = route.params?.mealType;
+  useEffect(() => {
+    if (initialMealType) {
+      setMealType(initialMealType);
+    }
+  }, [initialMealType, setMealType]);
 
   useFocusEffect(
     useCallback(() => {
@@ -219,10 +226,12 @@ const AddMealScreen = ({ navigation }: Props) => {
           <Text style={styles.sectionTitle}>Meal type</Text>
           <SegmentedButtons
             value={draft.mealType}
-            onValueChange={(value) => setMealType(value as any)}
-            buttons={MEAL_TYPE_KEYS.filter(
-              (k) => k !== "snacks" && k !== "water",
-            ).map((k) => ({
+            onValueChange={(value) => {
+              if ((MEAL_TYPE_KEYS as readonly string[]).includes(value)) {
+                setMealType(value as MealTypeKey);
+              }
+            }}
+            buttons={MEAL_TYPE_KEYS.map((k) => ({
               value: k,
               label: MEAL_TYPE_LABEL[k],
             }))}

@@ -22,7 +22,7 @@ export type ExternalProductParam = {
 
 export type MyDayStackParamList = {
   MyDay: undefined;
-  AddMeal: undefined;
+  AddMeal: { mealType?: MealTypeKey } | undefined;
   SelectProduct: undefined;
   AddFood: { productId: string };
   MealTypeEntries: { mealType: MealTypeKey };

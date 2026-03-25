@@ -179,6 +179,22 @@ describe("useBarcodeLookup", () => {
     expect(result.current.result?.catalogPortions).toBeUndefined();
   });
 
+  it("OFF path rounds fractional caloriesPer100g to nearest integer", async () => {
+    mockGetCatalogProductByBarcode.mockResolvedValue(null);
+    const offProduct = makeOffProduct();
+    mockGetProductByBarcode.mockResolvedValue(offProduct);
+    mockExtractCalories.mockReturnValue(166.66666);
+    mockExtractMacros.mockReturnValue({ protein: 25, carbs: 0, fat: 2 });
+
+    const { result } = renderHook(() => useBarcodeLookup());
+
+    await act(async () => {
+      await result.current.lookup("1234567890123");
+    });
+
+    expect(result.current.result?.caloriesPer100g).toBe(167);
+  });
+
   it("lookup returns not_found when both return null", async () => {
     mockGetCatalogProductByBarcode.mockResolvedValue(null);
     mockGetProductByBarcode.mockResolvedValue(null);
@@ -308,6 +324,33 @@ describe("useBarcodeLookup", () => {
       carbsPer100g: 5,
       fatPer100g: 4,
     });
+  });
+
+  it("normalizePer100g rounds result to avoid IEEE 754 float display issues", async () => {
+    // 1379.9999999999998 / 300 * 100 = 459.99999999999994 without rounding
+    const catalogProduct = makeCatalogResponse({
+      default_portion: {
+        id: "por-1",
+        label: "300g serving",
+        gram_weight: 300,
+        calories: 1379.9999999999998,
+        protein: 90,
+        carbs: 30,
+        fat: 12,
+        is_default: true,
+        base_amount: 300,
+        base_unit: "g",
+      },
+    });
+    mockGetCatalogProductByBarcode.mockResolvedValue(catalogProduct);
+
+    const { result } = renderHook(() => useBarcodeLookup());
+
+    await act(async () => {
+      await result.current.lookup("1234567890123");
+    });
+
+    expect(result.current.result?.caloriesPer100g).toBe(460);
   });
 
   it("different barcode within cooldown is not blocked", async () => {

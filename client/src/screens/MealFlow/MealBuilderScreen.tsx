@@ -415,7 +415,7 @@ const MealBuilderScreen = ({ navigation, route }: Props) => {
                   <View style={styles.productInfo}>
                     <Text style={styles.productName}>{product.name}</Text>
                     <Text style={styles.productMeta}>
-                      {product.caloriesPer100g} kcal / 100g
+                      {Math.round(product.caloriesPer100g)} kcal / 100g
                     </Text>
                   </View>
                 </Pressable>

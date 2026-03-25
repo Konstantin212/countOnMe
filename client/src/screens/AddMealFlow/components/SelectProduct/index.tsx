@@ -313,7 +313,9 @@ const SelectProductScreen = ({ navigation }: Props) => {
     >
       <View style={styles.rowContent}>
         <Text style={styles.rowName}>{item.name}</Text>
-        <Text style={styles.rowMeta}>{item.caloriesPer100g} kcal / 100g</Text>
+        <Text style={styles.rowMeta}>
+          {Math.round(item.caloriesPer100g)} kcal / 100g
+        </Text>
       </View>
       <Pressable
         style={styles.star}
@@ -357,7 +359,7 @@ const SelectProductScreen = ({ navigation }: Props) => {
           <View style={styles.rowContent}>
             <Text style={styles.rowName}>{name}</Text>
             <Text style={styles.rowMeta}>
-              {kcal != null ? `${kcal} kcal / 100g` : ""}
+              {kcal != null ? `${Math.round(kcal)} kcal / 100g` : ""}
             </Text>
             {isFavourite ? (
               <Text style={styles.badge}>Favourite</Text>
@@ -403,7 +405,7 @@ const SelectProductScreen = ({ navigation }: Props) => {
           ) : null}
           <Text style={styles.rowMeta}>
             {item.caloriesPer100g != null
-              ? `${item.caloriesPer100g} kcal / 100g`
+              ? `${Math.round(item.caloriesPer100g)} kcal / 100g`
               : ""}
           </Text>
           <Text style={styles.badge}>Catalog</Text>

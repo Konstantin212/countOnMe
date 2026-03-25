@@ -60,7 +60,7 @@ const normalizePer100g = (
   if (value === null || gramWeight === null || gramWeight <= 0) {
     return 0;
   }
-  return (value / gramWeight) * 100;
+  return Math.round((value / gramWeight) * 100);
 };
 
 const catalogToResult = (
@@ -154,7 +154,7 @@ export const useBarcodeLookup = (): UseBarcodeLookupReturn => {
           code: barcode,
           name: offProduct.product_name,
           brands: offProduct.brands,
-          caloriesPer100g: calories,
+          caloriesPer100g: Math.round(calories),
           proteinPer100g: macros.protein,
           carbsPer100g: macros.carbs,
           fatPer100g: macros.fat,

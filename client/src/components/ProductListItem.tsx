@@ -1,8 +1,8 @@
-﻿import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+﻿import React from "react";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 
-import { Product } from '@models/types';
-import { useTheme } from '@hooks/useTheme';
+import { Product } from "@models/types";
+import { useTheme } from "@hooks/useTheme";
 
 interface ProductListItemProps {
   product: Product;
@@ -10,14 +10,18 @@ interface ProductListItemProps {
   onDelete?: () => void;
 }
 
-const ProductListItem = ({ product, onPress, onDelete }: ProductListItemProps) => {
+const ProductListItem = ({
+  product,
+  onPress,
+  onDelete,
+}: ProductListItemProps) => {
   const { colors } = useTheme();
 
   const styles = StyleSheet.create({
     container: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
       padding: 16,
       borderRadius: 12,
       borderWidth: 1,
@@ -33,7 +37,7 @@ const ProductListItem = ({ product, onPress, onDelete }: ProductListItemProps) =
     },
     name: {
       fontSize: 16,
-      fontWeight: '600',
+      fontWeight: "600",
       marginBottom: 4,
       color: colors.text,
     },
@@ -54,7 +58,7 @@ const ProductListItem = ({ product, onPress, onDelete }: ProductListItemProps) =
     },
     deleteText: {
       color: colors.error,
-      fontWeight: '600',
+      fontWeight: "600",
     },
   });
 
@@ -66,14 +70,19 @@ const ProductListItem = ({ product, onPress, onDelete }: ProductListItemProps) =
     >
       <View style={styles.info}>
         <Text style={styles.name}>{product.name}</Text>
-        <Text style={styles.meta}>{product.caloriesPer100g} kcal / 100g</Text>
+        <Text style={styles.meta}>
+          {Math.round(product.caloriesPer100g)} kcal / 100g
+        </Text>
       </View>
       {onDelete ? (
         <Pressable
           accessibilityRole="button"
           hitSlop={8}
           onPress={onDelete}
-          style={({ pressed }) => [styles.deleteButton, pressed && styles.pressedDelete]}
+          style={({ pressed }) => [
+            styles.deleteButton,
+            pressed && styles.pressedDelete,
+          ]}
         >
           <Text style={styles.deleteText}>Delete</Text>
         </Pressable>

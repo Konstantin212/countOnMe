@@ -193,25 +193,66 @@ return {
 
 ## Navigation Patterns
 
+### App Structure: 3 Bottom Tabs
+
+```
+RootTabParamList
+├── MyDayTab → MyDayStackParamList
+│   ├── MyDay (home screen)
+│   ├── AddMeal → SelectProduct → AddFood
+│   ├── MealTypeEntries
+│   ├── ProductForm
+│   ├── BarcodeScanner → ProductConfirm
+│
+├── MyPathTab → MyPathStackParamList
+│   └── MyPath
+│
+└── ProfileTab → ProfileStackParamList
+    ├── ProfileMenu
+    ├── ProductsList → ProductDetails → ProductForm
+    ├── ProductSearch
+    ├── MealsList → MealBuilder → MealDetails
+    └── GoalSetup → GoalCalculated → GoalCalculatedResult / GoalManual
+```
+
 ### Typed Navigation Params
 
 ```typescript
-// ✅ GOOD: Typed param lists
-export type ProductsStackParamList = {
-  ProductsList: undefined
-  ProductForm: { productId?: string }
-  ProductDetails: { productId: string }
+// ✅ GOOD: Typed param lists matching actual navigation
+export type MyDayStackParamList = {
+  MyDay: undefined
+  AddMeal: undefined
+  SelectProduct: undefined
+  AddFood: { productId: string }
+  MealTypeEntries: { mealType: MealTypeKey }
+  ProductForm: ProductFormParams
+  BarcodeScanner: undefined
+  ProductConfirm: { externalProduct: ExternalProductParam }
 }
 
-export type MealsStackParamList = {
+export type ProfileStackParamList = {
+  ProfileMenu: undefined
+  ProductsList: undefined
+  ProductDetails: { productId: string }
+  ProductForm: ProductFormParams
+  ProductSearch: undefined
   MealsList: undefined
-  MealBuilder: { mealId?: string }
+  MealBuilder: { mealId?: string } | undefined
   MealDetails: { mealId: string }
-  SelectProduct: { mealTypeId: string }
+  GoalSetup: undefined
+  GoalCalculated: undefined
+  GoalCalculatedResult: { calculation: GoalCalculateResponse; inputs: GoalCalculateRequest }
+  GoalManual: undefined
+}
+
+export type RootTabParamList = {
+  MyDayTab: NavigatorScreenParams<MyDayStackParamList>
+  MyPathTab: NavigatorScreenParams<MyPathStackParamList>
+  ProfileTab: NavigatorScreenParams<ProfileStackParamList>
 }
 
 // Usage in screen
-type Props = NativeStackScreenProps<ProductsStackParamList, 'ProductForm'>
+type Props = NativeStackScreenProps<ProfileStackParamList, 'ProductForm'>
 
 export function ProductFormScreen({ route, navigation }: Props) {
   const { productId } = route.params ?? {}
@@ -384,7 +425,7 @@ import { Product } from '../../../models/types'
 
 ```typescript
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react-native'
+import { render, screen, fireEvent } from '@testing-library/react'
 
 describe('ProductCard', () => {
   const mockProduct = { id: '1', name: 'Chicken', caloriesPer100g: 165 }
@@ -407,7 +448,7 @@ describe('ProductCard', () => {
 ### Hook Testing
 
 ```typescript
-import { renderHook, waitFor, act } from '@testing-library/react-native'
+import { renderHook, waitFor, act } from '@testing-library/react'
 
 describe('useProducts', () => {
   it('loads products on mount', async () => {

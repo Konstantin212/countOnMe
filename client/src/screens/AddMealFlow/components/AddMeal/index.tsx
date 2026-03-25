@@ -9,7 +9,8 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { ActivityIndicator, SegmentedButtons } from "react-native-paper";
+import { ActivityIndicator } from "react-native-paper";
+import { Select } from "@particles/index";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useFocusEffect } from "@react-navigation/native";
 
@@ -224,14 +225,11 @@ const AddMealScreen = ({ navigation, route }: Props) => {
       >
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>Meal type</Text>
-          <SegmentedButtons
+          <Select
+            testID="meal-type-select"
             value={draft.mealType}
-            onValueChange={(value) => {
-              if ((MEAL_TYPE_KEYS as readonly string[]).includes(value)) {
-                setMealType(value as MealTypeKey);
-              }
-            }}
-            buttons={MEAL_TYPE_KEYS.map((k) => ({
+            onValueChange={setMealType}
+            options={MEAL_TYPE_KEYS.map((k) => ({
               value: k,
               label: MEAL_TYPE_LABEL[k],
             }))}

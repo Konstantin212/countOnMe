@@ -64,6 +64,19 @@ const FlatList = createMockComponent("FlatList");
 const ActivityIndicator = createMockComponent("ActivityIndicator");
 const SafeAreaView = createMockComponent("SafeAreaView");
 
+// Modal: renders children only when visible is true
+function ModalMock(props) {
+  const { visible, children, testID, transparent, animationType, onRequestClose, ...rest } = props || {};
+  if (!visible) return null;
+  return React.createElement(
+    "modal",
+    { ...rest, "data-testid": testID },
+    children,
+  );
+}
+ModalMock.displayName = "Modal";
+const Modal = ModalMock;
+
 const Platform = {
   OS: "web",
   select: (obj) => obj.web || obj.default,
@@ -131,4 +144,5 @@ module.exports = {
   Alert,
   Linking,
   Animated,
+  Modal,
 };

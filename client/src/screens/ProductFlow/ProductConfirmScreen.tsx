@@ -10,7 +10,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { Ionicons } from "@expo/vector-icons";
-import { SegmentedButtons } from "react-native-paper";
+import { Select } from "@particles/index";
 
 import { MyDayStackParamList } from "@app/navigationTypes";
 import { useProducts } from "@hooks/useProducts";
@@ -33,8 +33,6 @@ import {
 import { makeConfirmStyles } from "./components/confirmStyles";
 
 type Props = NativeStackScreenProps<MyDayStackParamList, "ProductConfirm">;
-
-const TRACKABLE_MEAL_TYPES = MEAL_TYPE_KEYS;
 
 const findDefaultPortionId = (portions: CatalogPortionData[]): string => {
   const defaultPortion = portions.find((p) => p.isDefault);
@@ -232,14 +230,11 @@ const CatalogTrackScreen = ({
         {/* Meal Type Selector */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Meal Type</Text>
-          <SegmentedButtons
+          <Select
+            testID="meal-type-select"
             value={mealType}
-            onValueChange={(value) => {
-              if ((TRACKABLE_MEAL_TYPES as readonly string[]).includes(value)) {
-                setMealType(value as MealTypeKey);
-              }
-            }}
-            buttons={TRACKABLE_MEAL_TYPES.map((k) => ({
+            onValueChange={setMealType}
+            options={MEAL_TYPE_KEYS.map((k) => ({
               value: k,
               label: MEAL_TYPE_LABEL[k],
             }))}

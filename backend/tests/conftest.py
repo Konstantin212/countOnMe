@@ -17,7 +17,7 @@ from sqlalchemy.ext.asyncio import (
 )
 
 from app.core.db import Base, get_session
-from app.features.auth.models import Device
+from app.features.auth.models import Device, User, UserDevice
 from app.features.auth.service import issue_device_token
 from app.features.catalog.models import CatalogPortion, CatalogProduct
 from app.features.goals.models import UserGoal
@@ -33,6 +33,8 @@ TEST_DATABASE_URL = os.getenv(
     "postgresql+asyncpg://countonme:countonme@localhost:5433/countonme_test",
 )
 os.environ.setdefault("DEVICE_TOKEN_PEPPER", "test-pepper-for-unit-tests-only")
+os.environ.setdefault("SUPABASE_JWT_SECRET", "test-jwt-secret-for-unit-tests-only")
+os.environ.setdefault("SUPABASE_SERVICE_ROLE_KEY", "test-service-role-key")
 
 
 @pytest_asyncio.fixture
@@ -41,7 +43,7 @@ async def test_engine() -> AsyncIterator[AsyncEngine]:
     engine = create_async_engine(TEST_DATABASE_URL, echo=False, pool_pre_ping=True)
 
     # Import all models to ensure they're registered with Base
-    _ = (Device, Product, ProductPortion, FoodEntry, UserGoal, BodyWeight, CatalogProduct, CatalogPortion)
+    _ = (Device, User, UserDevice, Product, ProductPortion, FoodEntry, UserGoal, BodyWeight, CatalogProduct, CatalogPortion)
 
     # Create schema (reuse existing enums if they exist)
     async with engine.begin() as conn:

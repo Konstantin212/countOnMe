@@ -37,8 +37,14 @@ export type MyPathStackParamList = {
   MyPath: undefined;
 };
 
+export type AuthStackParamList = {
+  Login: undefined;
+  MagicLinkSent: { email: string };
+};
+
 export type ProfileStackParamList = {
   ProfileMenu: undefined;
+  Account: undefined;
   ProductsList: undefined;
   ProductDetails: { productId: string };
   ProductForm: ProductFormParams;

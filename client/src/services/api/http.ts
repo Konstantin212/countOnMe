@@ -1,11 +1,5 @@
 import { buildUrl } from "./config";
-import { registerDevice } from "./devices";
-import {
-  clearDeviceToken,
-  getDeviceToken,
-  getOrCreateDeviceId,
-  setDeviceToken,
-} from "@storage/device";
+import { supabase } from "@services/supabase";
 
 export class ApiError extends Error {
   status?: number;
@@ -25,40 +19,34 @@ type ApiFetchOptions = {
   query?: Record<string, string | number | boolean | undefined>;
 };
 
-/** Singleton promise — prevents concurrent device registrations. */
-let pendingRegistration: Promise<string> | null = null;
-
 /**
- * Force-register: clears stale token, registers, stores new one.
- * Concurrent callers share the same in-flight promise.
+ * Get the Supabase access token from the current session.
+ * Throws if no session exists (user is not authenticated).
  */
-const acquireDeviceToken = async (): Promise<string> => {
-  if (pendingRegistration) {
-    return pendingRegistration;
+const getAccessToken = async (): Promise<string> => {
+  const {
+    data: { session },
+    error,
+  } = await supabase.auth.getSession();
+  if (error || !session?.access_token) {
+    throw new ApiError("No active session", { status: 401 });
   }
-
-  pendingRegistration = (async () => {
-    await clearDeviceToken();
-    const deviceId = await getOrCreateDeviceId();
-    const { device_token } = await registerDevice(deviceId);
-    await setDeviceToken(device_token);
-    return device_token;
-  })();
-
-  try {
-    return await pendingRegistration;
-  } finally {
-    pendingRegistration = null;
-  }
+  return session.access_token;
 };
 
-/** Returns cached token or acquires a new one. */
-const ensureDeviceToken = async (): Promise<string> => {
-  const existing = await getDeviceToken();
-  if (existing) {
-    return existing;
+/**
+ * Refresh the Supabase session and return the new access token.
+ * Returns null if refresh fails.
+ */
+const refreshAccessToken = async (): Promise<string | null> => {
+  const {
+    data: { session },
+    error,
+  } = await supabase.auth.refreshSession();
+  if (error || !session?.access_token) {
+    return null;
   }
-  return acquireDeviceToken();
+  return session.access_token;
 };
 
 const parseErrorDetails = async (res: Response): Promise<unknown> => {
@@ -77,7 +65,7 @@ export const apiFetch = async <T>(
   path: string,
   { method = "GET", body, query }: ApiFetchOptions = {},
 ): Promise<T> => {
-  const token = await ensureDeviceToken();
+  const token = await getAccessToken();
   const url = buildUrl(path, query);
 
   const doFetch = async (bearer: string) => {
@@ -94,11 +82,13 @@ export const apiFetch = async <T>(
 
   let res = await doFetch(token);
 
-  // 401 = token expired/missing → re-register and retry once.
-  // 403 = actively revoked → do NOT auto-reissue (force user awareness).
+  // 401 = token expired → refresh session and retry once.
+  // 403 = actively forbidden → do NOT auto-refresh (force user awareness).
   if (res.status === 401) {
-    const refreshed = await acquireDeviceToken();
-    res = await doFetch(refreshed);
+    const refreshed = await refreshAccessToken();
+    if (refreshed) {
+      res = await doFetch(refreshed);
+    }
   }
 
   if (!res.ok) {

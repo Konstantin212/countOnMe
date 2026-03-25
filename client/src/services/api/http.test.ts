@@ -1,34 +1,20 @@
-import { type Mock, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { apiFetch, ApiError } from "./http";
 
-// Mock storage device functions
-vi.mock("@storage/device", () => ({
-  getDeviceToken: vi.fn(),
-  setDeviceToken: vi.fn(),
-  clearDeviceToken: vi.fn(),
-  getOrCreateDeviceId: vi.fn(),
+// Use vi.hoisted so mock fns are available inside the hoisted vi.mock factory
+const { mockGetSession, mockRefreshSession } = vi.hoisted(() => ({
+  mockGetSession: vi.fn(),
+  mockRefreshSession: vi.fn(),
 }));
 
-// Mock registerDevice function
-vi.mock("./devices", () => ({
-  registerDevice: vi.fn(),
+vi.mock("@services/supabase", () => ({
+  supabase: {
+    auth: {
+      getSession: mockGetSession,
+      refreshSession: mockRefreshSession,
+    },
+  },
 }));
-
-// Import mocked functions after vi.mock calls
-const {
-  getDeviceToken,
-  setDeviceToken: _mockSetDeviceToken,
-  clearDeviceToken: _mockClearDeviceToken,
-  getOrCreateDeviceId,
-} = await import("@storage/device");
-
-const mockGetDeviceToken = getDeviceToken as unknown as Mock;
-const mockSetDeviceToken = _mockSetDeviceToken as unknown as Mock;
-const mockClearDeviceToken = _mockClearDeviceToken as unknown as Mock;
-const mockGetOrCreateDeviceId = getOrCreateDeviceId as unknown as Mock;
-
-const { registerDevice } = await import("./devices");
-const mockRegisterDevice = registerDevice as unknown as Mock;
 
 // Mock global fetch
 const mockFetch = vi.fn();
@@ -37,11 +23,8 @@ global.fetch = mockFetch;
 describe("http utilities", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockGetDeviceToken.mockReset();
-    mockSetDeviceToken.mockReset();
-    mockClearDeviceToken.mockReset();
-    mockGetOrCreateDeviceId.mockReset();
-    mockRegisterDevice.mockReset();
+    mockGetSession.mockReset();
+    mockRefreshSession.mockReset();
     mockFetch.mockReset();
   });
 
@@ -70,9 +53,14 @@ describe("http utilities", () => {
     });
   });
 
-  describe("apiFetch - token management", () => {
-    it("uses cached token when available", async () => {
-      mockGetDeviceToken.mockResolvedValue("cached-token");
+  describe("apiFetch - Supabase token management", () => {
+    it("uses session access token when available", async () => {
+      mockGetSession.mockResolvedValue({
+        data: {
+          session: { access_token: "supabase-jwt-token", user: { id: "u1" } },
+        },
+        error: null,
+      });
       mockFetch.mockResolvedValue({
         ok: true,
         status: 200,
@@ -81,60 +69,54 @@ describe("http utilities", () => {
 
       const result = await apiFetch("/test");
 
-      expect(mockGetDeviceToken).toHaveBeenCalledTimes(1);
-      expect(mockRegisterDevice).not.toHaveBeenCalled();
+      expect(mockGetSession).toHaveBeenCalledTimes(1);
       expect(mockFetch).toHaveBeenCalledWith(
         expect.any(String),
         expect.objectContaining({
           headers: expect.objectContaining({
-            Authorization: "Bearer cached-token",
+            Authorization: "Bearer supabase-jwt-token",
           }),
         }),
       );
       expect(result).toEqual({ data: "success" });
     });
 
-    it("registers device when no token exists", async () => {
-      mockGetDeviceToken.mockResolvedValue(null);
-      mockGetOrCreateDeviceId.mockResolvedValue("device-id-123");
-      mockRegisterDevice.mockResolvedValue({
-        device_id: "device-id-123",
-        device_token: "new-token",
-      });
-      mockFetch.mockResolvedValue({
-        ok: true,
-        status: 200,
-        json: async () => ({ data: "success" }),
+    it("throws when no session exists", async () => {
+      mockGetSession.mockResolvedValue({
+        data: { session: null },
+        error: null,
       });
 
-      await apiFetch("/test");
+      await expect(apiFetch("/test")).rejects.toThrow("No active session");
+      expect(mockFetch).not.toHaveBeenCalled();
+    });
 
-      expect(mockGetDeviceToken).toHaveBeenCalledTimes(1);
-      expect(mockClearDeviceToken).toHaveBeenCalledTimes(1);
-      expect(mockGetOrCreateDeviceId).toHaveBeenCalledTimes(1);
-      expect(mockRegisterDevice).toHaveBeenCalledWith("device-id-123");
-      expect(mockSetDeviceToken).toHaveBeenCalledWith("new-token");
-      expect(mockFetch).toHaveBeenCalledWith(
-        expect.any(String),
-        expect.objectContaining({
-          headers: expect.objectContaining({
-            Authorization: "Bearer new-token",
-          }),
-        }),
-      );
+    it("throws when getSession returns an error", async () => {
+      mockGetSession.mockResolvedValue({
+        data: { session: null },
+        error: { message: "Session expired" },
+      });
+
+      await expect(apiFetch("/test")).rejects.toThrow("No active session");
+      expect(mockFetch).not.toHaveBeenCalled();
     });
   });
 
   describe("apiFetch - 401 retry logic", () => {
-    it("retries with new token on 401 response", async () => {
-      mockGetDeviceToken.mockResolvedValue("expired-token");
-      mockGetOrCreateDeviceId.mockResolvedValue("device-id-123");
-      mockRegisterDevice.mockResolvedValue({
-        device_id: "device-id-123",
-        device_token: "refreshed-token",
+    it("retries with refreshed token on 401 response", async () => {
+      mockGetSession.mockResolvedValue({
+        data: {
+          session: { access_token: "expired-token", user: { id: "u1" } },
+        },
+        error: null,
+      });
+      mockRefreshSession.mockResolvedValue({
+        data: {
+          session: { access_token: "refreshed-token", user: { id: "u1" } },
+        },
+        error: null,
       });
 
-      // First call returns 401, second call succeeds
       mockFetch
         .mockResolvedValueOnce({
           ok: false,
@@ -149,14 +131,25 @@ describe("http utilities", () => {
       const result = await apiFetch("/test");
 
       expect(mockFetch).toHaveBeenCalledTimes(2);
-      expect(mockClearDeviceToken).toHaveBeenCalledTimes(1);
-      expect(mockRegisterDevice).toHaveBeenCalledWith("device-id-123");
-      expect(mockSetDeviceToken).toHaveBeenCalledWith("refreshed-token");
+      expect(mockRefreshSession).toHaveBeenCalledTimes(1);
+      expect(mockFetch).toHaveBeenLastCalledWith(
+        expect.any(String),
+        expect.objectContaining({
+          headers: expect.objectContaining({
+            Authorization: "Bearer refreshed-token",
+          }),
+        }),
+      );
       expect(result).toEqual({ data: "success after retry" });
     });
 
     it("does not retry on 403 forbidden", async () => {
-      mockGetDeviceToken.mockResolvedValue("valid-token");
+      mockGetSession.mockResolvedValue({
+        data: {
+          session: { access_token: "valid-token", user: { id: "u1" } },
+        },
+        error: null,
+      });
       mockFetch.mockResolvedValue({
         ok: false,
         status: 403,
@@ -166,18 +159,47 @@ describe("http utilities", () => {
       await expect(apiFetch("/test")).rejects.toThrow("Request failed (403)");
 
       expect(mockFetch).toHaveBeenCalledTimes(1);
-      expect(mockRegisterDevice).not.toHaveBeenCalled();
+      expect(mockRefreshSession).not.toHaveBeenCalled();
     });
 
-    it("throws error if retry also fails", async () => {
-      mockGetDeviceToken.mockResolvedValue("expired-token");
-      mockGetOrCreateDeviceId.mockResolvedValue("device-id-123");
-      mockRegisterDevice.mockResolvedValue({
-        device_id: "device-id-123",
-        device_token: "refreshed-token",
+    it("throws error if refresh fails on 401", async () => {
+      mockGetSession.mockResolvedValue({
+        data: {
+          session: { access_token: "expired-token", user: { id: "u1" } },
+        },
+        error: null,
+      });
+      mockRefreshSession.mockResolvedValue({
+        data: { session: null },
+        error: { message: "Refresh failed" },
       });
 
-      // Both calls return 401
+      mockFetch.mockResolvedValue({
+        ok: false,
+        status: 401,
+        text: async () => JSON.stringify({ error: "Unauthorized" }),
+      });
+
+      await expect(apiFetch("/test")).rejects.toThrow("Request failed (401)");
+
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+      expect(mockRefreshSession).toHaveBeenCalledTimes(1);
+    });
+
+    it("throws error if retry also fails with 401", async () => {
+      mockGetSession.mockResolvedValue({
+        data: {
+          session: { access_token: "expired-token", user: { id: "u1" } },
+        },
+        error: null,
+      });
+      mockRefreshSession.mockResolvedValue({
+        data: {
+          session: { access_token: "still-bad-token", user: { id: "u1" } },
+        },
+        error: null,
+      });
+
       mockFetch.mockResolvedValue({
         ok: false,
         status: 401,
@@ -190,43 +212,14 @@ describe("http utilities", () => {
     });
   });
 
-  describe("apiFetch - concurrent registration", () => {
-    it("shares same registration promise for concurrent calls", async () => {
-      mockGetDeviceToken.mockResolvedValue(null);
-      mockGetOrCreateDeviceId.mockResolvedValue("device-id-123");
-
-      let registerCallCount = 0;
-      mockRegisterDevice.mockImplementation(async () => {
-        registerCallCount++;
-        await new Promise((resolve) => setTimeout(resolve, 50));
-        return {
-          device_id: "device-id-123",
-          device_token: "new-token",
-        };
-      });
-
-      mockFetch.mockResolvedValue({
-        ok: true,
-        status: 200,
-        json: async () => ({ data: "success" }),
-      });
-
-      // Make 3 concurrent calls
-      await Promise.all([
-        apiFetch("/test1"),
-        apiFetch("/test2"),
-        apiFetch("/test3"),
-      ]);
-
-      // Should only register once despite 3 concurrent calls
-      expect(registerCallCount).toBe(1);
-      expect(mockSetDeviceToken).toHaveBeenCalledTimes(1);
-    });
-  });
-
   describe("apiFetch - HTTP methods", () => {
     beforeEach(() => {
-      mockGetDeviceToken.mockResolvedValue("test-token");
+      mockGetSession.mockResolvedValue({
+        data: {
+          session: { access_token: "test-token", user: { id: "u1" } },
+        },
+        error: null,
+      });
       mockFetch.mockResolvedValue({
         ok: true,
         status: 200,
@@ -288,7 +281,12 @@ describe("http utilities", () => {
 
   describe("apiFetch - request headers", () => {
     beforeEach(() => {
-      mockGetDeviceToken.mockResolvedValue("test-token");
+      mockGetSession.mockResolvedValue({
+        data: {
+          session: { access_token: "test-token", user: { id: "u1" } },
+        },
+        error: null,
+      });
       mockFetch.mockResolvedValue({
         ok: true,
         status: 200,
@@ -312,7 +310,15 @@ describe("http utilities", () => {
     });
 
     it("includes Authorization header with Bearer token", async () => {
-      mockGetDeviceToken.mockResolvedValue("my-special-token");
+      mockGetSession.mockResolvedValue({
+        data: {
+          session: {
+            access_token: "my-special-token",
+            user: { id: "u1" },
+          },
+        },
+        error: null,
+      });
       await apiFetch("/test");
 
       expect(mockFetch).toHaveBeenCalledWith(
@@ -328,7 +334,12 @@ describe("http utilities", () => {
 
   describe("apiFetch - response handling", () => {
     beforeEach(() => {
-      mockGetDeviceToken.mockResolvedValue("test-token");
+      mockGetSession.mockResolvedValue({
+        data: {
+          session: { access_token: "test-token", user: { id: "u1" } },
+        },
+        error: null,
+      });
     });
 
     it("returns parsed JSON on success", async () => {
@@ -428,7 +439,12 @@ describe("http utilities", () => {
 
   describe("apiFetch - edge cases", () => {
     beforeEach(() => {
-      mockGetDeviceToken.mockResolvedValue("test-token");
+      mockGetSession.mockResolvedValue({
+        data: {
+          session: { access_token: "test-token", user: { id: "u1" } },
+        },
+        error: null,
+      });
     });
 
     it("handles request without body", async () => {
@@ -496,56 +512,6 @@ describe("http utilities", () => {
           expect(error.details).toBeUndefined();
         }
       }
-    });
-  });
-
-  describe("apiFetch - integration scenarios", () => {
-    it("handles first-time registration flow", async () => {
-      mockGetDeviceToken.mockResolvedValue(null);
-      mockGetOrCreateDeviceId.mockResolvedValue("new-device-id");
-      mockRegisterDevice.mockResolvedValue({
-        device_id: "new-device-id",
-        device_token: "fresh-token",
-      });
-      mockFetch.mockResolvedValue({
-        ok: true,
-        status: 200,
-        json: async () => ({ products: [] }),
-      });
-
-      const result = await apiFetch("/products");
-
-      expect(mockClearDeviceToken).toHaveBeenCalled();
-      expect(mockRegisterDevice).toHaveBeenCalledWith("new-device-id");
-      expect(mockSetDeviceToken).toHaveBeenCalledWith("fresh-token");
-      expect(result).toEqual({ products: [] });
-    });
-
-    it("handles token expiration and refresh", async () => {
-      mockGetDeviceToken.mockResolvedValue("expired-token");
-      mockGetOrCreateDeviceId.mockResolvedValue("existing-device-id");
-      mockRegisterDevice.mockResolvedValue({
-        device_id: "existing-device-id",
-        device_token: "new-fresh-token",
-      });
-
-      mockFetch
-        .mockResolvedValueOnce({
-          ok: false,
-          status: 401,
-        })
-        .mockResolvedValueOnce({
-          ok: true,
-          status: 200,
-          json: async () => ({ data: "success with new token" }),
-        });
-
-      const result = await apiFetch("/protected-resource");
-
-      expect(mockFetch).toHaveBeenCalledTimes(2);
-      expect(mockClearDeviceToken).toHaveBeenCalled();
-      expect(mockSetDeviceToken).toHaveBeenCalledWith("new-fresh-token");
-      expect(result).toEqual({ data: "success with new token" });
     });
   });
 });

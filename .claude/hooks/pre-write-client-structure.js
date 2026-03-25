@@ -40,6 +40,7 @@ process.stdin.on("end", () => {
       "screens", // Screen components (organisms)
       "services", // API, utils, schemas, constants
       "storage", // AsyncStorage + device identity
+      "test", // Test setup and utilities
       "theme", // Colors, theming
     ];
 

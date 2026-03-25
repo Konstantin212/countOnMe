@@ -10,7 +10,12 @@ import {
   MyDayStackParamList,
   MyPathStackParamList,
   ProfileStackParamList,
+  AuthStackParamList,
 } from "./navigationTypes";
+import { useAuth } from "@services/auth/AuthContext";
+import LoginScreen from "@screens/AuthFlow/LoginScreen";
+import MagicLinkSentScreen from "@screens/AuthFlow/MagicLinkSentScreen";
+import AccountScreen from "@screens/ProfileFlow/AccountScreen";
 import GoalCalculatedResultScreen from "@screens/GoalFlow/GoalCalculatedResultScreen";
 import GoalCalculatedScreen from "@screens/GoalFlow/GoalCalculatedScreen";
 import GoalManualScreen from "@screens/GoalFlow/GoalManualScreen";
@@ -40,6 +45,7 @@ const Tab = createBottomTabNavigator<RootTabParamList>();
 const MyDayStack = createNativeStackNavigator<MyDayStackParamList>();
 const MyPathStack = createNativeStackNavigator<MyPathStackParamList>();
 const ProfileStack = createNativeStackNavigator<ProfileStackParamList>();
+const AuthStack = createNativeStackNavigator<AuthStackParamList>();
 
 type TabName = keyof RootTabParamList;
 type IoniconName = React.ComponentProps<typeof Ionicons>["name"];
@@ -67,6 +73,11 @@ const ProfileStackNavigator = () => {
         name="ProfileMenu"
         component={ProfileScreen}
         options={{ headerShown: false }}
+      />
+      <ProfileStack.Screen
+        name="Account"
+        component={AccountScreen}
+        options={{ title: "Account" }}
       />
       <ProfileStack.Screen
         name="ProductsList"
@@ -246,6 +257,32 @@ const TabNavigator = () => {
   );
 };
 
+const AuthStackNavigator = () => {
+  const { colors } = useTheme();
+
+  return (
+    <AuthStack.Navigator
+      screenOptions={{
+        headerShown: false,
+        contentStyle: { backgroundColor: colors.background },
+      }}
+    >
+      <AuthStack.Screen name="Login" component={LoginScreen} />
+      <AuthStack.Screen name="MagicLinkSent" component={MagicLinkSentScreen} />
+    </AuthStack.Navigator>
+  );
+};
+
 export const AppNavigator = () => {
+  const { status } = useAuth();
+
+  if (status === "loading") {
+    return null;
+  }
+
+  if (status === "unauthenticated") {
+    return <AuthStackNavigator />;
+  }
+
   return <TabNavigator />;
 };

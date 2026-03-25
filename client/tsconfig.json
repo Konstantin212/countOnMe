@@ -10,6 +10,7 @@
       "@components/*": ["components/*"],
       "@hooks/*": ["hooks/*"],
       "@models/*": ["models/*"],
+      "@particles": ["particles/index"],
       "@particles/*": ["particles/*"],
       "@screens/*": ["screens/*"],
       "@services/*": ["services/*"],

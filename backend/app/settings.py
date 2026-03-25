@@ -26,6 +26,11 @@ class Settings(BaseSettings):
 
     device_token_pepper: str  # Required — no default; must be set via env var
 
+    # Supabase Auth — HS256 secret for JWT verification
+    supabase_jwt_secret: str = ""
+    supabase_service_role_key: str = ""
+    supabase_url: str = ""
+
 
 settings = Settings()
 
@@ -42,4 +47,29 @@ if settings.device_token_pepper in _WEAK_PEPPERS:
             "Set DEVICE_TOKEN_PEPPER to a cryptographically random string (32+ chars)."
         )
         raise ValueError(msg)
+
+# Validate supabase_jwt_secret
+if not settings.supabase_jwt_secret:
+    if settings.env == "local":
+        logger.warning(
+            "SUPABASE_JWT_SECRET is empty. "
+            "Supabase JWT auth will not work until a valid secret is configured.",
+        )
+    else:
+        msg = (
+            "SUPABASE_JWT_SECRET must be set in non-local environments. "
+            "Set SUPABASE_JWT_SECRET to your Supabase project's JWT secret."
+        )
+        raise ValueError(msg)
+
+# Validate supabase_url
+if settings.supabase_url:
+    if settings.env != "local" and not settings.supabase_url.startswith("https://"):
+        msg = (
+            "SUPABASE_URL must use HTTPS in non-local environments. "
+            f"Got: {settings.supabase_url}"
+        )
+        raise ValueError(msg)
+elif settings.env != "local":
+    logger.warning("SUPABASE_URL is not set; Supabase Admin API calls will be skipped.")
 

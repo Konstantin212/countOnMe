@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, FastAPI
 
+from app.features.auth.router import auth_router
 from app.features.auth.router import router as devices_router
 from app.features.catalog.router import router as catalog_router
 from app.features.data.router import router as data_router
@@ -21,6 +22,7 @@ def create_app() -> FastAPI:
 
     v1 = APIRouter(prefix="/v1")
     v1.include_router(devices_router)
+    v1.include_router(auth_router)
     v1.include_router(products_router)
     v1.include_router(portions_router)
     v1.include_router(food_entries_router)

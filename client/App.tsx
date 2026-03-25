@@ -1,25 +1,26 @@
-import 'react-native-gesture-handler';
-import React from 'react';
-import { StatusBar } from 'expo-status-bar';
+import "react-native-gesture-handler";
+import React from "react";
+import { StatusBar } from "expo-status-bar";
 import {
   NavigationContainer,
   DefaultTheme as NavigationDefaultTheme,
   DarkTheme as NavigationDarkTheme,
   Theme as NavigationTheme,
-} from '@react-navigation/native';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { StyleSheet } from 'react-native';
+} from "@react-navigation/native";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { SafeAreaProvider } from "react-native-safe-area-context";
+import { StyleSheet } from "react-native";
 import {
   MD3LightTheme as PaperLightTheme,
   MD3DarkTheme as PaperDarkTheme,
   PaperProvider,
   MD3Theme as PaperTheme,
-} from 'react-native-paper';
+} from "react-native-paper";
 
-import { AppNavigator } from '@app/AppNavigator';
-import { ThemeProvider } from '@theme/ThemeContext';
-import { useTheme } from '@hooks/useTheme';
+import { AppNavigator } from "@app/AppNavigator";
+import { ThemeProvider } from "@theme/ThemeContext";
+import { AuthProvider } from "@services/auth/AuthContext";
+import { useTheme } from "@hooks/useTheme";
 
 const styles = StyleSheet.create({
   container: {
@@ -31,7 +32,7 @@ const ThemedApp = () => {
   const { colors, theme } = useTheme();
 
   const navigationTheme: NavigationTheme =
-    theme === 'dark'
+    theme === "dark"
       ? {
           ...NavigationDarkTheme,
           colors: {
@@ -56,7 +57,7 @@ const ThemedApp = () => {
         };
 
   const paperTheme: PaperTheme =
-    theme === 'dark'
+    theme === "dark"
       ? {
           ...PaperDarkTheme,
           colors: {
@@ -85,11 +86,13 @@ const ThemedApp = () => {
         };
 
   return (
-    <GestureHandlerRootView style={[styles.container, { backgroundColor: colors.background }]}>
+    <GestureHandlerRootView
+      style={[styles.container, { backgroundColor: colors.background }]}
+    >
       <SafeAreaProvider>
         <PaperProvider theme={paperTheme}>
           <NavigationContainer theme={navigationTheme}>
-            <StatusBar style={theme === 'dark' ? 'light' : 'dark'} />
+            <StatusBar style={theme === "dark" ? "light" : "dark"} />
             <AppNavigator />
           </NavigationContainer>
         </PaperProvider>
@@ -101,7 +104,9 @@ const ThemedApp = () => {
 export default function App() {
   return (
     <ThemeProvider>
-      <ThemedApp />
+      <AuthProvider>
+        <ThemedApp />
+      </AuthProvider>
     </ThemeProvider>
   );
 }

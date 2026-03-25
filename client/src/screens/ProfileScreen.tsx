@@ -74,6 +74,13 @@ const ProfileScreen = ({ navigation }: Props) => {
 
   const menuItems = [
     {
+      id: "account",
+      title: "Account",
+      subtitle: "Email, devices, and sign out",
+      icon: "person-circle" as const,
+      onPress: () => navigation.navigate("Account"),
+    },
+    {
       id: "goal",
       title: "My Goal",
       subtitle: "Set your calorie and macro targets",

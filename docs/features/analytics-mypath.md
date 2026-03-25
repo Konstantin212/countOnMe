@@ -1,7 +1,7 @@
 ---
 type: feature
 status: current
-last-updated: 2026-03-19
+last-updated: 2026-03-25
 related-features:
   - goal-system
   - food-tracking
@@ -168,9 +168,9 @@ Helper. Returns YYYY-MM-DD strings spanning last 7/30/90 days inclusive.
 
 **FAB Quick Actions**:
 - **Add Meal** → MyDayTab/AddMeal
-- **Add Product** → (stub, not implemented)
-- **Add Water** → (stub, not implemented)
-- **Scan Food** → (stub, not implemented)
+- **Add Product** → MyDayTab/SelectProduct
+- **Add Water** → Opens WaterModal (see [water-tracking.md](water-tracking.md))
+- **Scan Food** → MyDayTab/BarcodeScanner
 
 FAB closes on blur/focus or tab press.
 

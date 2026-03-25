@@ -185,6 +185,23 @@ vi.mock("./components/StreaksCard", () => ({
   StreaksCard: () => null,
 }));
 
+vi.mock("@components/WaterModal", () => ({
+  WaterModal: () => null,
+}));
+
+vi.mock("@hooks/useWaterTracking", () => ({
+  useWaterTracking: () => ({
+    todayTotal: 0,
+    todayLogs: [],
+    waterGoal: 2000,
+    loading: false,
+    addWater: vi.fn(),
+    removeWater: vi.fn(),
+    deleteWaterLog: vi.fn(),
+    refresh: vi.fn(),
+  }),
+}));
+
 // ---------------------------------------------------------------------------
 // Utility helpers
 // ---------------------------------------------------------------------------

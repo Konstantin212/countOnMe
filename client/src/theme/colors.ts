@@ -58,6 +58,11 @@ export const LightTheme = {
   chartBand: "#16A34A", // Healthy range band fill (Green — positive zone)
   chartBarOver: "#DC2626", // Bar color when over calorie goal (Red — warning)
 
+  // Water tracking colors
+  waterFill: "#3B82F6",
+  waterFillDeep: "#2563EB",
+  waterFillBg: "#DBEAFE",
+
   // Specific component colors
   tabBarActive: "#1E293B",
   tabBarInactive: "#94A3B8",
@@ -118,6 +123,11 @@ export const DarkTheme = {
   chartTarget: "#EF4444", // Target weight dashed line (Red)
   chartBand: "#22C55E", // Healthy range band fill (Emerald)
   chartBarOver: "#EF4444", // Bar color when over calorie goal (Red)
+
+  // Water tracking colors
+  waterFill: "#60A5FA",
+  waterFillDeep: "#3B82F6",
+  waterFillBg: "#1E3A5F",
 
   // Specific component colors
   tabBarActive: "#F8FAFC",

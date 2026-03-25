@@ -251,6 +251,14 @@ export type BodyWeightEntry = {
   updatedAt: ISODateString;
 };
 
+/** Water log entry for tracking water intake. */
+export type WaterLog = {
+  id: string;
+  day: string; // YYYY-MM-DD
+  amountMl: number;
+  createdAt: ISODateString;
+};
+
 /** Time period for stats aggregation. */
 export type StatsPeriod = "7d" | "30d" | "90d";
 

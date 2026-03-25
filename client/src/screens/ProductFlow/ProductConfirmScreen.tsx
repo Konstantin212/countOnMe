@@ -23,7 +23,10 @@ import {
   calculateNutrition,
   classifyPortionMode,
 } from "@services/utils/nutrition";
-import { MEAL_TYPE_KEYS, MEAL_TYPE_LABEL } from "@services/constants/mealTypes";
+import {
+  FOOD_MEAL_TYPE_KEYS,
+  MEAL_TYPE_LABEL,
+} from "@services/constants/mealTypes";
 import { logEvent } from "@services/analytics";
 import {
   loadProductFavourites,
@@ -234,7 +237,7 @@ const CatalogTrackScreen = ({
             testID="meal-type-select"
             value={mealType}
             onValueChange={setMealType}
-            options={MEAL_TYPE_KEYS.map((k) => ({
+            options={FOOD_MEAL_TYPE_KEYS.map((k) => ({
               value: k,
               label: MEAL_TYPE_LABEL[k],
             }))}

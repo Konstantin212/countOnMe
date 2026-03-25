@@ -5,6 +5,7 @@
 ### Features
 - [`features/product-management.md`](features/product-management.md) — Product CRUD, Open Food Facts import, scales and units
 - [`features/food-tracking.md`](features/food-tracking.md) — Daily food logging, meal types, AddMeal flow, day stats
+- [`features/water-tracking.md`](features/water-tracking.md) — Water intake logging, animated modal, progress tracking
 - [`features/draft-meal-system.md`](features/draft-meal-system.md) — Multi-step meal creation with persistent draft state
 - [`features/barcode-scanner.md`](features/barcode-scanner.md) — Barcode scanning, catalog + OFF lookup, portion modes, direct meal tracking
 - [`features/catalog-seeding.md`](features/catalog-seeding.md) — Global USDA product catalog, seed script, API endpoints

@@ -18,6 +18,8 @@ import { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useTheme } from "@hooks/useTheme";
 import { useGoal } from "@hooks/useGoal";
+import { useWaterTracking } from "@hooks/useWaterTracking";
+import { WaterModal } from "@components/WaterModal";
 import { useBodyWeight } from "@hooks/useBodyWeight";
 import { useStatsRange } from "@hooks/useStatsRange";
 import {
@@ -44,6 +46,7 @@ const MyPathScreen = () => {
   const insets = useSafeAreaInsets();
   const isFocused = useIsFocused();
   const [fabOpen, setFabOpen] = useState(false);
+  const [waterModalVisible, setWaterModalVisible] = useState(false);
   const backdropColor = colors.background;
 
   // Hooks
@@ -60,6 +63,7 @@ const MyPathScreen = () => {
     loading: statsLoading,
     refresh: refreshStats,
   } = useStatsRange();
+  const { todayTotal, waterGoal, addWater, removeWater } = useWaterTracking(goal?.waterMl);
 
   // Derived data
   const weightDelta = goal ? calculateWeightDelta(weights, goal) : null;
@@ -310,13 +314,7 @@ const MyPathScreen = () => {
             {
               icon: "cup-water",
               label: "Add water",
-              onPress: () =>
-                navigation
-                  .getParent<BottomTabNavigationProp<RootTabParamList>>()
-                  ?.navigate("MyDayTab", {
-                    screen: "AddMeal",
-                    params: { mealType: "water" },
-                  }),
+              onPress: () => setWaterModalVisible(true),
             },
             {
               icon: "barcode-scan",
@@ -339,6 +337,15 @@ const MyPathScreen = () => {
           backdropColor={backdropColor}
         />
       </Portal>
+
+      <WaterModal
+        visible={waterModalVisible}
+        currentMl={todayTotal}
+        goalMl={waterGoal}
+        onAddWater={addWater}
+        onRemoveWater={removeWater}
+        onClose={() => setWaterModalVisible(false)}
+      />
     </SafeAreaView>
   );
 };

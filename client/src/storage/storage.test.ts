@@ -1,7 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { Meal, Product } from "@models/types";
-import { loadMeals, loadProducts, saveMeals, saveProducts } from "./storage";
+import { Meal, Product, WaterLog } from "@models/types";
+import {
+  loadMeals,
+  loadProducts,
+  loadWaterLogs,
+  saveMeals,
+  saveProducts,
+  saveWaterLogs,
+} from "./storage";
 
 const storageStore = new Map<string, string>();
 
@@ -249,6 +256,36 @@ describe("storage repositories", () => {
     });
   });
 
+  describe("water logs storage", () => {
+    it("returns empty array when nothing stored", async () => {
+      expect(await loadWaterLogs()).toEqual([]);
+    });
+
+    it("saves and loads water logs", async () => {
+      const logs: WaterLog[] = [
+        {
+          id: "w1",
+          day: "2025-06-01",
+          amountMl: 250,
+          createdAt: "2025-06-01T08:00:00.000Z",
+        },
+        {
+          id: "w2",
+          day: "2025-06-01",
+          amountMl: 500,
+          createdAt: "2025-06-01T12:00:00.000Z",
+        },
+      ];
+      await saveWaterLogs(logs);
+      expect(await loadWaterLogs()).toEqual(logs);
+    });
+
+    it("returns empty array when JSON parse fails", async () => {
+      storageStore.set("@countOnMe/water-logs/v1", "invalid json");
+      expect(await loadWaterLogs()).toEqual([]);
+    });
+  });
+
   describe("clearAllFoodData", () => {
     it("removes all food-related keys from storage", async () => {
       const { clearAllFoodData } = await import("./storage");
@@ -263,6 +300,7 @@ describe("storage repositories", () => {
       storageStore.set("@countOnMe/goal/v1", "{}");
       storageStore.set("@countOnMe/body-weights/v1", "[]");
       storageStore.set("@countOnMe/draft-meal/v1", "{}");
+      storageStore.set("@countOnMe/water-logs/v1", "[]");
       // Theme should NOT be deleted
       storageStore.set("@countOnMe/theme/v1", "dark");
 
@@ -279,6 +317,7 @@ describe("storage repositories", () => {
       expect(storageStore.has("@countOnMe/goal/v1")).toBe(false);
       expect(storageStore.has("@countOnMe/body-weights/v1")).toBe(false);
       expect(storageStore.has("@countOnMe/draft-meal/v1")).toBe(false);
+      expect(storageStore.has("@countOnMe/water-logs/v1")).toBe(false);
       // Theme should remain
       expect(storageStore.get("@countOnMe/theme/v1")).toBe("dark");
     });

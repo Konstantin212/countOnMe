@@ -25,9 +25,15 @@ import { useDayStats, getMealTypeTotals } from "@hooks/useDayStats";
 import { useGoal } from "@hooks/useGoal";
 import { useTheme } from "@hooks/useTheme";
 import { MyDayStackParamList, RootTabParamList } from "@app/navigationTypes";
-import { MEAL_TYPE_KEYS, MEAL_TYPE_LABEL } from "@services/constants/mealTypes";
-import type { MealTypeKey } from "@models/types";
+import {
+  FOOD_MEAL_TYPE_KEYS,
+  MEAL_TYPE_LABEL,
+  type FoodMealTypeKey,
+} from "@services/constants/mealTypes";
 import { MacroRings } from "@components/MacroRings";
+import { WaterProgressCard } from "@components/WaterProgressCard";
+import { WaterModal } from "@components/WaterModal";
+import { useWaterTracking } from "@hooks/useWaterTracking";
 
 const MyDayScreen = () => {
   const { colors } = useTheme();
@@ -36,6 +42,7 @@ const MyDayScreen = () => {
   const isFocused = useIsFocused();
   const insets = useSafeAreaInsets();
   const [fabOpen, setFabOpen] = useState(false);
+  const [waterModalVisible, setWaterModalVisible] = useState(false);
   const backdropColor = colors.background;
   const summaryCardBg = colors.cardBackground;
   const rowCardBg = colors.cardBackgroundLight;
@@ -44,6 +51,7 @@ const MyDayScreen = () => {
   // Fetch goal and today's stats
   const { goal, loading: goalLoading } = useGoal();
   const { stats, loading: statsLoading, refresh: refreshStats } = useDayStats();
+  const { todayTotal, waterGoal, addWater, removeWater } = useWaterTracking(goal?.waterMl);
 
   // Refresh stats when screen comes into focus (after adding meals)
   useEffect(() => {
@@ -89,20 +97,19 @@ const MyDayScreen = () => {
   const carbsProgress = carbsGoal > 0 ? consumed.carbs / carbsGoal : 0;
   const fatProgress = fatGoal > 0 ? consumed.fat / fatGoal : 0;
 
-  const MEAL_TYPE_ICON: Record<MealTypeKey, number> = {
+  const MEAL_TYPE_ICON: Record<FoodMealTypeKey, number> = {
     breakfast: require("../../assets/breakfast.png"),
     lunch: require("../../assets/lunch.png"),
     dinner: require("../../assets/dinner.png"),
     snacks: require("../../assets/snacks.png"),
-    water: require("../../assets/water.png"),
   };
 
-  // Calculate per-meal-type calories from stats
-  const meals = MEAL_TYPE_KEYS.map((key) => {
+  // Calculate per-meal-type calories from stats (food only, no water)
+  const meals = FOOD_MEAL_TYPE_KEYS.map((key) => {
     const mealTotals = getMealTypeTotals(stats, key);
     const calories = Math.round(mealTotals.calories);
-    // Progress is relative to a fifth of daily goal (one per meal type)
-    const mealGoal = calorieGoal / 5;
+    // Progress is relative to a quarter of daily goal (4 food meal types)
+    const mealGoal = calorieGoal / 4;
     const progress = Math.min(calories / mealGoal, 1);
 
     return {
@@ -431,6 +438,12 @@ const MyDayScreen = () => {
           </View>
         </View>
 
+        <WaterProgressCard
+          currentMl={todayTotal}
+          goalMl={waterGoal}
+          onPress={() => setWaterModalVisible(true)}
+        />
+
         <Portal>
           {fabOpen && (
             <Pressable
@@ -457,8 +470,7 @@ const MyDayScreen = () => {
               {
                 icon: "cup-water",
                 label: "Add water",
-                onPress: () =>
-                  navigation.navigate("AddMeal", { mealType: "water" }),
+                onPress: () => setWaterModalVisible(true),
               },
               {
                 icon: "barcode-scan",
@@ -479,6 +491,15 @@ const MyDayScreen = () => {
           />
         </Portal>
       </ScrollView>
+
+      <WaterModal
+        visible={waterModalVisible}
+        currentMl={todayTotal}
+        goalMl={waterGoal}
+        onAddWater={addWater}
+        onRemoveWater={removeWater}
+        onClose={() => setWaterModalVisible(false)}
+      />
     </SafeAreaView>
   );
 };

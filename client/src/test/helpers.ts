@@ -5,6 +5,7 @@ import type {
   MealTypeKey,
   UserGoal,
   Unit,
+  WaterLog,
 } from "@models/types";
 import type { FoodEntry } from "@services/api/foodEntries";
 import type { Portion } from "@services/api/portions";
@@ -124,5 +125,13 @@ export const makeUserGoal = (overrides: Partial<UserGoal> = {}): UserGoal => ({
   waterMl: 2000,
   createdAt: "2025-01-01T00:00:00.000Z",
   updatedAt: "2025-01-01T00:00:00.000Z",
+  ...overrides,
+});
+
+export const makeWaterLog = (overrides: Partial<WaterLog> = {}): WaterLog => ({
+  id: "water-1",
+  day: "2025-06-01",
+  amountMl: 250,
+  createdAt: "2025-06-01T08:00:00.000Z",
   ...overrides,
 });

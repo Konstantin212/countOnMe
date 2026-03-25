@@ -45,12 +45,12 @@ const TextInput = createMockComponent("TextInput");
 // TouchableOpacity / Pressable: map onPress → onClick so fireEvent.click works
 function createPressableMockComponent(name) {
   const component = function (props) {
-    const { testID, children, onPress, style, ...rest } = props || {};
+    const { testID, children, onPress, onPressIn, onPressOut, style, ...rest } = props || {};
     // style may be a function (pressed state) — resolve to plain object for jsdom
     const resolvedStyle = typeof style === "function" ? style({ pressed: false }) : style;
     return React.createElement(
       name.toLowerCase(),
-      { ...rest, style: resolvedStyle, "data-testid": testID, onClick: onPress },
+      { ...rest, style: resolvedStyle, "data-testid": testID, onClick: onPress, onMouseDown: onPressIn, onMouseUp: onPressOut },
       children,
     );
   };

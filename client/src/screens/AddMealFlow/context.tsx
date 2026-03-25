@@ -8,19 +8,22 @@ import React, {
 } from "react";
 
 import type { MealItem, MealTypeKey, Unit } from "@models/types";
-import { MEAL_TYPE_KEYS } from "@services/constants/mealTypes";
+import {
+  FOOD_MEAL_TYPE_KEYS,
+  FoodMealTypeKey,
+} from "@services/constants/mealTypes";
 import { clearDraftMeal, loadDraftMeal, saveDraftMeal } from "@storage/storage";
 
 type DraftMealItem = MealItem;
 
 type DraftMealState = {
-  mealType: MealTypeKey;
-  itemsByMealType: Record<MealTypeKey, DraftMealItem[]>;
+  mealType: FoodMealTypeKey;
+  itemsByMealType: Record<FoodMealTypeKey, DraftMealItem[]>;
 };
 
 type DraftMealContextValue = {
   draft: DraftMealState;
-  setMealType: (mealType: MealTypeKey) => void;
+  setMealType: (mealType: FoodMealTypeKey) => void;
   upsertItem: (item: { productId: string; amount: number; unit: Unit }) => void;
   removeItem: (productId: string) => void;
   reset: () => void;
@@ -30,15 +33,18 @@ const DraftMealContext = createContext<DraftMealContextValue | undefined>(
   undefined,
 );
 
-const DEFAULT_MEAL_TYPE: MealTypeKey = "breakfast";
+const DEFAULT_MEAL_TYPE: FoodMealTypeKey = "breakfast";
 
-const createEmptyItemsByMealType = (): Record<MealTypeKey, DraftMealItem[]> => {
-  return MEAL_TYPE_KEYS.reduce(
+const createEmptyItemsByMealType = (): Record<
+  FoodMealTypeKey,
+  DraftMealItem[]
+> => {
+  return FOOD_MEAL_TYPE_KEYS.reduce(
     (acc, key) => {
       acc[key] = [];
       return acc;
     },
-    {} as Record<MealTypeKey, DraftMealItem[]>,
+    {} as Record<FoodMealTypeKey, DraftMealItem[]>,
   );
 };
 
@@ -56,7 +62,18 @@ export const DraftMealProvider = ({
   useEffect(() => {
     loadDraftMeal()
       .then((stored) => {
-        if (stored) setDraft(stored);
+        if (stored) {
+          const mealType = FOOD_MEAL_TYPE_KEYS.includes(
+            stored.mealType as FoodMealTypeKey,
+          )
+            ? (stored.mealType as FoodMealTypeKey)
+            : DEFAULT_MEAL_TYPE;
+          const itemsByMealType = createEmptyItemsByMealType();
+          for (const key of FOOD_MEAL_TYPE_KEYS) {
+            itemsByMealType[key] = stored.itemsByMealType[key] ?? [];
+          }
+          setDraft({ mealType, itemsByMealType });
+        }
       })
       .catch(() => {})
       .finally(() => setHydrated(true));
@@ -64,10 +81,13 @@ export const DraftMealProvider = ({
 
   useEffect(() => {
     if (!hydrated) return;
-    saveDraftMeal(draft).catch(() => {});
+    saveDraftMeal({
+      mealType: draft.mealType,
+      itemsByMealType: { ...draft.itemsByMealType, water: [] },
+    }).catch(() => {});
   }, [draft, hydrated]);
 
-  const setMealType = useCallback((mealType: MealTypeKey) => {
+  const setMealType = useCallback((mealType: FoodMealTypeKey) => {
     setDraft((prev) => ({ ...prev, mealType }));
   }, []);
 

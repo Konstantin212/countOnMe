@@ -1,7 +1,7 @@
 ---
 type: feature
 status: current
-last-updated: 2026-03-19
+last-updated: 2026-03-25
 related-features:
   - product-management
   - food-tracking
@@ -181,20 +181,16 @@ Seven funnel events track the scan-to-track path: `scanner_opened`, `permission_
 
 ### Backend
 
-- `backend/app/features/catalog/router.py` — Route `GET /v1/catalog/products/barcode/{barcode}` (declared before `/{catalog_product_id}` to avoid UUID parsing conflict); returns CatalogBarcodeResponse with default_portion + all portions
-- `backend/app/features/catalog/service.py` — Function `get_catalog_product_by_barcode()` queries catalog by barcode with eager-loaded portions
-- `backend/app/features/catalog/models.py` — ORM model `CatalogProduct` with `barcode` column and index; `CatalogPortion` with gram_weight (nullable) and is_default
-- `backend/app/features/catalog/schemas.py` — Response schema `CatalogBarcodeResponse` with default_portion and portions list
-- `backend/app/features/meals/router.py` — Route `POST /v1/food-entries` receives food entry creation (uses existing endpoint, no barcode-specific changes)
-- `backend/app/features/products/service.py` — Function `get_product_by_barcode()` and barcode dedup logic in `create_product()`
-- `backend/app/features/products/models.py` — ORM model `Product` with `barcode` column (device-scoped)
+- `backend/app/features/catalog/router.py` — `GET /v1/catalog/products/barcode/{barcode}`
+- `backend/app/features/catalog/service.py` — `get_catalog_product_by_barcode()` with eager-loaded portions
+- `backend/app/features/catalog/models.py` — `CatalogProduct` with `barcode` column and index
+- `backend/app/features/catalog/schemas.py` — `CatalogBarcodeResponse` schema
+- `backend/app/features/products/service.py` — `get_product_by_barcode()` and barcode dedup in `create_product()`
+- `backend/app/features/products/models.py` — `Product` with `barcode` column (device-scoped)
 
 ## API Endpoints
 
-See [`docs/api/catalog.md`](../api/catalog.md) for full endpoint documentation.
-
-**Key endpoint:**
-- `GET /v1/catalog/products/barcode/{barcode}` — Look up catalog product by barcode; returns `CatalogProductResponse` with portions, or 404 if not found. Requires device auth.
+See [`docs/api/catalog.md`](../api/catalog.md) for full endpoint documentation. Key endpoint: `GET /v1/catalog/products/barcode/{barcode}`.
 
 ## Related Features
 

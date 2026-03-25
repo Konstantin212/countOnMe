@@ -20,8 +20,11 @@ import { useMeals } from "@hooks/useMeals";
 import { useFoodEntries } from "@hooks/useFoodEntries";
 import { FoodEntry } from "@services/api/foodEntries";
 import { calcMealCalories } from "@services/utils/calories";
-import { MEAL_TYPE_KEYS, MEAL_TYPE_LABEL } from "@services/constants/mealTypes";
-import { MealTypeKey } from "@models/types";
+import {
+  FOOD_MEAL_TYPE_KEYS,
+  MEAL_TYPE_LABEL,
+  type FoodMealTypeKey,
+} from "@services/constants/mealTypes";
 import { MyDayStackParamList } from "@app/navigationTypes";
 import { useDraftMeal } from "../../context";
 
@@ -38,7 +41,9 @@ const AddMealScreen = ({ navigation, route }: Props) => {
   const [savedEntries, setSavedEntries] = useState<FoodEntry[]>([]);
   const [loadingEntries, setLoadingEntries] = useState(false);
 
-  const initialMealType = route.params?.mealType;
+  const rawMealType = route.params?.mealType;
+  const initialMealType =
+    rawMealType && rawMealType !== "water" ? rawMealType : undefined;
   useEffect(() => {
     if (initialMealType) {
       setMealType(initialMealType);
@@ -67,7 +72,7 @@ const AddMealScreen = ({ navigation, route }: Props) => {
   // Total calories across all meal types (day total)
   const totalDayCalories = useMemo(() => {
     let total = 0;
-    for (const mealType of MEAL_TYPE_KEYS) {
+    for (const mealType of FOOD_MEAL_TYPE_KEYS) {
       const items = draft.itemsByMealType[mealType] ?? [];
       total += calcMealCalories(items, products);
     }
@@ -75,10 +80,11 @@ const AddMealScreen = ({ navigation, route }: Props) => {
   }, [draft.itemsByMealType, products]);
 
   const savedByMealType = useMemo(() => {
-    const map: Partial<Record<MealTypeKey, FoodEntry[]>> = {};
+    const map: Partial<Record<FoodMealTypeKey, FoodEntry[]>> = {};
     for (const entry of savedEntries) {
-      if (!MEAL_TYPE_KEYS.includes(entry.mealType as MealTypeKey)) continue;
-      const key = entry.mealType as MealTypeKey;
+      if (!(FOOD_MEAL_TYPE_KEYS as readonly string[]).includes(entry.mealType))
+        continue;
+      const key = entry.mealType as FoodMealTypeKey;
       const bucket = map[key] ?? [];
       bucket.push(entry);
       map[key] = bucket;
@@ -229,7 +235,7 @@ const AddMealScreen = ({ navigation, route }: Props) => {
             testID="meal-type-select"
             value={draft.mealType}
             onValueChange={setMealType}
-            options={MEAL_TYPE_KEYS.map((k) => ({
+            options={FOOD_MEAL_TYPE_KEYS.map((k) => ({
               value: k,
               label: MEAL_TYPE_LABEL[k],
             }))}
@@ -317,7 +323,7 @@ const AddMealScreen = ({ navigation, route }: Props) => {
             setSaving(true);
             try {
               // Save each meal type that has items
-              for (const mealType of MEAL_TYPE_KEYS) {
+              for (const mealType of FOOD_MEAL_TYPE_KEYS) {
                 const items = draft.itemsByMealType[mealType] ?? [];
                 if (items.length === 0) continue;
 

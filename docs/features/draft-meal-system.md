@@ -1,7 +1,7 @@
 ---
 type: feature
 status: current
-last-updated: 2026-03-19
+last-updated: 2026-03-25
 related-features:
   - food-tracking
   - product-management
@@ -93,7 +93,7 @@ Each meal type maintains its own item array. Switching meal types (via segment b
 ## Screen Interactions
 
 ### AddMeal (Primary Hub)
-- Displays current meal type via SegmentedButtons
+- Displays current meal type via Select dropdown (`@particles/index`)
 - Shows products in current meal type with amounts
 - Calculates meal calories via `calcMealCalories(items, products)`
 - Operations: `setMealType()`, `removeItem()`, `reset()`

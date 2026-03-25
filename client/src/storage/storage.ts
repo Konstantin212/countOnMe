@@ -7,6 +7,7 @@ import {
   MealTypeKey,
   Product,
   UserGoal,
+  WaterLog,
 } from "@models/types";
 import { ThemeMode } from "@theme/ThemeContext";
 
@@ -25,6 +26,7 @@ export const STORAGE_KEYS = {
   goal: `${STORAGE_PREFIX}/goal/${STORAGE_VERSION_V1}`,
   bodyWeights: `${STORAGE_PREFIX}/body-weights/${STORAGE_VERSION_V1}`,
   draftMeal: `${STORAGE_PREFIX}/draft-meal/${STORAGE_VERSION_V1}`,
+  waterLogs: `${STORAGE_PREFIX}/water-logs/${STORAGE_VERSION_V1}`,
 } as const;
 
 const parseCollection = <T>(rawValue: string | null): T[] => {
@@ -276,6 +278,14 @@ export const saveBodyWeights = async (
   await saveCollection<BodyWeightEntry>(STORAGE_KEYS.bodyWeights, entries);
 };
 
+export const loadWaterLogs = async (): Promise<WaterLog[]> => {
+  return loadCollection<WaterLog>(STORAGE_KEYS.waterLogs);
+};
+
+export const saveWaterLogs = async (logs: WaterLog[]): Promise<void> => {
+  await saveCollection<WaterLog>(STORAGE_KEYS.waterLogs, logs);
+};
+
 // Local shape that mirrors DraftMealState from context.tsx — avoids circular import.
 type StoredDraftMeal = {
   mealType: MealTypeKey;
@@ -324,6 +334,7 @@ export const clearAllFoodData = async (): Promise<void> => {
     STORAGE_KEYS.goal,
     STORAGE_KEYS.bodyWeights,
     STORAGE_KEYS.draftMeal,
+    STORAGE_KEYS.waterLogs,
   ];
   await AsyncStorage.multiRemove(keysToDelete);
 };

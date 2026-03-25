@@ -1,7 +1,7 @@
 ---
 type: feature
 status: current
-last-updated: 2026-03-15
+last-updated: 2026-03-25
 related-features:
   - product-management
   - goal-system
@@ -23,7 +23,7 @@ Food entries are categorized into five meal types:
 | lunch      | Midday meal            |
 | dinner     | Evening meal           |
 | snacks     | Between-meal snacking  |
-| water      | Water intake (mapped to `snacks` on backend) |
+| water      | Water intake (dedicated tracking via `useWaterTracking`, see [water-tracking.md](water-tracking.md)) |
 
 These are defined in `client/src/services/constants/mealTypes.ts` and mirrored in the backend `MealType` enum.
 

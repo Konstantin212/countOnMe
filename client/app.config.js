@@ -23,6 +23,7 @@ module.exports = {
       supportsTablet: true,
     },
     android: {
+      package: "com.countonme.app",
       adaptiveIcon: {
         foregroundImage: "./assets/adaptive-icon.png",
         backgroundColor: "#ffffff",

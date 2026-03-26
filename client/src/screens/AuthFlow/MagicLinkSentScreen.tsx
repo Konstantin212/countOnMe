@@ -11,6 +11,7 @@ import { Button, Input } from "@particles";
 type Props = NativeStackScreenProps<AuthStackParamList, "MagicLinkSent">;
 
 const RESEND_COOLDOWN_SECONDS = 60;
+const OTP_CODE_LENGTH = 8;
 
 const MagicLinkSentScreen = ({ route }: Props) => {
   const { email } = route.params;
@@ -71,8 +72,8 @@ const MagicLinkSentScreen = ({ route }: Props) => {
   };
 
   const handleVerifyCode = async () => {
-    if (code.trim().length < 6) {
-      setError("Please enter the 6-digit code from your email");
+    if (code.trim().length < OTP_CODE_LENGTH) {
+      setError("Please enter the code from your email");
       return;
     }
 
@@ -248,12 +249,12 @@ const MagicLinkSentScreen = ({ route }: Props) => {
             <View style={styles.codeSection}>
               <Input
                 testID="otp-code-input"
-                label="6-digit code"
-                placeholder="000000"
+                label="Verification code"
+                placeholder="00000000"
                 value={code}
                 onChangeText={setCode}
                 keyboardType="number-pad"
-                maxLength={6}
+                maxLength={OTP_CODE_LENGTH}
                 autoFocus
               />
             </View>
@@ -261,7 +262,7 @@ const MagicLinkSentScreen = ({ route }: Props) => {
             <Button
               testID="verify-code-button"
               onPress={handleVerifyCode}
-              disabled={code.trim().length < 6}
+              disabled={code.trim().length < OTP_CODE_LENGTH}
               loading={isVerifying}
             >
               Verify Code

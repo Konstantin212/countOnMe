@@ -26,8 +26,7 @@ class Settings(BaseSettings):
 
     device_token_pepper: str  # Required — no default; must be set via env var
 
-    # Supabase Auth — HS256 secret for JWT verification
-    supabase_jwt_secret: str = ""
+    # Supabase Auth — JWKS-based JWT verification (no shared secret needed)
     supabase_secret_key: str = ""  # sb_secret_... — for admin operations (replaces legacy service_role)
     supabase_url: str = ""
 
@@ -48,28 +47,23 @@ if settings.device_token_pepper in _WEAK_PEPPERS:
         )
         raise ValueError(msg)
 
-# Validate supabase_jwt_secret
-if not settings.supabase_jwt_secret:
+# Validate supabase_url (required for JWKS verification and Admin API)
+if not settings.supabase_url:
     if settings.env == "local":
         logger.warning(
-            "SUPABASE_JWT_SECRET is empty. "
-            "Supabase JWT auth will not work until a valid secret is configured.",
+            "SUPABASE_URL is not set. "
+            "Supabase JWT auth and Admin API will not work.",
         )
     else:
         msg = (
-            "SUPABASE_JWT_SECRET must be set in non-local environments. "
-            "Set SUPABASE_JWT_SECRET to your Supabase project's JWT secret."
+            "SUPABASE_URL must be set in non-local environments. "
+            "Set SUPABASE_URL to your Supabase project URL (https://<ref>.supabase.co)."
         )
         raise ValueError(msg)
-
-# Validate supabase_url
-if settings.supabase_url:
-    if settings.env != "local" and not settings.supabase_url.startswith("https://"):
-        msg = (
-            "SUPABASE_URL must use HTTPS in non-local environments. "
-            f"Got: {settings.supabase_url}"
-        )
-        raise ValueError(msg)
-elif settings.env != "local":
-    logger.warning("SUPABASE_URL is not set; Supabase Admin API calls will be skipped.")
+elif settings.env != "local" and not settings.supabase_url.startswith("https://"):
+    msg = (
+        "SUPABASE_URL must use HTTPS in non-local environments. "
+        f"Got: {settings.supabase_url}"
+    )
+    raise ValueError(msg)
 

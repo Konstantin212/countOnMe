@@ -33,7 +33,6 @@ TEST_DATABASE_URL = os.getenv(
     "postgresql+asyncpg://countonme:countonme@localhost:5433/countonme_test",
 )
 os.environ.setdefault("DEVICE_TOKEN_PEPPER", "test-pepper-for-unit-tests-only")
-os.environ.setdefault("SUPABASE_JWT_SECRET", "test-jwt-secret-for-unit-tests-only")
 os.environ.setdefault("SUPABASE_SECRET_KEY", "test-secret-key")
 
 

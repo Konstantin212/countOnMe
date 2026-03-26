@@ -25,6 +25,9 @@ from app.settings import settings
 
 logger = logging.getLogger(__name__)
 
+# Sentinel token_hash value for devices created via Supabase auth (no legacy secret)
+SUPABASE_MANAGED_HASH = "supabase-managed"
+
 
 class OwnershipProofRequired(Exception):
     """Raised when a legacy device token is required but not provided."""
@@ -82,16 +85,32 @@ async def touch_device_last_seen(session: AsyncSession, device: Device) -> None:
 # ---------------------------------------------------------------------------
 
 
-def decode_supabase_jwt(token: str) -> dict[str, Any]:
-    """Decode and verify a Supabase access token using HS256.
+_jwks_client: pyjwt.PyJWKClient | None = None
 
+
+def _get_jwks_client() -> pyjwt.PyJWKClient:
+    """Lazily create a cached JWKS client for Supabase JWT verification."""
+    global _jwks_client
+    if _jwks_client is None:
+        jwks_url = f"{settings.supabase_url}/auth/v1/.well-known/jwks.json"
+        _jwks_client = pyjwt.PyJWKClient(jwks_url, cache_keys=True, lifespan=3600)
+    return _jwks_client
+
+
+def decode_supabase_jwt(token: str) -> dict[str, Any]:
+    """Decode and verify a Supabase access token using JWKS.
+
+    Supports both ECC (ES256) and legacy HS256 keys automatically.
+    Fetches the public key from Supabase's JWKS endpoint (cached for 1 hour).
     Returns the decoded payload dict.
     Raises jwt.InvalidTokenError (or subclass) on any verification failure.
     """
+    jwks_client = _get_jwks_client()
+    signing_key = jwks_client.get_signing_key_from_jwt(token)
     return pyjwt.decode(
         token,
-        settings.supabase_jwt_secret,
-        algorithms=["HS256"],
+        signing_key.key,
+        algorithms=["ES256", "HS256"],
         audience="authenticated",
         options={"require": ["exp", "sub"]},
     )
@@ -174,10 +193,10 @@ async def link_device_to_user(
     device = await get_device_by_id(session, device_id)
     if device is None:
         # Auto-create the device row
-        device = Device(id=device_id, token_hash="supabase-managed")  # noqa: S106
+        device = Device(id=device_id, token_hash=SUPABASE_MANAGED_HASH)
         session.add(device)
         await session.flush()
-    elif device.token_hash != "supabase-managed":  # noqa: S105
+    elif device.token_hash != SUPABASE_MANAGED_HASH:
         # Device exists with a real token — require legacy token as ownership proof
         if legacy_device_token is None:
             raise OwnershipProofRequired("Legacy device token required to claim this device")
@@ -188,7 +207,7 @@ async def link_device_to_user(
             raise ValueError("Invalid legacy device token")
 
     # If legacy token provided for a supabase-managed device, still validate format
-    if legacy_device_token is not None and device.token_hash == "supabase-managed":  # noqa: S105
+    if legacy_device_token is not None and device.token_hash == SUPABASE_MANAGED_HASH:
         parsed = parse_device_token(legacy_device_token)
         if parsed is None or parsed.device_id != device_id:
             raise ValueError("Invalid legacy device token")

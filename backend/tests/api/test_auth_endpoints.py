@@ -4,18 +4,20 @@ from __future__ import annotations
 
 import uuid
 from datetime import UTC, datetime, timedelta
+from unittest.mock import MagicMock, patch
 
 import jwt as pyjwt
 import pytest
+from cryptography.hazmat.primitives.asymmetric import ec
 from httpx import AsyncClient
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.features.auth.models import User, UserDevice
-from app.features.auth.service import issue_device_token
-from app.settings import settings
 
-_JWT_SECRET = settings.supabase_jwt_secret
+# Generate a test EC key pair for ES256
+_TEST_EC_PRIVATE_KEY = ec.generate_private_key(ec.SECP256R1())
+_TEST_EC_PUBLIC_KEY = _TEST_EC_PRIVATE_KEY.public_key()
 
 
 def _make_jwt(
@@ -23,9 +25,9 @@ def _make_jwt(
     email: str | None = "test@example.com",
     aud: str = "authenticated",
     exp_delta: timedelta = timedelta(hours=1),
-    secret: str = _JWT_SECRET,
+    private_key=_TEST_EC_PRIVATE_KEY,
 ) -> str:
-    """Create a signed Supabase-style JWT for testing."""
+    """Create a signed Supabase-style JWT for testing (ES256)."""
     payload: dict = {}
     if sub is not None:
         payload["sub"] = sub
@@ -34,7 +36,22 @@ def _make_jwt(
     payload["aud"] = aud
     payload["exp"] = datetime.now(UTC) + exp_delta
     payload["iat"] = datetime.now(UTC)
-    return pyjwt.encode(payload, secret, algorithm="HS256")
+    return pyjwt.encode(payload, private_key, algorithm="ES256")
+
+
+@pytest.fixture(autouse=True)
+def _patch_jwks_client():
+    """Patch the JWKS client for all tests in this module."""
+    mock_client = MagicMock()
+
+    def get_signing_key_from_jwt(token):
+        mock_key = MagicMock()
+        mock_key.key = _TEST_EC_PUBLIC_KEY
+        return mock_key
+
+    mock_client.get_signing_key_from_jwt = get_signing_key_from_jwt
+    with patch("app.features.auth.service._get_jwks_client", return_value=mock_client):
+        yield
 
 
 def _auth_headers(token: str) -> dict[str, str]:

@@ -33,6 +33,7 @@
     "expo-linear-gradient": "^15.0.8",
     "expo-linking": "^55.0.8",
     "expo-secure-store": "^55.0.9",
+    "expo-sqlite": "^55.0.11",
     "expo-status-bar": "~3.0.9",
     "react": "19.1.0",
     "react-hook-form": "^7.71.2",

@@ -2,43 +2,49 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // --- Mocks ---
 
-const storageStore = new Map<string, string>();
-
-vi.mock("@react-native-async-storage/async-storage", () => ({
-  default: {
-    getItem: vi.fn(async (key: string) => storageStore.get(key) ?? null),
-    setItem: vi.fn(async (key: string, value: string) => {
-      storageStore.set(key, value);
-    }),
-    removeItem: vi.fn(async (key: string) => {
-      storageStore.delete(key);
-    }),
-  },
-}));
-
-vi.mock("@react-native-community/netinfo", () => ({
-  default: {
-    addEventListener: vi.fn(() => vi.fn()),
-    fetch: vi.fn(() => Promise.resolve({ isConnected: true })),
-  },
-}));
-
 vi.mock("@services/api/sync", () => ({
   pullDeltas: vi.fn(),
   pushMutations: vi.fn(),
 }));
 
-vi.mock("@storage/syncQueue", () => ({
-  getQueue: vi.fn(async () => []),
+vi.mock("@storage/repositories", () => ({
+  productRepository: {
+    upsert: vi.fn(() => Promise.resolve()),
+    markDeleted: vi.fn(() => Promise.resolve()),
+  },
+  goalRepository: {
+    upsert: vi.fn(() => Promise.resolve()),
+    remove: vi.fn(() => Promise.resolve()),
+  },
+  bodyWeightRepository: {
+    upsert: vi.fn(() => Promise.resolve()),
+    markDeleted: vi.fn(() => Promise.resolve()),
+  },
+  waterLogRepository: {
+    upsert: vi.fn(() => Promise.resolve()),
+    markDeleted: vi.fn(() => Promise.resolve()),
+  },
+  outboxRepository: {
+    loadAll: vi.fn(() => Promise.resolve([])),
+    remove: vi.fn(() => Promise.resolve()),
+    markFailed: vi.fn(() => Promise.resolve()),
+    count: vi.fn(() => Promise.resolve(0)),
+  },
+  syncCursorRepository: {
+    getCursor: vi.fn(() => Promise.resolve(0)),
+    setCursor: vi.fn(() => Promise.resolve()),
+  },
 }));
 
 import type { SyncPullResponse } from "@services/api/sync";
 import * as syncApi from "@services/api/sync";
+import * as repos from "@storage/repositories";
 import {
   __resetForTesting,
   getState,
   pull,
   push,
+  setDatabase,
   startPeriodicSync,
   stopPeriodicSync,
   subscribe,
@@ -47,31 +53,42 @@ import {
 
 const mockPullDeltas = vi.mocked(syncApi.pullDeltas);
 const mockPushMutations = vi.mocked(syncApi.pushMutations);
+const mockOutboxLoadAll = vi.mocked(repos.outboxRepository.loadAll);
+const mockOutboxRemove = vi.mocked(repos.outboxRepository.remove);
+const mockOutboxMarkFailed = vi.mocked(repos.outboxRepository.markFailed);
+const mockOutboxCount = vi.mocked(repos.outboxRepository.count);
+const mockGetCursor = vi.mocked(repos.syncCursorRepository.getCursor);
+const mockSetCursor = vi.mocked(repos.syncCursorRepository.setCursor);
+const mockProductUpsert = vi.mocked(repos.productRepository.upsert);
+const mockProductMarkDeleted = vi.mocked(repos.productRepository.markDeleted);
+const mockBodyWeightUpsert = vi.mocked(repos.bodyWeightRepository.upsert);
+const mockGoalUpsert = vi.mocked(repos.goalRepository.upsert);
+const mockWaterLogUpsert = vi.mocked(repos.waterLogRepository.upsert);
 
-// Helper to set up outbox data directly in storage
-const setOutbox = async (entries: unknown[]): Promise<void> => {
-  storageStore.set("@countOnMe/outbox/v1", JSON.stringify(entries));
-};
+const mockDb = {};
 
 describe("syncEngine", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    storageStore.clear();
     __resetForTesting();
 
-    // Default: pull returns nothing
+    // Set the database so sync engine can operate
+    setDatabase(mockDb as any, "test-user");
+
+    // Defaults
     mockPullDeltas.mockResolvedValue({
       items: [],
       nextVersion: null,
       hasMore: false,
     });
-
-    // Default: push returns all accepted
     mockPushMutations.mockResolvedValue({
       accepted: 0,
       rejected: 0,
       conflicts: [],
     });
+    mockGetCursor.mockResolvedValue(0);
+    mockOutboxLoadAll.mockResolvedValue([]);
+    mockOutboxCount.mockResolvedValue(0);
   });
 
   describe("getState", () => {
@@ -115,9 +132,8 @@ describe("syncEngine", () => {
   });
 
   describe("pull", () => {
-    it("calls pullDeltas with sync cursor from storage", async () => {
-      // Set sync cursor
-      storageStore.set("@countOnMe/sync-cursor/v1", "42");
+    it("calls pullDeltas with sync cursor from repository", async () => {
+      mockGetCursor.mockResolvedValueOnce(42);
 
       await pull();
 
@@ -143,10 +159,7 @@ describe("syncEngine", () => {
             {
               entityType: "product",
               id: "p1",
-              data: {
-                name: "Chicken",
-                calories_per_100g: 165,
-              },
+              data: { name: "Chicken", calories_per_100g: 165 },
               syncVersion: 1,
               updatedAt: "2026-01-01T00:00:00Z",
               deletedAt: null,
@@ -160,10 +173,7 @@ describe("syncEngine", () => {
             {
               entityType: "product",
               id: "p2",
-              data: {
-                name: "Rice",
-                calories_per_100g: 130,
-              },
+              data: { name: "Rice", calories_per_100g: 130 },
               syncVersion: 2,
               updatedAt: "2026-01-01T00:00:00Z",
               deletedAt: null,
@@ -176,26 +186,20 @@ describe("syncEngine", () => {
       await pull();
 
       expect(mockPullDeltas).toHaveBeenCalledTimes(2);
-      // Second call should use the nextVersion from first response
       expect(mockPullDeltas).toHaveBeenNthCalledWith(2, {
         sinceVersion: 1,
         limit: 500,
       });
-
-      // Sync cursor should be saved
-      expect(storageStore.get("@countOnMe/sync-cursor/v1")).toBe("2");
+      expect(mockSetCursor).toHaveBeenCalledWith(mockDb, "all", 2);
     });
 
-    it("merges products into local storage", async () => {
+    it("merges products via repository", async () => {
       mockPullDeltas.mockResolvedValueOnce({
         items: [
           {
             entityType: "product",
             id: "p1",
-            data: {
-              name: "Chicken",
-              calories_per_100g: 165,
-            },
+            data: { name: "Chicken", calories_per_100g: 165 },
             syncVersion: 1,
             updatedAt: "2026-01-01T00:00:00Z",
             deletedAt: null,
@@ -207,30 +211,15 @@ describe("syncEngine", () => {
 
       await pull();
 
-      // Products should be saved to storage
-      const productsRaw = storageStore.get("@countOnMe/products/v2");
-      expect(productsRaw).toBeDefined();
-      const products = JSON.parse(productsRaw ?? "[]");
-      expect(products).toHaveLength(1);
-      expect(products[0].id).toBe("p1");
-      expect(products[0].name).toBe("Chicken");
+      expect(mockProductUpsert).toHaveBeenCalledTimes(1);
+      expect(mockProductUpsert).toHaveBeenCalledWith(
+        mockDb,
+        "test-user",
+        expect.objectContaining({ id: "p1", name: "Chicken" }),
+      );
     });
 
-    it("removes deleted products from local storage", async () => {
-      // Pre-populate local storage with a product
-      storageStore.set(
-        "@countOnMe/products/v2",
-        JSON.stringify([
-          {
-            id: "p1",
-            name: "Chicken",
-            caloriesPer100g: 165,
-            createdAt: "2026-01-01T00:00:00Z",
-            updatedAt: "2026-01-01T00:00:00Z",
-          },
-        ]),
-      );
-
+    it("soft-deletes deleted products", async () => {
       mockPullDeltas.mockResolvedValueOnce({
         items: [
           {
@@ -248,21 +237,16 @@ describe("syncEngine", () => {
 
       await pull();
 
-      const productsRaw = storageStore.get("@countOnMe/products/v2");
-      const products = JSON.parse(productsRaw ?? "[]");
-      expect(products).toHaveLength(0);
+      expect(mockProductMarkDeleted).toHaveBeenCalledWith(mockDb, "p1");
     });
 
-    it("merges body weights into local storage", async () => {
+    it("merges body weights via repository", async () => {
       mockPullDeltas.mockResolvedValueOnce({
         items: [
           {
             entityType: "body_weight",
             id: "bw1",
-            data: {
-              day: "2026-01-15",
-              weight_kg: 80,
-            },
+            data: { day: "2026-01-15", weight_kg: 80 },
             syncVersion: 1,
             updatedAt: "2026-01-15T00:00:00Z",
             deletedAt: null,
@@ -274,15 +258,10 @@ describe("syncEngine", () => {
 
       await pull();
 
-      const weightsRaw = storageStore.get("@countOnMe/body-weights/v1");
-      expect(weightsRaw).toBeDefined();
-      const weights = JSON.parse(weightsRaw ?? "[]");
-      expect(weights).toHaveLength(1);
-      expect(weights[0].id).toBe("bw1");
-      expect(weights[0].weightKg).toBe(80);
+      expect(mockBodyWeightUpsert).toHaveBeenCalledTimes(1);
     });
 
-    it("merges goals into local storage", async () => {
+    it("merges goals via repository", async () => {
       mockPullDeltas.mockResolvedValueOnce({
         items: [
           {
@@ -310,23 +289,16 @@ describe("syncEngine", () => {
 
       await pull();
 
-      const goalRaw = storageStore.get("@countOnMe/goal/v1");
-      expect(goalRaw).toBeDefined();
-      const goal = JSON.parse(goalRaw ?? "null");
-      expect(goal.id).toBe("g1");
-      expect(goal.dailyCaloriesKcal).toBe(2000);
+      expect(mockGoalUpsert).toHaveBeenCalledTimes(1);
     });
 
-    it("merges water logs into local storage", async () => {
+    it("merges water logs via repository", async () => {
       mockPullDeltas.mockResolvedValueOnce({
         items: [
           {
             entityType: "water_log",
             id: "wl1",
-            data: {
-              day: "2026-01-15",
-              amount_ml: 250,
-            },
+            data: { day: "2026-01-15", amount_ml: 250 },
             syncVersion: 1,
             updatedAt: "2026-01-15T08:00:00Z",
             deletedAt: null,
@@ -338,12 +310,7 @@ describe("syncEngine", () => {
 
       await pull();
 
-      const logsRaw = storageStore.get("@countOnMe/water-logs/v1");
-      expect(logsRaw).toBeDefined();
-      const logs = JSON.parse(logsRaw ?? "[]");
-      expect(logs).toHaveLength(1);
-      expect(logs[0].id).toBe("wl1");
-      expect(logs[0].amountMl).toBe(250);
+      expect(mockWaterLogUpsert).toHaveBeenCalledTimes(1);
     });
 
     it("updates sync cursor after successful pull", async () => {
@@ -355,23 +322,22 @@ describe("syncEngine", () => {
 
       await pull();
 
-      expect(storageStore.get("@countOnMe/sync-cursor/v1")).toBe("10");
+      expect(mockSetCursor).toHaveBeenCalledWith(mockDb, "all", 10);
     });
   });
 
   describe("push", () => {
     it("does nothing when outbox is empty", async () => {
       await push();
-
       expect(mockPushMutations).not.toHaveBeenCalled();
     });
 
     it("pushes outbox entries to server", async () => {
-      await setOutbox([
+      mockOutboxLoadAll.mockResolvedValueOnce([
         {
           id: "mut-1",
           entityType: "product",
-          action: "upsert",
+          action: "upsert" as const,
           entityId: "p1",
           data: { name: "Chicken" },
           updatedAt: "2026-01-01T00:00:00Z",
@@ -400,12 +366,12 @@ describe("syncEngine", () => {
       ]);
     });
 
-    it("clears accepted entries from outbox", async () => {
-      await setOutbox([
+    it("removes accepted entries from outbox", async () => {
+      mockOutboxLoadAll.mockResolvedValueOnce([
         {
           id: "mut-1",
           entityType: "product",
-          action: "upsert",
+          action: "upsert" as const,
           entityId: "p1",
           data: { name: "Chicken" },
           updatedAt: "2026-01-01T00:00:00Z",
@@ -422,18 +388,15 @@ describe("syncEngine", () => {
 
       await push();
 
-      // Outbox should be empty now
-      const outboxRaw = storageStore.get("@countOnMe/outbox/v1");
-      const outbox = JSON.parse(outboxRaw ?? "[]");
-      expect(outbox).toHaveLength(0);
+      expect(mockOutboxRemove).toHaveBeenCalledWith(mockDb, ["mut-1"]);
     });
 
     it("marks entries as failed on push error", async () => {
-      await setOutbox([
+      mockOutboxLoadAll.mockResolvedValueOnce([
         {
           id: "mut-1",
           entityType: "product",
-          action: "upsert",
+          action: "upsert" as const,
           entityId: "p1",
           data: { name: "Chicken" },
           updatedAt: "2026-01-01T00:00:00Z",
@@ -446,12 +409,11 @@ describe("syncEngine", () => {
 
       await expect(push()).rejects.toThrow("Network error");
 
-      // Entry should be marked as failed
-      const outboxRaw = storageStore.get("@countOnMe/outbox/v1");
-      const outbox = JSON.parse(outboxRaw ?? "[]");
-      expect(outbox).toHaveLength(1);
-      expect(outbox[0].attempts).toBe(1);
-      expect(outbox[0].lastError).toBe("Network error");
+      expect(mockOutboxMarkFailed).toHaveBeenCalledWith(
+        mockDb,
+        "mut-1",
+        "Network error",
+      );
     });
 
     it("pushes in batches of 50", async () => {
@@ -466,8 +428,7 @@ describe("syncEngine", () => {
         attempts: 0,
       }));
 
-      await setOutbox(entries);
-
+      mockOutboxLoadAll.mockResolvedValueOnce(entries);
       mockPushMutations.mockResolvedValue({
         accepted: 50,
         rejected: 0,
@@ -476,7 +437,6 @@ describe("syncEngine", () => {
 
       await push();
 
-      // Should be called twice: 50 + 25
       expect(mockPushMutations).toHaveBeenCalledTimes(2);
       expect(mockPushMutations.mock.calls[0][0]).toHaveLength(50);
       expect(mockPushMutations.mock.calls[1][0]).toHaveLength(25);
@@ -492,12 +452,11 @@ describe("syncEngine", () => {
         return { items: [], nextVersion: null, hasMore: false };
       });
 
-      // Add something to outbox so push runs
-      await setOutbox([
+      mockOutboxLoadAll.mockResolvedValueOnce([
         {
           id: "mut-1",
           entityType: "product",
-          action: "upsert",
+          action: "upsert" as const,
           entityId: "p1",
           data: { name: "Test" },
           updatedAt: "2026-01-01T00:00:00Z",
@@ -548,13 +507,12 @@ describe("syncEngine", () => {
       mockPullDeltas.mockReturnValueOnce(pullPromise);
 
       const sync1 = fullSync();
-      const sync2 = fullSync(); // Should be no-op
+      const sync2 = fullSync();
 
       deferred.resolve({ items: [], nextVersion: null, hasMore: false });
       await sync1;
       await sync2;
 
-      // pullDeltas should only be called once
       expect(mockPullDeltas).toHaveBeenCalledTimes(1);
     });
   });
@@ -564,13 +522,10 @@ describe("syncEngine", () => {
       vi.useFakeTimers();
 
       startPeriodicSync(1000);
-
-      // Advance timer but since sync is async, we just verify it doesn't throw
       vi.advanceTimersByTime(1000);
 
       stopPeriodicSync();
 
-      // After stopping, no more calls should happen
       const pullCountBeforeStop = mockPullDeltas.mock.calls.length;
       vi.advanceTimersByTime(5000);
       expect(mockPullDeltas.mock.calls.length).toBe(pullCountBeforeStop);

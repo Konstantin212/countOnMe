@@ -3,8 +3,8 @@ import { v4 as uuid } from "uuid";
 
 import { Product, ScaleType, Unit } from "@models/types";
 import { SCALE_UNITS } from "@services/constants/scaleConstants";
-import { loadProducts, saveProducts } from "@storage/storage";
-import { enqueueOutbox } from "@storage/outbox";
+import { useDatabaseContext } from "@storage/DatabaseProvider";
+import { productRepository, outboxRepository } from "@storage/repositories";
 import { debouncedSync } from "@services/syncEngine";
 
 export type NewProductInput = {
@@ -183,6 +183,7 @@ const patchProductRecord = (
 };
 
 export const useProducts = (): UseProductsResult => {
+  const { db, userId } = useDatabaseContext();
   const [products, setProducts] = useState<Product[]>([]);
   const productsRef = useRef<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -194,34 +195,10 @@ export const useProducts = (): UseProductsResult => {
     };
   }, []);
 
-  const applyChanges = useCallback(
-    async (updater: (prev: Product[]) => Product[]) => {
-      const prev = productsRef.current;
-      const next = updater(prev);
-
-      if (next === prev) {
-        return prev;
-      }
-
-      productsRef.current = next;
-      setProducts(next);
-
-      try {
-        await saveProducts(next);
-      } catch (error) {
-        console.error("Failed to save products", error);
-        throw error;
-      }
-
-      return next;
-    },
-    [],
-  );
-
   const refresh = useCallback(async () => {
     setLoading(true);
     try {
-      const stored = await loadProducts();
+      const stored = await productRepository.findAll(db, userId);
       if (isMountedRef.current) {
         productsRef.current = stored;
         setProducts(stored);
@@ -233,7 +210,7 @@ export const useProducts = (): UseProductsResult => {
         setLoading(false);
       }
     }
-  }, []);
+  }, [db, userId]);
 
   useEffect(() => {
     refresh();
@@ -245,7 +222,6 @@ export const useProducts = (): UseProductsResult => {
       if (barcode) {
         const existing = productsRef.current.find((p) => p.barcode === barcode);
         if (existing) {
-          // Update existing product with latest scanned data
           const updated = {
             ...existing,
             name: input.name,
@@ -255,16 +231,21 @@ export const useProducts = (): UseProductsResult => {
             fatPer100g: input.fatPer100g,
             updatedAt: new Date().toISOString(),
           };
-          await applyChanges((prev) =>
-            prev.map((p) => (p.id === existing.id ? updated : p)),
+          await productRepository.upsert(db, userId, updated);
+          productsRef.current = productsRef.current.map((p) =>
+            p.id === existing.id ? updated : p,
           );
+          setProducts(productsRef.current);
           return updated;
         }
       }
 
       const newProduct = createProductRecord(input);
-      await applyChanges((prev) => [...prev, newProduct]);
-      await enqueueOutbox({
+      await productRepository.upsert(db, userId, newProduct);
+      productsRef.current = [...productsRef.current, newProduct];
+      setProducts(productsRef.current);
+
+      await outboxRepository.enqueue(db, {
         id: `product:${newProduct.id}`,
         entityType: "product",
         action: "upsert",
@@ -275,72 +256,56 @@ export const useProducts = (): UseProductsResult => {
       debouncedSync();
       return newProduct;
     },
-    [applyChanges],
+    [db, userId],
   );
 
   const updateProduct = useCallback(
     async (id: string, patch: UpdateProductInput) => {
-      await applyChanges((prev) => {
-        let changed = false;
-        const next = prev.map((product) => {
-          if (product.id !== id) {
-            return product;
-          }
-          changed = true;
-          return patchProductRecord(product, patch);
-        });
+      const existing = productsRef.current.find((p) => p.id === id);
+      if (!existing) return null;
 
-        return changed ? next : prev;
+      const updated = patchProductRecord(existing, patch);
+      await productRepository.upsert(db, userId, updated);
+      productsRef.current = productsRef.current.map((p) =>
+        p.id === id ? updated : p,
+      );
+      setProducts(productsRef.current);
+
+      await outboxRepository.enqueue(db, {
+        id: `product:${updated.id}`,
+        entityType: "product",
+        action: "upsert",
+        entityId: updated.id,
+        data: buildProductOutboxData(updated),
+        updatedAt: updated.updatedAt,
       });
-
-      const updatedProduct =
-        productsRef.current.find((p) => p.id === id) ?? null;
-      if (updatedProduct) {
-        await enqueueOutbox({
-          id: `product:${updatedProduct.id}`,
-          entityType: "product",
-          action: "upsert",
-          entityId: updatedProduct.id,
-          data: buildProductOutboxData(updatedProduct),
-          updatedAt: updatedProduct.updatedAt,
-        });
-        debouncedSync();
-      }
-      return updatedProduct;
+      debouncedSync();
+      return updated;
     },
-    [applyChanges],
+    [db, userId],
   );
 
   const deleteProduct = useCallback(
     async (id: string) => {
-      let removed = false;
+      const exists = productsRef.current.some((p) => p.id === id);
+      if (!exists) return false;
 
-      await applyChanges((prev) => {
-        const next = prev.filter((product) => {
-          if (product.id === id) {
-            removed = true;
-            return false;
-          }
-          return true;
-        });
+      await productRepository.markDeleted(db, id);
+      productsRef.current = productsRef.current.filter((p) => p.id !== id);
+      setProducts(productsRef.current);
 
-        return removed ? next : prev;
+      await outboxRepository.enqueue(db, {
+        id: `product:${id}`,
+        entityType: "product",
+        action: "delete",
+        entityId: id,
+        data: null,
+        updatedAt: now(),
       });
-
-      if (removed) {
-        await enqueueOutbox({
-          id: `product:${id}`,
-          entityType: "product",
-          action: "delete",
-          entityId: id,
-          data: null,
-          updatedAt: now(),
-        });
-        debouncedSync();
-      }
-      return removed;
+      debouncedSync();
+      return true;
     },
-    [applyChanges],
+    [db, userId],
   );
 
   return {

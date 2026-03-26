@@ -53,6 +53,27 @@ vi.mock("expo-constants", () => ({
   },
 }));
 
+// Mock expo-sqlite
+vi.mock("expo-sqlite", () => {
+  const createMockDb = () => ({
+    execAsync: vi.fn(() => Promise.resolve()),
+    runAsync: vi.fn(() => Promise.resolve({ lastInsertRowId: 0, changes: 0 })),
+    getFirstAsync: vi.fn(() => Promise.resolve(null)),
+    getAllAsync: vi.fn(() => Promise.resolve([])),
+    withTransactionAsync: vi.fn(async (fn: () => Promise<void>) => await fn()),
+    closeAsync: vi.fn(() => Promise.resolve()),
+    getFirstSync: vi.fn(() => null),
+    getAllSync: vi.fn(() => []),
+    runSync: vi.fn(() => ({ lastInsertRowId: 0, changes: 0 })),
+    execSync: vi.fn(),
+  });
+
+  return {
+    openDatabaseAsync: vi.fn(() => Promise.resolve(createMockDb())),
+    openDatabaseSync: vi.fn(() => createMockDb()),
+  };
+});
+
 // Mock @supabase/supabase-js
 vi.mock("@supabase/supabase-js", () => {
   const mockAuth = {

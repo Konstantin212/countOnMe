@@ -251,6 +251,7 @@ async def search_shared_foods(
     q: str | None = None,
     limit: int = 50,
     offset: int = 0,
+    exclude_owner_ids: set[uuid.UUID] | None = None,
 ) -> list[SharedFood]:
     """Search public+approved shared foods.
 
@@ -268,6 +269,9 @@ async def search_shared_foods(
             SharedFood.moderation_status == ModerationStatus.approved,
         )
     )
+
+    if exclude_owner_ids:
+        stmt = stmt.where(SharedFood.owner_user_id.not_in(exclude_owner_ids))
 
     search = q.strip() if q else None
 

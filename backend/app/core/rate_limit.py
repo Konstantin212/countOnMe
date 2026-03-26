@@ -46,5 +46,38 @@ class RateLimiter:
         self._hits[key].append(now)
 
 
+class UserBasedRateLimiter:
+    """Sliding-window rate limiter keyed by user_id string."""
+
+    def __init__(self, max_requests: int, window_seconds: int) -> None:
+        self.max_requests = max_requests
+        self.window_seconds = window_seconds
+        self._hits: dict[str, list[float]] = defaultdict(list)
+
+    def _prune(self, key: str, now: float) -> None:
+        cutoff = now - self.window_seconds
+        timestamps = self._hits[key]
+        while timestamps and timestamps[0] < cutoff:
+            timestamps.pop(0)
+        if not timestamps:
+            del self._hits[key]
+
+    def check(self, user_id: str) -> None:
+        """Raise HTTPException(429) if the user exceeds the rate limit."""
+        now = time.monotonic()
+        self._prune(user_id, now)
+
+        if len(self._hits[user_id]) >= self.max_requests:
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail="Too many requests. Try again later.",
+            )
+
+        self._hits[user_id].append(now)
+
+
 # Pre-configured limiter: 10 requests per minute for device registration
 device_register_limiter = RateLimiter(max_requests=10, window_seconds=60)
+
+# Publish rate limiter: 10 publishes per hour per user
+publish_rate_limiter = UserBasedRateLimiter(max_requests=10, window_seconds=3600)

@@ -78,3 +78,12 @@ class ModerationStatus(StrEnum):
     pending = "pending"
     approved = "approved"
     rejected = "rejected"
+
+
+class ReportReason(StrEnum):
+    """Reason for reporting shared content."""
+
+    inaccurate = "inaccurate"
+    spam = "spam"
+    offensive = "offensive"
+    other = "other"

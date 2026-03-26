@@ -7,7 +7,7 @@ from unittest.mock import MagicMock
 import pytest
 from fastapi import HTTPException
 
-from app.core.rate_limit import RateLimiter
+from app.core.rate_limit import RateLimiter, UserBasedRateLimiter
 
 
 def _make_request(ip: str = "127.0.0.1") -> MagicMock:
@@ -90,3 +90,42 @@ class TestRateLimiter:
         request.headers = {}
 
         await limiter(request)  # Should not raise
+
+
+class TestUserBasedRateLimiter:
+    """Tests for the UserBasedRateLimiter class."""
+
+    def test_allows_requests_under_limit(self) -> None:
+        limiter = UserBasedRateLimiter(max_requests=3, window_seconds=60)
+
+        for _ in range(3):
+            limiter.check("user-1")
+
+    def test_blocks_requests_over_limit(self) -> None:
+        limiter = UserBasedRateLimiter(max_requests=2, window_seconds=60)
+
+        limiter.check("user-1")
+        limiter.check("user-1")
+
+        with pytest.raises(HTTPException) as exc_info:
+            limiter.check("user-1")
+
+        assert exc_info.value.status_code == 429
+
+    def test_different_users_tracked_independently(self) -> None:
+        limiter = UserBasedRateLimiter(max_requests=1, window_seconds=60)
+
+        limiter.check("user-a")
+        limiter.check("user-b")  # Should pass -- different user
+
+        with pytest.raises(HTTPException):
+            limiter.check("user-a")  # Should block -- same user
+
+    def test_window_expiry_allows_new_requests(self) -> None:
+        limiter = UserBasedRateLimiter(max_requests=1, window_seconds=1)
+
+        limiter.check("user-1")
+
+        time.sleep(1.1)
+
+        limiter.check("user-1")  # Should pass -- window expired

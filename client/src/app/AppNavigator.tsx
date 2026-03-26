@@ -9,6 +9,7 @@ import {
   RootTabParamList,
   MyDayStackParamList,
   MyPathStackParamList,
+  DiscoverStackParamList,
   ProfileStackParamList,
   AuthStackParamList,
 } from "./navigationTypes";
@@ -38,12 +39,18 @@ import AddFoodScreen from "@screens/AddMealFlow/components/AddFood";
 import MealTypeEntriesScreen from "@screens/MealFlow/MealTypeEntriesScreen";
 import BarcodeScannerScreen from "@screens/BarcodeFlow/BarcodeScannerScreen";
 import { DraftMealProvider } from "@screens/AddMealFlow/context";
+import { DatabaseProvider } from "@storage/DatabaseProvider";
+import DiscoverHomeScreen from "@screens/DiscoverFlow/DiscoverHomeScreen";
+import SharedFoodDetailScreen from "@screens/DiscoverFlow/SharedFoodDetailScreen";
+import MySharedFoodsScreen from "@screens/DiscoverFlow/MySharedFoodsScreen";
+import PublishFoodScreen from "@screens/DiscoverFlow/PublishFoodScreen";
 
 enableScreens();
 
 const Tab = createBottomTabNavigator<RootTabParamList>();
 const MyDayStack = createNativeStackNavigator<MyDayStackParamList>();
 const MyPathStack = createNativeStackNavigator<MyPathStackParamList>();
+const DiscoverStack = createNativeStackNavigator<DiscoverStackParamList>();
 const ProfileStack = createNativeStackNavigator<ProfileStackParamList>();
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
 
@@ -56,6 +63,7 @@ const TAB_ICONS: Record<
 > = {
   MyDayTab: { focused: "calendar", unfocused: "calendar-outline" },
   MyPathTab: { focused: "trending-up", unfocused: "trending-up-outline" },
+  DiscoverTab: { focused: "search", unfocused: "search-outline" },
   ProfileTab: { focused: "person", unfocused: "person-outline" },
 };
 
@@ -197,6 +205,39 @@ const MyPathStackNavigator = () => {
   );
 };
 
+const DiscoverStackNavigator = () => {
+  const { colors } = useTheme();
+  return (
+    <DiscoverStack.Navigator
+      screenOptions={{
+        headerShown: false,
+        contentStyle: { backgroundColor: colors.background },
+      }}
+    >
+      <DiscoverStack.Screen
+        name="DiscoverHome"
+        component={DiscoverHomeScreen}
+        options={{ headerShown: false }}
+      />
+      <DiscoverStack.Screen
+        name="SharedFoodDetail"
+        component={SharedFoodDetailScreen}
+        options={{ title: "Food Details" }}
+      />
+      <DiscoverStack.Screen
+        name="MySharedFoods"
+        component={MySharedFoodsScreen}
+        options={{ title: "My Shared Foods" }}
+      />
+      <DiscoverStack.Screen
+        name="PublishFood"
+        component={PublishFoodScreen}
+        options={{ title: "Share Food" }}
+      />
+    </DiscoverStack.Navigator>
+  );
+};
+
 const TabNavigator = () => {
   const { colors } = useTheme();
 
@@ -244,6 +285,18 @@ const TabNavigator = () => {
         })}
       />
       <Tab.Screen
+        name="DiscoverTab"
+        component={DiscoverStackNavigator}
+        options={{ title: "Discover" }}
+        listeners={({ navigation }) => ({
+          tabPress: () => {
+            navigation.navigate("DiscoverTab", {
+              screen: "DiscoverHome",
+            } as any);
+          },
+        })}
+      />
+      <Tab.Screen
         name="ProfileTab"
         component={ProfileStackNavigator}
         options={{ title: "Profile" }}
@@ -274,15 +327,21 @@ const AuthStackNavigator = () => {
 };
 
 export const AppNavigator = () => {
-  const { status } = useAuth();
+  const auth = useAuth();
 
-  if (status === "loading") {
+  if (auth.status === "loading") {
     return null;
   }
 
-  if (status === "unauthenticated") {
+  if (auth.status === "unauthenticated") {
     return <AuthStackNavigator />;
   }
 
-  return <TabNavigator />;
+  const userId = auth.user.id;
+
+  return (
+    <DatabaseProvider userId={userId}>
+      <TabNavigator />
+    </DatabaseProvider>
+  );
 };

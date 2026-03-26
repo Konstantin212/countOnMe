@@ -10,25 +10,16 @@ import {
   type SyncItem,
   type SyncMutation,
 } from "@services/api/sync";
+import type { Database } from "@storage/database";
+import type { OutboxEntry } from "@storage/outbox";
 import {
-  loadOutbox,
-  markFailed,
-  removeFromOutbox,
-  type OutboxEntry,
-} from "@storage/outbox";
-import {
-  loadBodyWeights,
-  loadGoal,
-  loadProducts,
-  loadSyncCursor,
-  loadWaterLogs,
-  saveBodyWeights,
-  saveGoal,
-  saveProducts,
-  saveSyncCursor,
-  saveWaterLogs,
-} from "@storage/storage";
-import { getQueue as getLegacyQueue } from "@storage/syncQueue";
+  productRepository,
+  goalRepository,
+  bodyWeightRepository,
+  waterLogRepository,
+  outboxRepository,
+  syncCursorRepository,
+} from "@storage/repositories";
 
 // --- Types ---
 
@@ -60,6 +51,23 @@ let currentState: SyncState = {
 const listeners = new Set<SyncListener>();
 let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 let isSyncing = false;
+
+// --- Database reference (set by DatabaseProvider on mount) ---
+
+let _db: Database | null = null;
+let _userId: string | null = null;
+
+/**
+ * Set the database instance for the sync engine.
+ * Called by DatabaseProvider after DB initialisation.
+ */
+export const setDatabase = (db: Database, userId: string): void => {
+  _db = db;
+  _userId = userId;
+};
+
+const getDb = (): Database | null => _db;
+const getUserId = (): string | null => _userId;
 
 // --- Helpers ---
 
@@ -110,18 +118,14 @@ const asOptionalNumber = (value: unknown): number | undefined => {
 
 // --- Entity merge functions (pull) ---
 
-const mergeProducts = async (items: SyncItem[]): Promise<void> => {
-  const products = await loadProducts();
-  let updated = [...products];
-
+const mergeProducts = async (
+  db: Database,
+  userId: string,
+  items: SyncItem[],
+): Promise<void> => {
   for (const item of items) {
-    const idx = updated.findIndex((p) => p.id === item.id);
-
     if (item.deletedAt) {
-      // Remove deleted product
-      if (idx >= 0) {
-        updated = updated.filter((p) => p.id !== item.id);
-      }
+      await productRepository.markDeleted(db, item.id);
       continue;
     }
 
@@ -148,33 +152,23 @@ const mergeProducts = async (items: SyncItem[]): Promise<void> => {
       updatedAt: item.updatedAt,
     };
 
-    if (idx >= 0) {
-      updated = updated.map((p) => (p.id === item.id ? product : p));
-    } else {
-      updated = [...updated, product];
-    }
+    await productRepository.upsert(db, userId, product);
   }
-
-  await saveProducts(updated);
 };
 
-const mergeBodyWeights = async (items: SyncItem[]): Promise<void> => {
-  const weights = await loadBodyWeights();
-  let updated = [...weights];
-
+const mergeBodyWeights = async (
+  db: Database,
+  userId: string,
+  items: SyncItem[],
+): Promise<void> => {
   for (const item of items) {
-    const idx = updated.findIndex((w) => w.id === item.id);
-
     if (item.deletedAt) {
-      if (idx >= 0) {
-        updated = updated.filter((w) => w.id !== item.id);
-      }
+      await bodyWeightRepository.markDeleted(db, item.id);
       continue;
     }
 
     const { data } = item;
 
-    // Skip items missing required fields
     if (typeof data.day !== "string" || typeof data.weight_kg !== "number") {
       continue;
     }
@@ -187,38 +181,27 @@ const mergeBodyWeights = async (items: SyncItem[]): Promise<void> => {
       updatedAt: item.updatedAt,
     };
 
-    if (idx >= 0) {
-      updated = updated.map((w) => (w.id === item.id ? weight : w));
-    } else {
-      updated = [...updated, weight];
-    }
+    await bodyWeightRepository.upsert(db, userId, weight);
   }
-
-  await saveBodyWeights(updated);
 };
 
-const mergeGoals = async (items: SyncItem[]): Promise<void> => {
-  const currentGoal = await loadGoal();
-
-  // Process items in order; last one wins
-  let latestGoal: UserGoal | null = currentGoal;
-
+const mergeGoals = async (
+  db: Database,
+  userId: string,
+  items: SyncItem[],
+): Promise<void> => {
   for (const item of items) {
     if (item.deletedAt) {
-      if (latestGoal?.id === item.id) {
-        latestGoal = null;
-      }
+      await goalRepository.remove(db, item.id);
       continue;
     }
 
     const { data } = item;
 
-    // Skip items missing the critical required field
     if (
       typeof data.daily_calories_kcal !== "number" &&
       data.daily_calories_kcal !== undefined
     ) {
-      // Allow undefined (will default to 0) but reject non-number truthy values
       if (data.daily_calories_kcal !== undefined) {
         continue;
       }
@@ -263,31 +246,23 @@ const mergeGoals = async (items: SyncItem[]): Promise<void> => {
       updatedAt: item.updatedAt,
     };
 
-    latestGoal = goal;
-  }
-
-  if (latestGoal) {
-    await saveGoal(latestGoal);
+    await goalRepository.upsert(db, userId, goal);
   }
 };
 
-const mergeWaterLogs = async (items: SyncItem[]): Promise<void> => {
-  const logs = await loadWaterLogs();
-  let updated = [...logs];
-
+const mergeWaterLogs = async (
+  db: Database,
+  userId: string,
+  items: SyncItem[],
+): Promise<void> => {
   for (const item of items) {
-    const idx = updated.findIndex((l) => l.id === item.id);
-
     if (item.deletedAt) {
-      if (idx >= 0) {
-        updated = updated.filter((l) => l.id !== item.id);
-      }
+      await waterLogRepository.markDeleted(db, item.id);
       continue;
     }
 
     const { data } = item;
 
-    // Skip items missing required fields
     if (typeof data.day !== "string" || typeof data.amount_ml !== "number") {
       continue;
     }
@@ -300,18 +275,15 @@ const mergeWaterLogs = async (items: SyncItem[]): Promise<void> => {
       updatedAt: item.updatedAt,
     };
 
-    if (idx >= 0) {
-      updated = updated.map((l) => (l.id === item.id ? log : l));
-    } else {
-      updated = [...updated, log];
-    }
+    await waterLogRepository.upsert(db, userId, log);
   }
-
-  await saveWaterLogs(updated);
 };
 
-const applyDeltas = async (items: SyncItem[]): Promise<void> => {
-  // Group items by entity type
+const applyDeltas = async (
+  db: Database,
+  userId: string,
+  items: SyncItem[],
+): Promise<void> => {
   const grouped: Record<string, SyncItem[]> = {};
   for (const item of items) {
     const key = item.entityType;
@@ -321,20 +293,18 @@ const applyDeltas = async (items: SyncItem[]): Promise<void> => {
     grouped[key].push(item);
   }
 
-  // Apply by entity type
   if (grouped["product"]) {
-    await mergeProducts(grouped["product"]);
+    await mergeProducts(db, userId, grouped["product"]);
   }
   if (grouped["body_weight"]) {
-    await mergeBodyWeights(grouped["body_weight"]);
+    await mergeBodyWeights(db, userId, grouped["body_weight"]);
   }
   if (grouped["user_goal"]) {
-    await mergeGoals(grouped["user_goal"]);
+    await mergeGoals(db, userId, grouped["user_goal"]);
   }
   if (grouped["water_log"]) {
-    await mergeWaterLogs(grouped["water_log"]);
+    await mergeWaterLogs(db, userId, grouped["water_log"]);
   }
-  // Portions and food_entries: skip (no local storage / pull-only via direct API)
 };
 
 // --- Outbox to mutation mapper ---
@@ -347,62 +317,19 @@ const outboxEntryToMutation = (entry: OutboxEntry): SyncMutation => ({
   updatedAt: entry.updatedAt,
 });
 
-// --- Legacy queue migration ---
-
-const migrateLegacyQueue = async (): Promise<void> => {
-  try {
-    const legacyOps = await getLegacyQueue();
-    if (legacyOps.length === 0) {
-      return;
-    }
-
-    // Legacy ops use different resource names; map to new entity types
-    const resourceToEntityType: Record<string, string> = {
-      products: "product",
-      goals: "user_goal",
-      "body-weights": "body_weight",
-    };
-
-    const { enqueueOutbox } = await import("@storage/outbox");
-
-    for (const op of legacyOps) {
-      const entityType = resourceToEntityType[op.resource];
-      if (!entityType) {
-        continue;
-      }
-
-      const entityId = (op.payload?.id as string) ?? op.id;
-      const action = op.action === "delete" ? "delete" : "upsert";
-
-      await enqueueOutbox({
-        id: `legacy:${op.id}`,
-        entityType,
-        action,
-        entityId,
-        data: action === "delete" ? null : op.payload,
-        updatedAt: new Date(op.createdAt).toISOString(),
-      });
-    }
-
-    // Clear the legacy queue storage
-    const AsyncStorage = (
-      await import("@react-native-async-storage/async-storage")
-    ).default;
-    await AsyncStorage.removeItem("syncQueue:v1");
-  } catch {
-    // Legacy migration is best-effort
-  }
-};
-
 // --- Core sync operations ---
 
 /**
  * Pull changes from the server and apply to local storage.
  */
 export const pull = async (): Promise<void> => {
+  const db = getDb();
+  const userId = getUserId();
+  if (!db || !userId) return;
+
   setState({ status: "pulling" });
 
-  let sinceVersion = await loadSyncCursor();
+  let sinceVersion = await syncCursorRepository.getCursor(db, "all");
   let hasMore = true;
 
   while (hasMore) {
@@ -412,12 +339,12 @@ export const pull = async (): Promise<void> => {
     });
 
     if (response.items.length > 0) {
-      await applyDeltas(response.items);
+      await applyDeltas(db, userId, response.items);
     }
 
     if (response.nextVersion !== null) {
       sinceVersion = response.nextVersion;
-      await saveSyncCursor(sinceVersion);
+      await syncCursorRepository.setCursor(db, "all", sinceVersion);
     }
 
     hasMore = response.hasMore;
@@ -428,14 +355,16 @@ export const pull = async (): Promise<void> => {
  * Push pending outbox mutations to the server in batches.
  */
 export const push = async (): Promise<void> => {
+  const db = getDb();
+  if (!db) return;
+
   setState({ status: "pushing" });
 
-  const entries = await loadOutbox();
+  const entries = await outboxRepository.loadAll(db);
   if (entries.length === 0) {
     return;
   }
 
-  // Process in batches of PUSH_BATCH_SIZE
   for (let i = 0; i < entries.length; i += PUSH_BATCH_SIZE) {
     const batch = entries.slice(i, i + PUSH_BATCH_SIZE);
     const mutations = batch.map(outboxEntryToMutation);
@@ -443,21 +372,16 @@ export const push = async (): Promise<void> => {
     try {
       const result = await pushMutations(mutations);
 
-      // Remove accepted entries from outbox
       const acceptedIds = batch.map((e) => e.id);
-      await removeFromOutbox(acceptedIds);
+      await outboxRepository.remove(db, acceptedIds);
 
-      // Handle conflicts — LWW means server is right, so we just remove them
       if (result.conflicts.length > 0) {
-        // Conflicts are already handled server-side (server version wins).
-        // The conflicting outbox entries were already removed above.
-        // On next pull, we'll get the server's version.
+        // Conflicts handled server-side (LWW). Next pull gets server version.
       }
     } catch (error) {
-      // Mark individual entries as failed
       for (const entry of batch) {
         const msg = error instanceof Error ? error.message : "Push failed";
-        await markFailed(entry.id, msg);
+        await outboxRepository.markFailed(db, entry.id, msg);
       }
       throw error;
     }
@@ -472,16 +396,16 @@ export const sync = async (): Promise<void> => {
     return;
   }
 
+  const db = getDb();
+  if (!db) return;
+
   isSyncing = true;
 
   try {
-    // Migrate legacy queue on first sync
-    await migrateLegacyQueue();
-
     await pull();
     await push();
 
-    const pendingCount = (await loadOutbox()).length;
+    const pendingCount = await outboxRepository.count(db);
 
     setState({
       status: "idle",
@@ -566,6 +490,8 @@ export const __resetForTesting = (): void => {
   };
   listeners.clear();
   isSyncing = false;
+  _db = null;
+  _userId = null;
   stopPeriodicSync();
   if (debounceTimer) {
     clearTimeout(debounceTimer);

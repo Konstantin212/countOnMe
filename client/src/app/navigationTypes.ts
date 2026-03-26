@@ -62,8 +62,16 @@ export type ProfileStackParamList = {
   GoalManual: undefined;
 };
 
+export type DiscoverStackParamList = {
+  DiscoverHome: undefined;
+  SharedFoodDetail: { sharedFoodId: string };
+  MySharedFoods: undefined;
+  PublishFood: { productId: string };
+};
+
 export type RootTabParamList = {
   MyDayTab: NavigatorScreenParams<MyDayStackParamList>;
   MyPathTab: NavigatorScreenParams<MyPathStackParamList>;
+  DiscoverTab: NavigatorScreenParams<DiscoverStackParamList>;
   ProfileTab: NavigatorScreenParams<ProfileStackParamList>;
 };

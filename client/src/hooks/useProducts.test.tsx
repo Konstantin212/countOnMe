@@ -2,16 +2,25 @@ import { act, renderHook, waitFor } from "@testing-library/react";
 import { vi } from "vitest";
 
 import { Product } from "@models/types";
-import { loadProducts, saveProducts } from "@storage/storage";
+import { productRepository, outboxRepository } from "@storage/repositories";
+import { useDatabaseContext } from "@storage/DatabaseProvider";
 import { useProducts } from "./useProducts";
 
-vi.mock("../storage/storage", () => ({
-  loadProducts: vi.fn(),
-  saveProducts: vi.fn(),
+const mockDbContext = { db: {}, userId: "test-user" };
+vi.mock("../storage/DatabaseProvider", () => ({
+  useDatabaseContext: vi.fn(() => mockDbContext),
 }));
 
-vi.mock("../storage/outbox", () => ({
-  enqueueOutbox: vi.fn(),
+vi.mock("../storage/repositories", () => ({
+  productRepository: {
+    findAll: vi.fn(() => Promise.resolve([])),
+    upsert: vi.fn(() => Promise.resolve()),
+    markDeleted: vi.fn(() => Promise.resolve()),
+    findById: vi.fn(() => Promise.resolve(null)),
+  },
+  outboxRepository: {
+    enqueue: vi.fn(() => Promise.resolve()),
+  },
 }));
 
 vi.mock("../services/syncEngine", () => ({
@@ -22,8 +31,10 @@ vi.mock("uuid", () => ({
   v4: vi.fn(() => "uuid-mock"),
 }));
 
-const mockLoadProducts = vi.mocked(loadProducts);
-const mockSaveProducts = vi.mocked(saveProducts);
+const mockFindAll = vi.mocked(productRepository.findAll);
+const mockUpsert = vi.mocked(productRepository.upsert);
+const mockMarkDeleted = vi.mocked(productRepository.markDeleted);
+const mockEnqueue = vi.mocked(outboxRepository.enqueue);
 
 const sampleProduct: Product = {
   id: "product-1",
@@ -34,8 +45,7 @@ const sampleProduct: Product = {
 };
 
 const setupHook = async (initialProducts: Product[] = []) => {
-  mockLoadProducts.mockResolvedValue(initialProducts);
-  mockSaveProducts.mockResolvedValue();
+  mockFindAll.mockResolvedValue(initialProducts);
 
   const hook = renderHook(() => useProducts());
 
@@ -49,13 +59,17 @@ const setupHook = async (initialProducts: Product[] = []) => {
 describe("useProducts", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockFindAll.mockResolvedValue([]);
+    mockUpsert.mockResolvedValue();
+    mockMarkDeleted.mockResolvedValue();
+    mockEnqueue.mockResolvedValue();
   });
 
   it("loads products on mount", async () => {
     const { result } = await setupHook([sampleProduct]);
 
     expect(result.current.products).toEqual([sampleProduct]);
-    expect(mockLoadProducts).toHaveBeenCalledTimes(1);
+    expect(mockFindAll).toHaveBeenCalledTimes(1);
   });
 
   it("adds a product with sanitized values and persists", async () => {
@@ -74,7 +88,7 @@ describe("useProducts", () => {
       name: "Banana",
       caloriesPer100g: 0,
     });
-    expect(mockSaveProducts).toHaveBeenCalledTimes(1);
+    expect(mockUpsert).toHaveBeenCalledTimes(1);
   });
 
   it("updates an existing product and clamps numbers", async () => {
@@ -92,7 +106,7 @@ describe("useProducts", () => {
       name: "Updated",
       caloriesPer100g: 0,
     });
-    expect(mockSaveProducts).toHaveBeenCalledTimes(1);
+    expect(mockUpsert).toHaveBeenCalledTimes(1);
   });
 
   it("deletes product by id and persists changes", async () => {
@@ -103,7 +117,7 @@ describe("useProducts", () => {
     });
 
     expect(result.current.products).toHaveLength(0);
-    expect(mockSaveProducts).toHaveBeenCalledTimes(1);
+    expect(mockMarkDeleted).toHaveBeenCalledTimes(1);
   });
 
   it("ignores updates for missing product ids without persisting", async () => {
@@ -114,7 +128,7 @@ describe("useProducts", () => {
     });
 
     expect(result.current.products).toEqual([sampleProduct]);
-    expect(mockSaveProducts).not.toHaveBeenCalled();
+    expect(mockUpsert).not.toHaveBeenCalled();
   });
 
   it("defaults source to 'user' when not provided", async () => {
@@ -176,11 +190,8 @@ describe("useProducts", () => {
       });
     });
 
-    // Should not create a new product
     expect(result.current.products).toHaveLength(1);
-    // Should return the same product ID
     expect(returned?.id).toBe(existingProduct.id);
-    // Should have updated data
     expect(returned?.name).toBe("Updated Scan");
     expect(returned?.caloriesPer100g).toBe(999);
   });
@@ -199,7 +210,6 @@ describe("useProducts", () => {
       });
     });
 
-    // Should create a new product since no barcode was provided
     expect(result.current.products).toHaveLength(2);
   });
 });

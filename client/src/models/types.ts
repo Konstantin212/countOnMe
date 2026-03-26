@@ -288,3 +288,62 @@ export type DailyStatsPoint = {
   carbs: number;
   fat: number;
 };
+
+// ---------------------------------------------------------------------------
+// Shared / Community Foods
+// ---------------------------------------------------------------------------
+
+export type Visibility = "private" | "unlisted" | "public";
+export type ModerationStatus = "pending" | "approved" | "rejected";
+
+/** A single portion of a shared food with nutritional data. */
+export type SharedFoodPortion = {
+  id: string;
+  sharedFoodId: string;
+  label: string;
+  baseAmount: number;
+  baseUnit: Unit;
+  gramWeight: number | null;
+  calories: number;
+  protein: number | null;
+  carbs: number | null;
+  fat: number | null;
+  isDefault: boolean;
+};
+
+/** Full shared food with all portions (detail view). */
+export type SharedFood = {
+  id: string;
+  ownerUserId: string;
+  name: string;
+  displayName: string;
+  description: string | null;
+  brand: string | null;
+  barcode: string | null;
+  category: string | null;
+  visibility: Visibility;
+  moderationStatus: ModerationStatus;
+  createdAt: ISODateString;
+  updatedAt: ISODateString;
+  portions: SharedFoodPortion[];
+};
+
+/** Shared food list item with only the default portion (search / list view). */
+export type SharedFoodListItem = {
+  id: string;
+  ownerUserId: string;
+  name: string;
+  displayName: string;
+  brand: string | null;
+  barcode: string | null;
+  category: string | null;
+  visibility: Visibility;
+  moderationStatus: ModerationStatus;
+  defaultPortion: SharedFoodPortion | null;
+};
+
+/** Result of importing a shared food into private collection. */
+export type SharedFoodImportResult = {
+  productId: string;
+  portionCount: number;
+};

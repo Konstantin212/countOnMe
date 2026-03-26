@@ -11,6 +11,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.db import get_session
 from app.core.deps import get_current_user_id
 from app.core.enums import Visibility
+from app.core.rate_limit import publish_rate_limiter
+from app.features.moderation.service import get_blocked_user_ids
 from app.features.shared.schemas import (
     SharedFoodCreateRequest,
     SharedFoodImportResponse,
@@ -102,11 +104,18 @@ async def search_foods(
     q: str | None = Query(default=None, max_length=200),
     limit: int = Query(default=50, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
-    _user_id: uuid.UUID = Depends(get_current_user_id),
+    user_id: uuid.UUID = Depends(get_current_user_id),
     session: AsyncSession = Depends(get_session),
 ) -> list[SharedFoodListItem]:
-    """Search public+approved shared foods."""
-    foods = await search_shared_foods(session, q=q, limit=limit, offset=offset)
+    """Search public+approved shared foods (excludes blocked users' content)."""
+    blocked_ids = await get_blocked_user_ids(session, user_id=user_id)
+    foods = await search_shared_foods(
+        session,
+        q=q,
+        limit=limit,
+        offset=offset,
+        exclude_owner_ids=blocked_ids if blocked_ids else None,
+    )
     return [
         SharedFoodListItem(
             id=f.id,
@@ -138,13 +147,20 @@ async def get_food(
 
     Owner can see any of their items. Non-owners can only see
     public+approved or unlisted items. Private items from other
-    users return 404.
+    users return 404. Blocked users' content returns 404.
     """
     food = await get_shared_food(session, shared_food_id=shared_food_id)
     if food is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
 
     is_owner = food.owner_user_id == user_id
+
+    # Block check: if the food owner is blocked by the requester, return 404
+    if not is_owner:
+        blocked_ids = await get_blocked_user_ids(session, user_id=user_id)
+        if food.owner_user_id in blocked_ids:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
+
     is_unlisted = food.visibility == Visibility.unlisted
     is_public_approved = (
         food.visibility == Visibility.public
@@ -219,7 +235,8 @@ async def publish_food(
     user_id: uuid.UUID = Depends(get_current_user_id),
     session: AsyncSession = Depends(get_session),
 ) -> SharedFoodResponse:
-    """Publish a shared food to the community (owner only)."""
+    """Publish a shared food to the community (owner only). Rate limited."""
+    publish_rate_limiter.check(str(user_id))
     try:
         result = await publish_shared_food(
             session, owner_user_id=user_id, shared_food_id=shared_food_id,

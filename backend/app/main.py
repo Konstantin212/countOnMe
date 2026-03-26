@@ -8,6 +8,8 @@ from app.features.catalog.router import router as catalog_router
 from app.features.data.router import router as data_router
 from app.features.goals.router import router as goals_router
 from app.features.meals.router import router as food_entries_router
+from app.features.moderation.router import admin_router as moderation_admin_router
+from app.features.moderation.router import router as moderation_router
 from app.features.portions.router import router as portions_router
 from app.features.products.router import router as products_router
 from app.features.shared.router import router as shared_router
@@ -35,6 +37,8 @@ def create_app() -> FastAPI:
     v1.include_router(water_logs_router)
     v1.include_router(catalog_router)
     v1.include_router(shared_router)
+    v1.include_router(moderation_router)
+    v1.include_router(moderation_admin_router)
     v1.include_router(data_router)
     app.include_router(v1)
 

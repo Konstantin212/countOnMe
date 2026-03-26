@@ -8,12 +8,13 @@ from decimal import Decimal
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.enums import MealType, ModerationStatus, Unit, Visibility
+from app.core.enums import MealType, ModerationStatus, ReportReason, Unit, Visibility
 from app.features.auth.models import Device, User, UserDevice
 from app.features.auth.service import issue_device_token
 from app.features.catalog.models import CatalogPortion, CatalogProduct
 from app.features.goals.models import UserGoal
 from app.features.meals.models import FoodEntry
+from app.features.moderation.models import ContentReport, UserBlock
 from app.features.portions.models import ProductPortion
 from app.features.products.models import Product
 from app.features.shared.models import SharedFood, SharedFoodPortion
@@ -353,3 +354,57 @@ async def create_water_log(
     await session.flush()
     await session.refresh(water_log)
     return water_log
+
+
+async def create_admin_user(
+    session: AsyncSession,
+    **overrides,
+) -> User:
+    """Create a test admin user."""
+    return await create_user(session, is_admin=True, **overrides)
+
+
+async def create_content_report(
+    session: AsyncSession,
+    *,
+    reporter_user_id: uuid.UUID,
+    target_shared_food_id: uuid.UUID,
+    reason: ReportReason = ReportReason.inaccurate,
+    detail: str | None = None,
+    **overrides,
+) -> ContentReport:
+    """Create a test content report."""
+    defaults: dict = {
+        "reporter_user_id": reporter_user_id,
+        "target_shared_food_id": target_shared_food_id,
+        "reason": reason,
+        "detail": detail,
+    }
+    defaults.update(overrides)
+
+    report = ContentReport(**defaults)
+    session.add(report)
+    await session.flush()
+    await session.refresh(report)
+    return report
+
+
+async def create_user_block(
+    session: AsyncSession,
+    *,
+    blocker_user_id: uuid.UUID,
+    blocked_user_id: uuid.UUID,
+    **overrides,
+) -> UserBlock:
+    """Create a test user block."""
+    defaults: dict = {
+        "blocker_user_id": blocker_user_id,
+        "blocked_user_id": blocked_user_id,
+    }
+    defaults.update(overrides)
+
+    block = UserBlock(**defaults)
+    session.add(block)
+    await session.flush()
+    await session.refresh(block)
+    return block

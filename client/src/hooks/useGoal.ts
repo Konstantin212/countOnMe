@@ -12,8 +12,8 @@ import {
   calculateGoal as apiCalculateGoal,
   getCurrentGoal as apiGetCurrentGoal,
 } from "@services/api/goals";
-import { clearGoal, loadGoal, saveGoal } from "@storage/storage";
-import { enqueueOutbox } from "@storage/outbox";
+import { useDatabaseContext } from "@storage/DatabaseProvider";
+import { goalRepository, outboxRepository } from "@storage/repositories";
 import { debouncedSync } from "@services/syncEngine";
 
 export type UseGoalResult = {
@@ -79,6 +79,7 @@ const computeGrams = (
 });
 
 export const useGoal = (): UseGoalResult => {
+  const { db, userId } = useDatabaseContext();
   const [goal, setGoal] = useState<UserGoal | null>(null);
   const goalRef = useRef<UserGoal | null>(null);
   const [loading, setLoading] = useState(true);
@@ -96,15 +97,13 @@ export const useGoal = (): UseGoalResult => {
     setError(null);
 
     try {
-      // Try to load from local storage first (offline-first)
-      const localGoal = await loadGoal();
+      const localGoal = await goalRepository.getCurrent(db, userId);
 
       if (isMountedRef.current) {
         goalRef.current = localGoal;
         setGoal(localGoal);
       }
 
-      // Try to sync from backend
       try {
         const remoteGoal = await apiGetCurrentGoal();
 
@@ -112,16 +111,11 @@ export const useGoal = (): UseGoalResult => {
           if (remoteGoal) {
             goalRef.current = remoteGoal;
             setGoal(remoteGoal);
-            // Update local storage with remote data
-            await saveGoal(remoteGoal);
-          } else if (localGoal) {
-            // Local goal exists but not on server - might need to sync
-            // For now, keep local goal
+            await goalRepository.upsert(db, userId, remoteGoal);
           }
         }
       } catch {
         // Backend not available, use local data
-        // This is expected in offline-first mode
       }
     } catch {
       if (isMountedRef.current) {
@@ -132,7 +126,7 @@ export const useGoal = (): UseGoalResult => {
         setLoading(false);
       }
     }
-  }, []);
+  }, [db, userId]);
 
   useEffect(() => {
     refresh();
@@ -195,8 +189,8 @@ export const useGoal = (): UseGoalResult => {
       }
 
       try {
-        await saveGoal(newGoal);
-        await enqueueOutbox({
+        await goalRepository.upsert(db, userId, newGoal);
+        await outboxRepository.enqueue(db, {
           id: `user_goal:${newGoal.id}`,
           entityType: "user_goal",
           action: "upsert",
@@ -211,7 +205,7 @@ export const useGoal = (): UseGoalResult => {
 
       return newGoal;
     },
-    [],
+    [db, userId],
   );
 
   const saveManualGoal = useCallback(
@@ -245,8 +239,8 @@ export const useGoal = (): UseGoalResult => {
       }
 
       try {
-        await saveGoal(newGoal);
-        await enqueueOutbox({
+        await goalRepository.upsert(db, userId, newGoal);
+        await outboxRepository.enqueue(db, {
           id: `user_goal:${newGoal.id}`,
           entityType: "user_goal",
           action: "upsert",
@@ -261,7 +255,7 @@ export const useGoal = (): UseGoalResult => {
 
       return newGoal;
     },
-    [],
+    [db, userId],
   );
 
   const updateGoalHandler = useCallback(
@@ -303,8 +297,8 @@ export const useGoal = (): UseGoalResult => {
       }
 
       try {
-        await saveGoal(updatedGoal);
-        await enqueueOutbox({
+        await goalRepository.upsert(db, userId, updatedGoal);
+        await outboxRepository.enqueue(db, {
           id: `user_goal:${updatedGoal.id}`,
           entityType: "user_goal",
           action: "upsert",
@@ -319,7 +313,7 @@ export const useGoal = (): UseGoalResult => {
 
       return updatedGoal;
     },
-    [],
+    [db, userId],
   );
 
   const deleteGoalHandler = useCallback(async (): Promise<boolean> => {
@@ -334,8 +328,8 @@ export const useGoal = (): UseGoalResult => {
     }
 
     try {
-      await clearGoal();
-      await enqueueOutbox({
+      await goalRepository.remove(db, currentGoal.id);
+      await outboxRepository.enqueue(db, {
         id: `user_goal:${currentGoal.id}`,
         entityType: "user_goal",
         action: "delete",
@@ -349,7 +343,7 @@ export const useGoal = (): UseGoalResult => {
     }
 
     return true;
-  }, []);
+  }, [db, userId]);
 
   return {
     goal,

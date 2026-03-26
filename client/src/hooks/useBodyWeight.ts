@@ -3,8 +3,8 @@ import { v4 as uuid } from "uuid";
 
 import type { BodyWeightEntry } from "@models/types";
 import { listBodyWeights as apiListBodyWeights } from "@services/api/bodyWeights";
-import { loadBodyWeights, saveBodyWeights } from "@storage/storage";
-import { enqueueOutbox } from "@storage/outbox";
+import { useDatabaseContext } from "@storage/DatabaseProvider";
+import { bodyWeightRepository, outboxRepository } from "@storage/repositories";
 import { debouncedSync } from "@services/syncEngine";
 
 export type UseBodyWeightResult = {
@@ -18,6 +18,7 @@ export type UseBodyWeightResult = {
 };
 
 export const useBodyWeight = (): UseBodyWeightResult => {
+  const { db, userId } = useDatabaseContext();
   const [weights, setWeights] = useState<BodyWeightEntry[]>([]);
   const weightsRef = useRef<BodyWeightEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -35,27 +36,26 @@ export const useBodyWeight = (): UseBodyWeightResult => {
     setError(null);
 
     try {
-      // Try to load from local storage first (offline-first)
-      const localWeights = await loadBodyWeights();
+      const localWeights = await bodyWeightRepository.findAll(db, userId);
 
       if (isMountedRef.current) {
         weightsRef.current = localWeights;
         setWeights(localWeights);
       }
 
-      // Try to sync from backend
       try {
         const remoteWeights = await apiListBodyWeights();
 
         if (isMountedRef.current) {
           weightsRef.current = remoteWeights;
           setWeights(remoteWeights);
-          // Update local storage with remote data (remote wins)
-          await saveBodyWeights(remoteWeights);
+          // Update local storage with remote data
+          for (const entry of remoteWeights) {
+            await bodyWeightRepository.upsert(db, userId, entry);
+          }
         }
       } catch {
         // Backend not available, use local data
-        // This is expected in offline-first mode
       }
     } catch {
       if (isMountedRef.current) {
@@ -66,7 +66,7 @@ export const useBodyWeight = (): UseBodyWeightResult => {
         setLoading(false);
       }
     }
-  }, []);
+  }, [db, userId]);
 
   useEffect(() => {
     refresh();
@@ -96,8 +96,8 @@ export const useBodyWeight = (): UseBodyWeightResult => {
       }
 
       try {
-        await saveBodyWeights(updatedWeights);
-        await enqueueOutbox({
+        await bodyWeightRepository.upsert(db, userId, updatedEntry);
+        await outboxRepository.enqueue(db, {
           id: `body_weight:${updatedEntry.id}`,
           entityType: "body_weight",
           action: "upsert",
@@ -116,12 +116,11 @@ export const useBodyWeight = (): UseBodyWeightResult => {
 
       return updatedEntry;
     },
-    [],
+    [db, userId],
   );
 
   const logWeight = useCallback(
     async (day: string, weightKg: number): Promise<BodyWeightEntry> => {
-      // Check for existing entry on the same day (local conflict)
       const existing = weightsRef.current.find((w) => w.day === day);
       if (existing) {
         return await updateWeightHandler(existing.id, weightKg);
@@ -144,8 +143,8 @@ export const useBodyWeight = (): UseBodyWeightResult => {
       }
 
       try {
-        await saveBodyWeights(updatedWeights);
-        await enqueueOutbox({
+        await bodyWeightRepository.upsert(db, userId, newEntry);
+        await outboxRepository.enqueue(db, {
           id: `body_weight:${newEntry.id}`,
           entityType: "body_weight",
           action: "upsert",
@@ -164,26 +163,23 @@ export const useBodyWeight = (): UseBodyWeightResult => {
 
       return newEntry;
     },
-    [updateWeightHandler],
+    [db, userId, updateWeightHandler],
   );
 
   const deleteWeightHandler = useCallback(
     async (id: string): Promise<boolean> => {
-      const updatedWeights = weightsRef.current.filter((w) => w.id !== id);
+      const exists = weightsRef.current.some((w) => w.id === id);
+      if (!exists) return false;
 
-      if (updatedWeights.length === weightsRef.current.length) {
-        return false;
-      }
-
-      weightsRef.current = updatedWeights;
+      weightsRef.current = weightsRef.current.filter((w) => w.id !== id);
 
       if (isMountedRef.current) {
-        setWeights(updatedWeights);
+        setWeights(weightsRef.current);
       }
 
       try {
-        await saveBodyWeights(updatedWeights);
-        await enqueueOutbox({
+        await bodyWeightRepository.markDeleted(db, id);
+        await outboxRepository.enqueue(db, {
           id: `body_weight:${id}`,
           entityType: "body_weight",
           action: "delete",
@@ -198,7 +194,7 @@ export const useBodyWeight = (): UseBodyWeightResult => {
 
       return true;
     },
-    [],
+    [db, userId],
   );
 
   return {

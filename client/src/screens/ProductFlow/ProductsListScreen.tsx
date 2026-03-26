@@ -2,12 +2,13 @@ import React, { useCallback, useMemo } from "react";
 import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
+import { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
 import { useFocusEffect } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 
 import ProductListItem from "@components/ProductListItem";
 import { Product } from "@models/types";
-import { ProfileStackParamList } from "@app/navigationTypes";
+import { ProfileStackParamList, RootTabParamList } from "@app/navigationTypes";
 import { useProducts } from "@hooks/useProducts";
 import { useTheme } from "@hooks/useTheme";
 
@@ -91,15 +92,57 @@ const ProductsListScreen = ({ navigation }: Props) => {
       textAlign: "center",
       marginTop: 32,
     },
+    shareButton: {
+      padding: 6,
+      borderRadius: 6,
+    },
+    shareButtonPressed: {
+      opacity: 0.5,
+    },
+    itemRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+    },
+    itemContent: {
+      flex: 1,
+    },
   });
 
+  const handleShare = useCallback(
+    (productId: string) => {
+      navigation
+        .getParent<BottomTabNavigationProp<RootTabParamList>>()
+        ?.navigate("DiscoverTab", {
+          screen: "PublishFood",
+          params: { productId },
+        });
+    },
+    [navigation],
+  );
+
   const renderItem = ({ item }: { item: Product }) => (
-    <ProductListItem
-      product={item}
-      onPress={() =>
-        navigation.navigate("ProductDetails", { productId: item.id })
-      }
-    />
+    <View style={styles.itemRow}>
+      <View style={styles.itemContent}>
+        <ProductListItem
+          product={item}
+          onPress={() =>
+            navigation.navigate("ProductDetails", { productId: item.id })
+          }
+        />
+      </View>
+      <Pressable
+        onPress={() => handleShare(item.id)}
+        style={({ pressed }) => [
+          styles.shareButton,
+          pressed && styles.shareButtonPressed,
+        ]}
+        testID={`share-product-${item.id}`}
+        hitSlop={8}
+      >
+        <Ionicons name="share-outline" size={20} color={colors.primary} />
+      </Pressable>
+    </View>
   );
 
   const renderEmptyState = () => (

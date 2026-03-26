@@ -16,11 +16,14 @@ import { useTheme } from "@hooks/useTheme";
 import { ThemeMode } from "@theme/ThemeContext";
 import { resetDeviceData } from "@services/api/data";
 import { clearAllFoodData } from "@storage/storage";
+import { useDatabaseContext } from "@storage/DatabaseProvider";
+import { clearAllUserData } from "@storage/database";
 
 type Props = NativeStackScreenProps<ProfileStackParamList, "ProfileMenu">;
 
 const ProfileScreen = ({ navigation }: Props) => {
   const { colors, themeMode, setThemeMode, theme } = useTheme();
+  const { db, userId } = useDatabaseContext();
   const sync = useSyncStatus();
 
   const themeOptions: {
@@ -61,6 +64,7 @@ const ProfileScreen = ({ navigation }: Props) => {
           onPress: async () => {
             try {
               await resetDeviceData();
+              await clearAllUserData(db, userId);
               await clearAllFoodData();
               Alert.alert("Done", "All data has been reset.");
             } catch {

@@ -34,10 +34,10 @@ class UserGoal(Base, TimestampMixin):
         server_default=func.gen_random_uuid(),
     )
 
-    device_id: Mapped[uuid.UUID] = mapped_column(
+    device_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("devices.id", ondelete="CASCADE"),
-        nullable=False,
+        nullable=True,
         index=True,
     )
 

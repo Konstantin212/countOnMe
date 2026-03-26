@@ -2,10 +2,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { apiFetch, ApiError } from "./http";
 
 // Use vi.hoisted so mock fns are available inside the hoisted vi.mock factory
-const { mockGetSession, mockRefreshSession } = vi.hoisted(() => ({
-  mockGetSession: vi.fn(),
-  mockRefreshSession: vi.fn(),
-}));
+const { mockGetSession, mockRefreshSession, mockGetOrCreateDeviceId } =
+  vi.hoisted(() => ({
+    mockGetSession: vi.fn(),
+    mockRefreshSession: vi.fn(),
+    mockGetOrCreateDeviceId: vi.fn(),
+  }));
 
 vi.mock("@services/supabase", () => ({
   supabase: {
@@ -14,6 +16,10 @@ vi.mock("@services/supabase", () => ({
       refreshSession: mockRefreshSession,
     },
   },
+}));
+
+vi.mock("@storage/device", () => ({
+  getOrCreateDeviceId: mockGetOrCreateDeviceId,
 }));
 
 // Mock global fetch
@@ -26,6 +32,8 @@ describe("http utilities", () => {
     mockGetSession.mockReset();
     mockRefreshSession.mockReset();
     mockFetch.mockReset();
+    mockGetOrCreateDeviceId.mockReset();
+    mockGetOrCreateDeviceId.mockResolvedValue("test-device-uuid");
   });
 
   describe("ApiError", () => {
@@ -294,7 +302,7 @@ describe("http utilities", () => {
       });
     });
 
-    it("sets correct headers", async () => {
+    it("sets correct headers including X-Device-Id", async () => {
       await apiFetch("/test");
 
       expect(mockFetch).toHaveBeenCalledWith(
@@ -304,7 +312,23 @@ describe("http utilities", () => {
             Accept: "application/json",
             "Content-Type": "application/json",
             Authorization: "Bearer test-token",
+            "X-Device-Id": "test-device-uuid",
           },
+        }),
+      );
+    });
+
+    it("includes X-Device-Id header from getOrCreateDeviceId", async () => {
+      mockGetOrCreateDeviceId.mockResolvedValue("custom-device-id");
+      await apiFetch("/test");
+
+      expect(mockGetOrCreateDeviceId).toHaveBeenCalledTimes(1);
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({
+          headers: expect.objectContaining({
+            "X-Device-Id": "custom-device-id",
+          }),
         }),
       );
     });

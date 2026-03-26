@@ -100,7 +100,9 @@ def _get_jwks_client() -> pyjwt.PyJWKClient:
 def decode_supabase_jwt(token: str) -> dict[str, Any]:
     """Decode and verify a Supabase access token using JWKS.
 
-    Supports both ECC (ES256) and legacy HS256 keys automatically.
+    Only ES256 (ECC) is accepted.  HS256 is explicitly excluded to prevent
+    algorithm-confusion attacks where a symmetric secret could be used to
+    forge tokens.
     Fetches the public key from Supabase's JWKS endpoint (cached for 1 hour).
     Returns the decoded payload dict.
     Raises jwt.InvalidTokenError (or subclass) on any verification failure.
@@ -110,7 +112,7 @@ def decode_supabase_jwt(token: str) -> dict[str, Any]:
     return pyjwt.decode(
         token,
         signing_key.key,
-        algorithms=["ES256", "HS256"],
+        algorithms=["ES256"],
         audience="authenticated",
         options={"require": ["exp", "sub"]},
     )
@@ -274,7 +276,7 @@ async def delete_user_account(
     return user.supabase_id
 
 
-async def _delete_supabase_auth_user(supabase_id: uuid.UUID) -> None:
+async def delete_supabase_auth_user(supabase_id: uuid.UUID) -> None:
     """Call Supabase Admin API to delete auth.users row.
 
     Best-effort: logs on failure, never raises.
@@ -358,11 +360,21 @@ async def claim_device_data(
     if result.scalar_one_or_none() is None:
         raise DeviceNotLinked(f"Device {device_id} is not linked to user {user_id}")
 
-    # 2. Check for rows already claimed by a different user
+    # 2. Check for rows already claimed by a different user.
+    # TOCTOU note: The conflict check + bulk update below are NOT wrapped in a
+    # serializable transaction or row-level lock.  Under READ COMMITTED (the
+    # default), a concurrent claim for the *same* device by a *different* user
+    # could theoretically interleave.  This is acceptable because:
+    #   - claim_device_data is called only after link_device_to_user, which
+    #     already establishes a unique (user_id, device_id) link.
+    #   - In practice, a single human owns a device; concurrent claims by
+    #     different users for the same device are not a realistic scenario.
+    #   - Adding SELECT ... FOR UPDATE on every data row would be expensive
+    #     and unnecessary for this single-user claim flow.
     for model, key in _CLAIMABLE_TABLES:
         conflict_stmt = select(func.count()).select_from(model).where(
             model.device_id == device_id,
-            model.user_id.isnot(None),
+            model.user_id.is_not(None),
             model.user_id != user_id,
             model.deleted_at.is_(None),
         )

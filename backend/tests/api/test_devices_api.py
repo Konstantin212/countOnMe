@@ -3,10 +3,19 @@
 from __future__ import annotations
 
 import uuid
+from unittest.mock import patch
 
 import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
+
+
+@pytest.fixture(autouse=True)
+def _enable_device_auth():
+    """Enable legacy device auth for all tests in this module."""
+    with patch("app.features.auth.router.settings") as mock_settings:
+        mock_settings.allow_device_auth = True
+        yield
 
 
 @pytest.mark.asyncio
@@ -47,3 +56,16 @@ async def test_register_device_with_invalid_uuid(app_client: AsyncClient):
     """Test registering with invalid UUID returns 422."""
     response = await app_client.post("/v1/devices/register", json={"device_id": "not-a-uuid"})
     assert response.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_register_device_returns_410_when_disabled(app_client: AsyncClient):
+    """Test that /devices/register returns 410 when allow_device_auth is False."""
+    with patch("app.features.auth.router.settings") as mock_settings:
+        mock_settings.allow_device_auth = False
+        device_id = uuid.uuid4()
+        response = await app_client.post(
+            "/v1/devices/register", json={"device_id": str(device_id)},
+        )
+    assert response.status_code == 410
+    assert response.json()["detail"] == "Legacy device auth is disabled"

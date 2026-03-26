@@ -5,8 +5,12 @@ from __future__ import annotations
 import os
 import uuid
 from collections.abc import AsyncIterator
+from datetime import UTC, datetime, timedelta
+from unittest.mock import MagicMock, patch
 
+import jwt as pyjwt
 import pytest_asyncio
+from cryptography.hazmat.primitives.asymmetric import ec
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import (
@@ -18,7 +22,7 @@ from sqlalchemy.ext.asyncio import (
 
 from app.core.db import Base, get_session
 from app.features.auth.models import Device, User, UserDevice
-from app.features.auth.service import issue_device_token
+from app.features.auth.service import SUPABASE_MANAGED_HASH
 from app.features.catalog.models import CatalogPortion, CatalogProduct
 from app.features.goals.models import UserGoal
 from app.features.meals.models import FoodEntry
@@ -34,6 +38,44 @@ TEST_DATABASE_URL = os.getenv(
 )
 os.environ.setdefault("DEVICE_TOKEN_PEPPER", "test-pepper-for-unit-tests-only")
 os.environ.setdefault("SUPABASE_SECRET_KEY", "test-secret-key")
+
+# ---------------------------------------------------------------------------
+# Shared EC key pair for JWT test tokens (session-scoped)
+# ---------------------------------------------------------------------------
+_TEST_EC_PRIVATE_KEY = ec.generate_private_key(ec.SECP256R1())
+_TEST_EC_PUBLIC_KEY = _TEST_EC_PRIVATE_KEY.public_key()
+
+
+def _make_test_jwt(
+    sub: str,
+    email: str = "test@test.com",
+    aud: str = "authenticated",
+    exp_delta: timedelta = timedelta(hours=1),
+) -> str:
+    """Create a signed Supabase-style JWT for testing (ES256)."""
+    payload = {
+        "sub": sub,
+        "email": email,
+        "aud": aud,
+        "exp": datetime.now(UTC) + exp_delta,
+        "iat": datetime.now(UTC),
+    }
+    return pyjwt.encode(payload, _TEST_EC_PRIVATE_KEY, algorithm="ES256")
+
+
+@pytest_asyncio.fixture(autouse=True)
+async def _patch_jwks_for_tests():
+    """Patch the JWKS client for ALL tests so JWT verification uses our test key."""
+    mock_client = MagicMock()
+
+    def get_signing_key_from_jwt(token):
+        mock_key = MagicMock()
+        mock_key.key = _TEST_EC_PUBLIC_KEY
+        return mock_key
+
+    mock_client.get_signing_key_from_jwt = get_signing_key_from_jwt
+    with patch("app.features.auth.service._get_jwks_client", return_value=mock_client):
+        yield
 
 
 @pytest_asyncio.fixture
@@ -119,22 +161,37 @@ async def authenticated_client(
     app_client: AsyncClient,
     db_session: AsyncSession,
 ) -> AsyncIterator[tuple[AsyncClient, uuid.UUID]]:
-    """Create authenticated test client with a registered device.
+    """Create authenticated test client with a JWT-based user.
 
     Returns:
-        tuple[AsyncClient, uuid.UUID]: (client with auth header, device_id)
+        tuple[AsyncClient, uuid.UUID]: (client with auth header, user_id)
     """
-    # Create a device
+    # Create a user
+    supabase_id = uuid.uuid4()
+    user = User(supabase_id=supabase_id, email="test@test.com")
+    db_session.add(user)
+    await db_session.flush()
+    await db_session.refresh(user)
+
+    # Create a device and link it to the user
     device_id = uuid.uuid4()
-    token, token_hash = issue_device_token(device_id)
-    device = Device(id=device_id, token_hash=token_hash)
+    device = Device(id=device_id, token_hash=SUPABASE_MANAGED_HASH)
     db_session.add(device)
     await db_session.flush()
 
-    # Add Authorization header to client
-    app_client.headers["Authorization"] = f"Bearer {token}"
+    user_device = UserDevice(user_id=user.id, device_id=device_id)
+    db_session.add(user_device)
+    await db_session.flush()
 
-    yield app_client, device_id
+    # Generate JWT
+    jwt_token = _make_test_jwt(sub=str(supabase_id), email="test@test.com")
 
-    # Cleanup auth header
+    # Add headers
+    app_client.headers["Authorization"] = f"Bearer {jwt_token}"
+    app_client.headers["X-Device-Id"] = str(device_id)
+
+    yield app_client, user.id
+
+    # Cleanup auth headers
     app_client.headers.pop("Authorization", None)
+    app_client.headers.pop("X-Device-Id", None)

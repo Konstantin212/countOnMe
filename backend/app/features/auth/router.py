@@ -25,14 +25,15 @@ from app.features.auth.service import (
     DataClaimedByOther,
     DeviceNotLinked,
     OwnershipProofRequired,
-    _delete_supabase_auth_user,
     claim_device_data,
+    delete_supabase_auth_user,
     delete_user_account,
     get_device_by_id,
     get_user_profile,
     issue_device_token,
     link_device_to_user,
 )
+from app.settings import settings
 
 logger = logging.getLogger(__name__)
 
@@ -54,6 +55,12 @@ async def register_device(
     Uses SELECT ... FOR UPDATE to prevent TOCTOU races when concurrent
     requests arrive for the same device_id.
     """
+    if not settings.allow_device_auth:
+        raise HTTPException(
+            status_code=status.HTTP_410_GONE,
+            detail="Legacy device auth is disabled",
+        )
+
     # Lock the row (or gap) to serialize concurrent registrations
     stmt = (
         select(Device)
@@ -188,6 +195,6 @@ async def delete_account(
     # Best-effort Supabase auth cleanup — after commit so DB state is safe
     if supabase_id is not None:
         try:
-            await _delete_supabase_auth_user(supabase_id)
+            await delete_supabase_auth_user(supabase_id)
         except Exception:
             logger.exception("Failed to delete Supabase auth user %s (best-effort)", supabase_id)

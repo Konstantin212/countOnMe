@@ -19,15 +19,15 @@ def _not_deleted(stmt: Select):
 async def _get_portion(
     session: AsyncSession,
     *,
-    device_id: uuid.UUID,
+    user_id: uuid.UUID,
     portion_id: uuid.UUID,
-    user_id: uuid.UUID | None = None,
+    device_id: uuid.UUID | None = None,
 ) -> ProductPortion | None:
     stmt = (
         select(ProductPortion)
         .where(
             ProductPortion.deleted_at.is_(None),
-            get_owner_filter(ProductPortion, user_id=user_id, device_id=device_id),
+            get_owner_filter(ProductPortion, user_id=user_id),
             ProductPortion.id == portion_id,
         )
         .limit(1)
@@ -39,25 +39,27 @@ async def _get_portion(
 async def create_food_entry(
     session: AsyncSession,
     *,
-    device_id: uuid.UUID,
+    user_id: uuid.UUID,
     product_id: uuid.UUID,
     portion_id: uuid.UUID,
     day: date,
     meal_type,
     amount,
     unit,
-    user_id: uuid.UUID | None = None,
+    device_id: uuid.UUID | None = None,
 ) -> FoodEntry | None:
-    product = await get_product(session, device_id=device_id, product_id=product_id, user_id=user_id)
+    product = await get_product(session, user_id=user_id, product_id=product_id)
     if product is None:
         return None
 
-    portion = await _get_portion(session, device_id=device_id, portion_id=portion_id, user_id=user_id)
+    portion = await _get_portion(session, user_id=user_id, portion_id=portion_id)
     if portion is None or portion.product_id != product_id:
         return None
 
     entry = FoodEntry(
         device_id=device_id,
+        user_id=user_id,
+        created_on_device_id=device_id,
         product_id=product_id,
         portion_id=portion_id,
         day=day,
@@ -74,14 +76,14 @@ async def create_food_entry(
 async def list_food_entries(
     session: AsyncSession,
     *,
-    device_id: uuid.UUID,
+    user_id: uuid.UUID,
     day: date | None = None,
     from_day: date | None = None,
     to_day: date | None = None,
-    user_id: uuid.UUID | None = None,
+    device_id: uuid.UUID | None = None,
 ) -> list[FoodEntry]:
     stmt = _not_deleted(select(FoodEntry)).where(
-        get_owner_filter(FoodEntry, user_id=user_id, device_id=device_id),
+        get_owner_filter(FoodEntry, user_id=user_id),
     )
     if day is not None:
         stmt = stmt.where(FoodEntry.day == day)
@@ -97,12 +99,12 @@ async def list_food_entries(
 async def get_food_entry(
     session: AsyncSession,
     *,
-    device_id: uuid.UUID,
+    user_id: uuid.UUID,
     entry_id: uuid.UUID,
-    user_id: uuid.UUID | None = None,
+    device_id: uuid.UUID | None = None,
 ) -> FoodEntry | None:
     stmt = _not_deleted(select(FoodEntry)).where(
-        get_owner_filter(FoodEntry, user_id=user_id, device_id=device_id),
+        get_owner_filter(FoodEntry, user_id=user_id),
         FoodEntry.id == entry_id,
     )
     res = await session.execute(stmt)
@@ -112,23 +114,25 @@ async def get_food_entry(
 async def update_food_entry(
     session: AsyncSession,
     *,
-    device_id: uuid.UUID,
+    user_id: uuid.UUID,
     entry_id: uuid.UUID,
     patch: dict,
-    user_id: uuid.UUID | None = None,
+    device_id: uuid.UUID | None = None,
 ) -> FoodEntry | None:
-    entry = await get_food_entry(session, device_id=device_id, entry_id=entry_id, user_id=user_id)
+    entry = await get_food_entry(session, user_id=user_id, entry_id=entry_id)
     if entry is None:
         return None
 
     if "portion_id" in patch:
-        portion = await _get_portion(session, device_id=device_id, portion_id=patch["portion_id"], user_id=user_id)
+        portion = await _get_portion(session, user_id=user_id, portion_id=patch["portion_id"])
         if portion is None or portion.product_id != entry.product_id:
             return None
 
     for k, v in patch.items():
         setattr(entry, k, v)
     entry.updated_at = datetime.now(UTC)
+    if device_id is not None:
+        entry.updated_on_device_id = device_id
     session.add(entry)
     await session.commit()
     await session.refresh(entry)
@@ -138,11 +142,11 @@ async def update_food_entry(
 async def soft_delete_food_entry(
     session: AsyncSession,
     *,
-    device_id: uuid.UUID,
+    user_id: uuid.UUID,
     entry_id: uuid.UUID,
-    user_id: uuid.UUID | None = None,
+    device_id: uuid.UUID | None = None,
 ) -> bool:
-    entry = await get_food_entry(session, device_id=device_id, entry_id=entry_id, user_id=user_id)
+    entry = await get_food_entry(session, user_id=user_id, entry_id=entry_id)
     if entry is None:
         return False
 

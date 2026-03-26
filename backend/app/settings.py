@@ -30,6 +30,9 @@ class Settings(BaseSettings):
     supabase_secret_key: str = ""  # sb_secret_... — for admin operations (replaces legacy service_role)
     supabase_url: str = ""
 
+    # Legacy device-token auth — set to True to allow fallback to device tokens
+    allow_device_auth: bool = False
+
 
 settings = Settings()
 

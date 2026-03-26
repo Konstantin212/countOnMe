@@ -21,17 +21,23 @@ def _not_deleted(stmt: Select):
 async def create_body_weight(
     session: AsyncSession,
     *,
-    device_id: uuid.UUID,
+    user_id: uuid.UUID,
     day: date,
     weight_kg,
-    user_id: uuid.UUID | None = None,
+    device_id: uuid.UUID | None = None,
 ) -> BodyWeight:
     # Only one per day (non-deleted).
-    existing = await get_body_weight_by_day(session, device_id=device_id, day=day, user_id=user_id)
+    existing = await get_body_weight_by_day(session, user_id=user_id, day=day)
     if existing is not None:
         raise WeightConflict("Weight for this day already exists.")
 
-    row = BodyWeight(device_id=device_id, day=day, weight_kg=weight_kg)
+    row = BodyWeight(
+        device_id=device_id,
+        user_id=user_id,
+        created_on_device_id=device_id,
+        day=day,
+        weight_kg=weight_kg,
+    )
     session.add(row)
     await session.commit()
     await session.refresh(row)
@@ -41,13 +47,13 @@ async def create_body_weight(
 async def list_body_weights(
     session: AsyncSession,
     *,
-    device_id: uuid.UUID,
+    user_id: uuid.UUID,
     from_day: date | None = None,
     to_day: date | None = None,
-    user_id: uuid.UUID | None = None,
+    device_id: uuid.UUID | None = None,
 ) -> list[BodyWeight]:
     stmt = _not_deleted(select(BodyWeight)).where(
-        get_owner_filter(BodyWeight, user_id=user_id, device_id=device_id),
+        get_owner_filter(BodyWeight, user_id=user_id),
     )
     if from_day is not None:
         stmt = stmt.where(BodyWeight.day >= from_day)
@@ -61,12 +67,12 @@ async def list_body_weights(
 async def get_body_weight(
     session: AsyncSession,
     *,
-    device_id: uuid.UUID,
+    user_id: uuid.UUID,
     weight_id: uuid.UUID,
-    user_id: uuid.UUID | None = None,
+    device_id: uuid.UUID | None = None,
 ) -> BodyWeight | None:
     stmt = _not_deleted(select(BodyWeight)).where(
-        get_owner_filter(BodyWeight, user_id=user_id, device_id=device_id),
+        get_owner_filter(BodyWeight, user_id=user_id),
         BodyWeight.id == weight_id,
     )
     res = await session.execute(stmt)
@@ -76,12 +82,12 @@ async def get_body_weight(
 async def get_body_weight_by_day(
     session: AsyncSession,
     *,
-    device_id: uuid.UUID,
+    user_id: uuid.UUID,
     day: date,
-    user_id: uuid.UUID | None = None,
+    device_id: uuid.UUID | None = None,
 ) -> BodyWeight | None:
     stmt = _not_deleted(select(BodyWeight)).where(
-        get_owner_filter(BodyWeight, user_id=user_id, device_id=device_id),
+        get_owner_filter(BodyWeight, user_id=user_id),
         BodyWeight.day == day,
     )
     res = await session.execute(stmt)
@@ -91,16 +97,18 @@ async def get_body_weight_by_day(
 async def update_body_weight(
     session: AsyncSession,
     *,
-    device_id: uuid.UUID,
+    user_id: uuid.UUID,
     weight_id: uuid.UUID,
     weight_kg,
-    user_id: uuid.UUID | None = None,
+    device_id: uuid.UUID | None = None,
 ) -> BodyWeight | None:
-    row = await get_body_weight(session, device_id=device_id, weight_id=weight_id, user_id=user_id)
+    row = await get_body_weight(session, user_id=user_id, weight_id=weight_id)
     if row is None:
         return None
     row.weight_kg = weight_kg
     row.updated_at = datetime.now(UTC)
+    if device_id is not None:
+        row.updated_on_device_id = device_id
     session.add(row)
     await session.commit()
     await session.refresh(row)
@@ -110,11 +118,11 @@ async def update_body_weight(
 async def soft_delete_body_weight(
     session: AsyncSession,
     *,
-    device_id: uuid.UUID,
+    user_id: uuid.UUID,
     weight_id: uuid.UUID,
-    user_id: uuid.UUID | None = None,
+    device_id: uuid.UUID | None = None,
 ) -> bool:
-    row = await get_body_weight(session, device_id=device_id, weight_id=weight_id, user_id=user_id)
+    row = await get_body_weight(session, user_id=user_id, weight_id=weight_id)
     if row is None:
         return False
     row.deleted_at = datetime.now(UTC)

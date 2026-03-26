@@ -17,19 +17,19 @@ from app.features.portions.service import (
     soft_delete_portion,
     update_portion,
 )
-from tests.factories import create_device, create_product
 from tests.factories import create_portion as factory_create_portion
+from tests.factories import create_product, create_user
 
 
 @pytest.mark.asyncio
 async def test_create_portion_first_is_default(db_session: AsyncSession):
     """Test that the first portion is automatically set as default."""
-    device = await create_device(db_session)
-    product = await create_product(db_session, device.id)
+    user = await create_user(db_session)
+    product = await create_product(db_session, user_id=user.id)
 
     portion = await create_portion(
         db_session,
-        device_id=device.id,
+        user_id=user.id,
         product_id=product.id,
         label="100g",
         base_amount=Decimal("100"),
@@ -47,12 +47,12 @@ async def test_create_portion_first_is_default(db_session: AsyncSession):
 @pytest.mark.asyncio
 async def test_create_portion_explicit_default_clears_others(db_session: AsyncSession):
     """Test that creating a portion with is_default=True clears other defaults."""
-    device = await create_device(db_session)
-    product = await create_product(db_session, device.id)
+    user = await create_user(db_session)
+    product = await create_product(db_session, user_id=user.id)
 
     portion1 = await create_portion(
         db_session,
-        device_id=device.id,
+        user_id=user.id,
         product_id=product.id,
         label="100g",
         base_amount=Decimal("100"),
@@ -66,7 +66,7 @@ async def test_create_portion_explicit_default_clears_others(db_session: AsyncSe
 
     portion2 = await create_portion(
         db_session,
-        device_id=device.id,
+        user_id=user.id,
         product_id=product.id,
         label="1 piece",
         base_amount=Decimal("50"),
@@ -88,11 +88,11 @@ async def test_create_portion_explicit_default_clears_others(db_session: AsyncSe
 @pytest.mark.asyncio
 async def test_create_portion_product_not_found(db_session: AsyncSession):
     """Test that creating a portion for non-existent product returns None."""
-    device = await create_device(db_session)
+    user = await create_user(db_session)
 
     result = await create_portion(
         db_session,
-        device_id=device.id,
+        user_id=user.id,
         product_id=uuid.uuid4(),
         label="100g",
         base_amount=Decimal("100"),
@@ -108,15 +108,15 @@ async def test_create_portion_product_not_found(db_session: AsyncSession):
 
 
 @pytest.mark.asyncio
-async def test_create_portion_wrong_device(db_session: AsyncSession):
-    """Test that creating a portion for another device's product fails."""
-    device1 = await create_device(db_session)
-    device2 = await create_device(db_session)
-    product = await create_product(db_session, device1.id)
+async def test_create_portion_wrong_user(db_session: AsyncSession):
+    """Test that creating a portion for another user's product fails."""
+    user1 = await create_user(db_session)
+    user2 = await create_user(db_session)
+    product = await create_product(db_session, user_id=user1.id)
 
     result = await create_portion(
         db_session,
-        device_id=device2.id,
+        user_id=user2.id,
         product_id=product.id,
         label="100g",
         base_amount=Decimal("100"),
@@ -134,10 +134,10 @@ async def test_create_portion_wrong_device(db_session: AsyncSession):
 @pytest.mark.asyncio
 async def test_list_portions_empty(db_session: AsyncSession):
     """Test listing portions when there are none."""
-    device = await create_device(db_session)
-    product = await create_product(db_session, device.id)
+    user = await create_user(db_session)
+    product = await create_product(db_session, user_id=user.id)
 
-    portions = await list_portions(db_session, device_id=device.id, product_id=product.id)
+    portions = await list_portions(db_session, user_id=user.id, product_id=product.id)
 
     assert portions == []
 
@@ -145,20 +145,20 @@ async def test_list_portions_empty(db_session: AsyncSession):
 @pytest.mark.asyncio
 async def test_list_portions_ordered(db_session: AsyncSession):
     """Test that portions are ordered by is_default desc, then label asc."""
-    device = await create_device(db_session)
-    product = await create_product(db_session, device.id)
+    user = await create_user(db_session)
+    product = await create_product(db_session, user_id=user.id)
 
     await factory_create_portion(
-        db_session, device.id, product.id, label="C portion", is_default=False
+        db_session, user_id=user.id, product_id= product.id, label="C portion", is_default=False
     )
     await factory_create_portion(
-        db_session, device.id, product.id, label="A portion", is_default=True
+        db_session, user_id=user.id, product_id= product.id, label="A portion", is_default=True
     )
     await factory_create_portion(
-        db_session, device.id, product.id, label="B portion", is_default=False
+        db_session, user_id=user.id, product_id= product.id, label="B portion", is_default=False
     )
 
-    portions = await list_portions(db_session, device_id=device.id, product_id=product.id)
+    portions = await list_portions(db_session, user_id=user.id, product_id=product.id)
 
     assert len(portions) == 3
     assert portions[0].label == "A portion"  # Default first
@@ -169,20 +169,20 @@ async def test_list_portions_ordered(db_session: AsyncSession):
 @pytest.mark.asyncio
 async def test_list_portions_excludes_deleted(db_session: AsyncSession):
     """Test that soft-deleted portions are not listed."""
-    device = await create_device(db_session)
-    product = await create_product(db_session, device.id)
+    user = await create_user(db_session)
+    product = await create_product(db_session, user_id=user.id)
 
-    _portion1 = await factory_create_portion(db_session, device.id, product.id, label="Keep")
-    portion2 = await factory_create_portion(db_session, device.id, product.id, label="Delete")
+    _portion1 = await factory_create_portion(db_session, user_id=user.id, product_id=product.id, label="Keep")
+    portion2 = await factory_create_portion(db_session, user_id=user.id, product_id=product.id, label="Delete")
 
     # Create a third portion to become the default before deleting portion2
     _portion3 = await factory_create_portion(
-        db_session, device.id, product.id, label="Backup", is_default=False
+        db_session, user_id=user.id, product_id= product.id, label="Backup", is_default=False
     )
 
-    await soft_delete_portion(db_session, device_id=device.id, portion_id=portion2.id)
+    await soft_delete_portion(db_session, user_id=user.id, portion_id=portion2.id)
 
-    portions = await list_portions(db_session, device_id=device.id, product_id=product.id)
+    portions = await list_portions(db_session, user_id=user.id, product_id=product.id)
 
     labels = [p.label for p in portions]
     assert "Delete" not in labels
@@ -190,18 +190,18 @@ async def test_list_portions_excludes_deleted(db_session: AsyncSession):
 
 
 @pytest.mark.asyncio
-async def test_list_portions_device_scoped(db_session: AsyncSession):
-    """Test that portions are scoped by device."""
-    device1 = await create_device(db_session)
-    device2 = await create_device(db_session)
-    product1 = await create_product(db_session, device1.id)
-    product2 = await create_product(db_session, device2.id)
+async def test_list_portions_user_scoped(db_session: AsyncSession):
+    """Test that portions are scoped by user."""
+    user1 = await create_user(db_session)
+    user2 = await create_user(db_session)
+    product1 = await create_product(db_session, user_id=user1.id)
+    product2 = await create_product(db_session, user_id=user2.id)
 
-    await factory_create_portion(db_session, device1.id, product1.id, label="Device1 Portion")
-    await factory_create_portion(db_session, device2.id, product2.id, label="Device2 Portion")
+    await factory_create_portion(db_session, user_id=user1.id, product_id=product1.id, label="Device1 Portion")
+    await factory_create_portion(db_session, user_id=user2.id, product_id=product2.id, label="Device2 Portion")
 
-    portions1 = await list_portions(db_session, device_id=device1.id, product_id=product1.id)
-    portions2 = await list_portions(db_session, device_id=device2.id, product_id=product2.id)
+    portions1 = await list_portions(db_session, user_id=user1.id, product_id=product1.id)
+    portions2 = await list_portions(db_session, user_id=user2.id, product_id=product2.id)
 
     assert len(portions1) == 1
     assert portions1[0].label == "Device1 Portion"
@@ -212,11 +212,11 @@ async def test_list_portions_device_scoped(db_session: AsyncSession):
 @pytest.mark.asyncio
 async def test_get_portion_found(db_session: AsyncSession):
     """Test getting a portion by ID."""
-    device = await create_device(db_session)
-    product = await create_product(db_session, device.id)
-    portion = await factory_create_portion(db_session, device.id, product.id)
+    user = await create_user(db_session)
+    product = await create_product(db_session, user_id=user.id)
+    portion = await factory_create_portion(db_session, user_id=user.id, product_id=product.id)
 
-    result = await get_portion(db_session, device_id=device.id, portion_id=portion.id)
+    result = await get_portion(db_session, user_id=user.id, portion_id=portion.id)
 
     assert result is not None
     assert result.id == portion.id
@@ -225,22 +225,22 @@ async def test_get_portion_found(db_session: AsyncSession):
 @pytest.mark.asyncio
 async def test_get_portion_not_found(db_session: AsyncSession):
     """Test getting a non-existent portion."""
-    device = await create_device(db_session)
+    user = await create_user(db_session)
 
-    result = await get_portion(db_session, device_id=device.id, portion_id=uuid.uuid4())
+    result = await get_portion(db_session, user_id=user.id, portion_id=uuid.uuid4())
 
     assert result is None
 
 
 @pytest.mark.asyncio
-async def test_get_portion_wrong_device(db_session: AsyncSession):
-    """Test that portions from other devices cannot be accessed."""
-    device1 = await create_device(db_session)
-    device2 = await create_device(db_session)
-    product = await create_product(db_session, device1.id)
-    portion = await factory_create_portion(db_session, device1.id, product.id)
+async def test_get_portion_wrong_user(db_session: AsyncSession):
+    """Test that portions from other users cannot be accessed."""
+    user1 = await create_user(db_session)
+    user2 = await create_user(db_session)
+    product = await create_product(db_session, user_id=user1.id)
+    portion = await factory_create_portion(db_session, user_id=user1.id, product_id=product.id)
 
-    result = await get_portion(db_session, device_id=device2.id, portion_id=portion.id)
+    result = await get_portion(db_session, user_id=user2.id, portion_id=portion.id)
 
     assert result is None
 
@@ -248,14 +248,14 @@ async def test_get_portion_wrong_device(db_session: AsyncSession):
 @pytest.mark.asyncio
 async def test_get_portion_deleted(db_session: AsyncSession):
     """Test that soft-deleted portions cannot be retrieved."""
-    device = await create_device(db_session)
-    product = await create_product(db_session, device.id)
-    portion1 = await factory_create_portion(db_session, device.id, product.id)
-    _portion2 = await factory_create_portion(db_session, device.id, product.id, is_default=False)
+    user = await create_user(db_session)
+    product = await create_product(db_session, user_id=user.id)
+    portion1 = await factory_create_portion(db_session, user_id=user.id, product_id=product.id)
+    _portion2 = await factory_create_portion(db_session, user_id=user.id, product_id=product.id, is_default=False)
 
-    await soft_delete_portion(db_session, device_id=device.id, portion_id=portion1.id)
+    await soft_delete_portion(db_session, user_id=user.id, portion_id=portion1.id)
 
-    result = await get_portion(db_session, device_id=device.id, portion_id=portion1.id)
+    result = await get_portion(db_session, user_id=user.id, portion_id=portion1.id)
 
     assert result is None
 
@@ -263,19 +263,19 @@ async def test_get_portion_deleted(db_session: AsyncSession):
 @pytest.mark.asyncio
 async def test_update_portion_set_default(db_session: AsyncSession):
     """Test updating a portion to be the default."""
-    device = await create_device(db_session)
-    product = await create_product(db_session, device.id)
+    user = await create_user(db_session)
+    product = await create_product(db_session, user_id=user.id)
 
     portion1 = await factory_create_portion(
-        db_session, device.id, product.id, label="First", is_default=True
+        db_session, user_id=user.id, product_id= product.id, label="First", is_default=True
     )
     portion2 = await factory_create_portion(
-        db_session, device.id, product.id, label="Second", is_default=False
+        db_session, user_id=user.id, product_id= product.id, label="Second", is_default=False
     )
 
     updated = await update_portion(
         db_session,
-        device_id=device.id,
+        user_id=user.id,
         portion_id=portion2.id,
         patch={"is_default": True},
     )
@@ -289,15 +289,15 @@ async def test_update_portion_set_default(db_session: AsyncSession):
 @pytest.mark.asyncio
 async def test_update_portion_cannot_unset_default(db_session: AsyncSession):
     """Test that unsetting the default portion raises PortionConflict."""
-    device = await create_device(db_session)
-    product = await create_product(db_session, device.id)
+    user = await create_user(db_session)
+    product = await create_product(db_session, user_id=user.id)
 
-    portion = await factory_create_portion(db_session, device.id, product.id, is_default=True)
+    portion = await factory_create_portion(db_session, user_id=user.id, product_id=product.id, is_default=True)
 
     with pytest.raises(PortionConflict):
         await update_portion(
             db_session,
-            device_id=device.id,
+            user_id=user.id,
             portion_id=portion.id,
             patch={"is_default": False},
         )
@@ -306,20 +306,20 @@ async def test_update_portion_cannot_unset_default(db_session: AsyncSession):
 @pytest.mark.asyncio
 async def test_update_portion_other_fields(db_session: AsyncSession):
     """Test updating other fields without touching is_default."""
-    device = await create_device(db_session)
-    product = await create_product(db_session, device.id)
+    user = await create_user(db_session)
+    product = await create_product(db_session, user_id=user.id)
 
     portion = await factory_create_portion(
         db_session,
-        device.id,
-        product.id,
+        user_id=user.id,
+        product_id=product.id,
         label="Original",
         calories=Decimal("200"),
     )
 
     updated = await update_portion(
         db_session,
-        device_id=device.id,
+        user_id=user.id,
         portion_id=portion.id,
         patch={"label": "Updated", "calories": Decimal("250")},
     )
@@ -331,17 +331,17 @@ async def test_update_portion_other_fields(db_session: AsyncSession):
 @pytest.mark.asyncio
 async def test_soft_delete_portion_promotes_next(db_session: AsyncSession):
     """Test that deleting the default portion promotes the next one."""
-    device = await create_device(db_session)
-    product = await create_product(db_session, device.id)
+    user = await create_user(db_session)
+    product = await create_product(db_session, user_id=user.id)
 
     portion1 = await factory_create_portion(
-        db_session, device.id, product.id, label="First", is_default=True
+        db_session, user_id=user.id, product_id= product.id, label="First", is_default=True
     )
     portion2 = await factory_create_portion(
-        db_session, device.id, product.id, label="Second", is_default=False
+        db_session, user_id=user.id, product_id= product.id, label="Second", is_default=False
     )
 
-    result = await soft_delete_portion(db_session, device_id=device.id, portion_id=portion1.id)
+    result = await soft_delete_portion(db_session, user_id=user.id, portion_id=portion1.id)
 
     await db_session.refresh(portion2)
 
@@ -352,29 +352,29 @@ async def test_soft_delete_portion_promotes_next(db_session: AsyncSession):
 @pytest.mark.asyncio
 async def test_soft_delete_portion_only_default_raises(db_session: AsyncSession):
     """Test that deleting the only default portion raises PortionConflict."""
-    device = await create_device(db_session)
-    product = await create_product(db_session, device.id)
+    user = await create_user(db_session)
+    product = await create_product(db_session, user_id=user.id)
 
-    portion = await factory_create_portion(db_session, device.id, product.id, is_default=True)
+    portion = await factory_create_portion(db_session, user_id=user.id, product_id=product.id, is_default=True)
 
     with pytest.raises(PortionConflict):
-        await soft_delete_portion(db_session, device_id=device.id, portion_id=portion.id)
+        await soft_delete_portion(db_session, user_id=user.id, portion_id=portion.id)
 
 
 @pytest.mark.asyncio
 async def test_soft_delete_portion_non_default(db_session: AsyncSession):
     """Test deleting a non-default portion."""
-    device = await create_device(db_session)
-    product = await create_product(db_session, device.id)
+    user = await create_user(db_session)
+    product = await create_product(db_session, user_id=user.id)
 
     portion1 = await factory_create_portion(
-        db_session, device.id, product.id, label="First", is_default=True
+        db_session, user_id=user.id, product_id= product.id, label="First", is_default=True
     )
     portion2 = await factory_create_portion(
-        db_session, device.id, product.id, label="Second", is_default=False
+        db_session, user_id=user.id, product_id= product.id, label="Second", is_default=False
     )
 
-    result = await soft_delete_portion(db_session, device_id=device.id, portion_id=portion2.id)
+    result = await soft_delete_portion(db_session, user_id=user.id, portion_id=portion2.id)
 
     assert result is True
     # portion1 should still be default
@@ -385,8 +385,8 @@ async def test_soft_delete_portion_non_default(db_session: AsyncSession):
 @pytest.mark.asyncio
 async def test_soft_delete_portion_not_found(db_session: AsyncSession):
     """Test soft deleting a non-existent portion."""
-    device = await create_device(db_session)
+    user = await create_user(db_session)
 
-    result = await soft_delete_portion(db_session, device_id=device.id, portion_id=uuid.uuid4())
+    result = await soft_delete_portion(db_session, user_id=user.id, portion_id=uuid.uuid4())
 
     assert result is False

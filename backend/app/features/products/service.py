@@ -20,12 +20,12 @@ def _not_deleted(stmt: Select) -> Select:
 async def get_product_by_barcode(
     session: AsyncSession,
     *,
-    device_id: uuid.UUID,
+    user_id: uuid.UUID,
     barcode: str,
-    user_id: uuid.UUID | None = None,
+    device_id: uuid.UUID | None = None,
 ) -> Product | None:
     stmt = _not_deleted(select(Product)).where(
-        get_owner_filter(Product, user_id=user_id, device_id=device_id),
+        get_owner_filter(Product, user_id=user_id),
         Product.barcode == barcode,
     )
     res = await session.execute(stmt)
@@ -35,22 +35,24 @@ async def get_product_by_barcode(
 async def create_product(
     session: AsyncSession,
     *,
-    device_id: uuid.UUID,
+    user_id: uuid.UUID,
     name: str,
     product_id: uuid.UUID | None = None,
     barcode: str | None = None,
-    user_id: uuid.UUID | None = None,
+    device_id: uuid.UUID | None = None,
 ) -> Product:
-    # Barcode dedup: if barcode provided, check for existing product on this device
+    # Barcode dedup: if barcode provided, check for existing product for this user
     if barcode is not None:
         existing = await get_product_by_barcode(
-            session, device_id=device_id, barcode=barcode, user_id=user_id,
+            session, user_id=user_id, barcode=barcode,
         )
         if existing is not None:
             return existing
 
     product = Product(
         device_id=device_id,
+        user_id=user_id,
+        created_on_device_id=device_id,
         name=name,
         barcode=barcode,
         **({"id": product_id} if product_id else {}),
@@ -64,12 +66,12 @@ async def create_product(
 async def list_products(
     session: AsyncSession,
     *,
-    device_id: uuid.UUID,
-    user_id: uuid.UUID | None = None,
+    user_id: uuid.UUID,
+    device_id: uuid.UUID | None = None,
 ) -> list[Product]:
     stmt = (
         _not_deleted(select(Product))
-        .where(get_owner_filter(Product, user_id=user_id, device_id=device_id))
+        .where(get_owner_filter(Product, user_id=user_id))
         .order_by(Product.name.asc())
     )
     res = await session.execute(stmt)
@@ -79,12 +81,12 @@ async def list_products(
 async def get_product(
     session: AsyncSession,
     *,
-    device_id: uuid.UUID,
+    user_id: uuid.UUID,
     product_id: uuid.UUID,
-    user_id: uuid.UUID | None = None,
+    device_id: uuid.UUID | None = None,
 ) -> Product | None:
     stmt = _not_deleted(select(Product)).where(
-        get_owner_filter(Product, user_id=user_id, device_id=device_id),
+        get_owner_filter(Product, user_id=user_id),
         Product.id == product_id,
     )
     res = await session.execute(stmt)
@@ -94,13 +96,13 @@ async def get_product(
 async def update_product(
     session: AsyncSession,
     *,
-    device_id: uuid.UUID,
+    user_id: uuid.UUID,
     product_id: uuid.UUID,
     name: str | None,
     barcode: str | None = None,
-    user_id: uuid.UUID | None = None,
+    device_id: uuid.UUID | None = None,
 ) -> Product | None:
-    product = await get_product(session, device_id=device_id, product_id=product_id, user_id=user_id)
+    product = await get_product(session, user_id=user_id, product_id=product_id)
     if product is None:
         return None
 
@@ -109,6 +111,8 @@ async def update_product(
     if barcode is not None:
         product.barcode = barcode
     product.updated_at = datetime.now(UTC)
+    if device_id is not None:
+        product.updated_on_device_id = device_id
     session.add(product)
 
     await session.commit()
@@ -119,15 +123,15 @@ async def update_product(
 async def check_product_name_available(
     session: AsyncSession,
     *,
-    device_id: uuid.UUID,
+    user_id: uuid.UUID,
     name: str,
-    user_id: uuid.UUID | None = None,
+    device_id: uuid.UUID | None = None,
 ) -> bool:
     stmt = (
         select(func.count())
         .select_from(Product)
         .where(
-            get_owner_filter(Product, user_id=user_id, device_id=device_id),
+            get_owner_filter(Product, user_id=user_id),
             func.lower(Product.name) == func.lower(name),
             Product.deleted_at.is_(None),
         )
@@ -157,17 +161,17 @@ def _relevance_rank(name: str, query: str) -> int:
 async def search_products(
     session: AsyncSession,
     *,
-    device_id: uuid.UUID,
+    user_id: uuid.UUID,
     q: str,
     limit: int = 35,
-    user_id: uuid.UUID | None = None,
+    device_id: uuid.UUID | None = None,
 ) -> list[ProductSearchResultItem]:
     escaped_q = q.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
 
     # Query 1: user products — fetch up to limit candidates from each source
     user_stmt = (
         _not_deleted(select(Product))
-        .where(get_owner_filter(Product, user_id=user_id, device_id=device_id), Product.name.ilike(f"%{escaped_q}%"))
+        .where(get_owner_filter(Product, user_id=user_id), Product.name.ilike(f"%{escaped_q}%"))
         .order_by(Product.name.asc())
         .limit(limit)
     )
@@ -244,16 +248,18 @@ async def search_products(
 async def soft_delete_product(
     session: AsyncSession,
     *,
-    device_id: uuid.UUID,
+    user_id: uuid.UUID,
     product_id: uuid.UUID,
-    user_id: uuid.UUID | None = None,
+    device_id: uuid.UUID | None = None,
 ) -> bool:
-    product = await get_product(session, device_id=device_id, product_id=product_id, user_id=user_id)
+    product = await get_product(session, user_id=user_id, product_id=product_id)
     if product is None:
         return False
 
     product.deleted_at = datetime.now(UTC)
     product.updated_at = datetime.now(UTC)
+    if device_id is not None:
+        product.updated_on_device_id = device_id
     session.add(product)
     await session.commit()
     return True

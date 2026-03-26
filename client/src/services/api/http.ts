@@ -1,5 +1,6 @@
 import { buildUrl } from "./config";
 import { supabase } from "@services/supabase";
+import { getOrCreateDeviceId } from "@storage/device";
 
 export class ApiError extends Error {
   status?: number;
@@ -65,7 +66,10 @@ export const apiFetch = async <T>(
   path: string,
   { method = "GET", body, query }: ApiFetchOptions = {},
 ): Promise<T> => {
-  const token = await getAccessToken();
+  const [token, deviceId] = await Promise.all([
+    getAccessToken(),
+    getOrCreateDeviceId(),
+  ]);
   const url = buildUrl(path, query);
 
   const doFetch = async (bearer: string) => {
@@ -75,6 +79,7 @@ export const apiFetch = async <T>(
         Accept: "application/json",
         "Content-Type": "application/json",
         Authorization: `Bearer ${bearer}`,
+        "X-Device-Id": deviceId,
       },
       body: body === undefined ? undefined : JSON.stringify(body),
     });

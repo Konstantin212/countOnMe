@@ -148,10 +148,13 @@ async def test_claim_skips_soft_deleted_rows(db_session: AsyncSession) -> None:
     user = await _create_user(db_session)
     await _link_device(db_session, user.id, device.id)
 
-    from app.features.products.service import soft_delete_product
+    from datetime import UTC, datetime
 
     product = await create_product(db_session, device.id)
-    await soft_delete_product(db_session, device_id=device.id, product_id=product.id)
+    # Directly soft-delete (service requires user_id which isn't set yet)
+    product.deleted_at = datetime.now(UTC)
+    db_session.add(product)
+    await db_session.commit()
 
     counts = await claim_device_data(db_session, user_id=user.id, device_id=device.id)
     await db_session.commit()

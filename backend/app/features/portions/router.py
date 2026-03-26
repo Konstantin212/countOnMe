@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db import get_session
-from app.core.deps import get_current_device_id
+from app.core.deps import get_current_user_id, get_optional_device_id
 from app.features.portions.schemas import (
     PortionCreateRequest,
     PortionResponse,
@@ -27,10 +27,10 @@ router = APIRouter(tags=["portions"])
 @router.get("/products/{product_id}/portions", response_model=list[PortionResponse])
 async def portions_list(
     product_id: uuid.UUID,
-    device_id: uuid.UUID = Depends(get_current_device_id),
+    user_id: uuid.UUID = Depends(get_current_user_id),
     session: AsyncSession = Depends(get_session),
 ) -> list[PortionResponse]:
-    return await list_portions(session, device_id=device_id, product_id=product_id)
+    return await list_portions(session, user_id=user_id, product_id=product_id)
 
 
 @router.post(
@@ -41,12 +41,13 @@ async def portions_list(
 async def portions_create(
     product_id: uuid.UUID,
     body: PortionCreateRequest,
-    device_id: uuid.UUID = Depends(get_current_device_id),
+    user_id: uuid.UUID = Depends(get_current_user_id),
+    device_id: uuid.UUID | None = Depends(get_optional_device_id),
     session: AsyncSession = Depends(get_session),
 ) -> PortionResponse:
     portion = await create_portion(
         session,
-        device_id=device_id,
+        user_id=user_id,
         product_id=product_id,
         label=body.label,
         base_amount=body.base_amount,
@@ -56,6 +57,7 @@ async def portions_create(
         carbs=body.carbs,
         fat=body.fat,
         is_default=body.is_default,
+        device_id=device_id,
     )
     if portion is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
@@ -65,10 +67,10 @@ async def portions_create(
 @router.get("/portions/{portion_id}", response_model=PortionResponse)
 async def portions_get(
     portion_id: uuid.UUID,
-    device_id: uuid.UUID = Depends(get_current_device_id),
+    user_id: uuid.UUID = Depends(get_current_user_id),
     session: AsyncSession = Depends(get_session),
 ) -> PortionResponse:
-    portion = await get_portion(session, device_id=device_id, portion_id=portion_id)
+    portion = await get_portion(session, user_id=user_id, portion_id=portion_id)
     if portion is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
     return portion
@@ -78,7 +80,8 @@ async def portions_get(
 async def portions_update(
     portion_id: uuid.UUID,
     body: PortionUpdateRequest,
-    device_id: uuid.UUID = Depends(get_current_device_id),
+    user_id: uuid.UUID = Depends(get_current_user_id),
+    device_id: uuid.UUID | None = Depends(get_optional_device_id),
     session: AsyncSession = Depends(get_session),
 ) -> PortionResponse:
     patch: dict = {}
@@ -88,7 +91,7 @@ async def portions_update(
             patch[key] = val
 
     try:
-        portion = await update_portion(session, device_id=device_id, portion_id=portion_id, patch=patch)
+        portion = await update_portion(session, user_id=user_id, portion_id=portion_id, patch=patch, device_id=device_id)
     except PortionConflict as e:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e)) from e
 
@@ -100,11 +103,12 @@ async def portions_update(
 @router.delete("/portions/{portion_id}", status_code=status.HTTP_204_NO_CONTENT, response_model=None)
 async def portions_delete(
     portion_id: uuid.UUID,
-    device_id: uuid.UUID = Depends(get_current_device_id),
+    user_id: uuid.UUID = Depends(get_current_user_id),
+    device_id: uuid.UUID | None = Depends(get_optional_device_id),
     session: AsyncSession = Depends(get_session),
 ) -> None:
     try:
-        ok = await soft_delete_portion(session, device_id=device_id, portion_id=portion_id)
+        ok = await soft_delete_portion(session, user_id=user_id, portion_id=portion_id, device_id=device_id)
     except PortionConflict as e:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e)) from e
 

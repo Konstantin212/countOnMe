@@ -9,7 +9,7 @@ from decimal import Decimal
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.enums import MealType, Unit
-from app.features.auth.models import Device
+from app.features.auth.models import Device, User, UserDevice
 from app.features.auth.service import issue_device_token
 from app.features.catalog.models import CatalogPortion, CatalogProduct
 from app.features.goals.models import UserGoal
@@ -17,6 +17,24 @@ from app.features.meals.models import FoodEntry
 from app.features.portions.models import ProductPortion
 from app.features.products.models import Product
 from app.features.weights.models import BodyWeight
+
+
+async def create_user(
+    session: AsyncSession,
+    **overrides,
+) -> User:
+    """Create a test user."""
+    defaults = {
+        "supabase_id": uuid.uuid4(),
+        "email": f"test-{uuid.uuid4().hex[:8]}@test.com",
+    }
+    defaults.update(overrides)
+
+    user = User(**defaults)
+    session.add(user)
+    await session.flush()
+    await session.refresh(user)
+    return user
 
 
 async def create_device(
@@ -42,14 +60,37 @@ async def create_device(
     return device
 
 
+async def create_user_device(
+    session: AsyncSession,
+    user_id: uuid.UUID,
+    device_id: uuid.UUID,
+    **overrides,
+) -> UserDevice:
+    """Create a test user-device link."""
+    defaults = {
+        "user_id": user_id,
+        "device_id": device_id,
+    }
+    defaults.update(overrides)
+
+    user_device = UserDevice(**defaults)
+    session.add(user_device)
+    await session.flush()
+    await session.refresh(user_device)
+    return user_device
+
+
 async def create_product(
     session: AsyncSession,
-    device_id: uuid.UUID,
+    device_id: uuid.UUID | None = None,
+    *,
+    user_id: uuid.UUID | None = None,
     **overrides,
 ) -> Product:
     """Create a test product."""
     defaults = {
         "device_id": device_id,
+        "user_id": user_id,
         "name": f"Test Product {uuid.uuid4().hex[:8]}",
     }
     defaults.update(overrides)
@@ -63,13 +104,16 @@ async def create_product(
 
 async def create_portion(
     session: AsyncSession,
-    device_id: uuid.UUID,
-    product_id: uuid.UUID,
+    device_id: uuid.UUID | None = None,
+    product_id: uuid.UUID | None = None,
+    *,
+    user_id: uuid.UUID | None = None,
     **overrides,
 ) -> ProductPortion:
     """Create a test product portion."""
     defaults = {
         "device_id": device_id,
+        "user_id": user_id,
         "product_id": product_id,
         "label": f"Test Portion {uuid.uuid4().hex[:8]}",
         "base_amount": Decimal("100"),
@@ -91,14 +135,17 @@ async def create_portion(
 
 async def create_food_entry(
     session: AsyncSession,
-    device_id: uuid.UUID,
-    product_id: uuid.UUID,
-    portion_id: uuid.UUID,
+    device_id: uuid.UUID | None = None,
+    product_id: uuid.UUID | None = None,
+    portion_id: uuid.UUID | None = None,
+    *,
+    user_id: uuid.UUID | None = None,
     **overrides,
 ) -> FoodEntry:
     """Create a test food entry."""
     defaults = {
         "device_id": device_id,
+        "user_id": user_id,
         "product_id": product_id,
         "portion_id": portion_id,
         "day": date.today(),
@@ -117,12 +164,15 @@ async def create_food_entry(
 
 async def create_goal(
     session: AsyncSession,
-    device_id: uuid.UUID,
+    device_id: uuid.UUID | None = None,
+    *,
+    user_id: uuid.UUID | None = None,
     **overrides,
 ) -> UserGoal:
     """Create a test user goal (manual goal by default)."""
     defaults = {
         "device_id": device_id,
+        "user_id": user_id,
         "goal_type": "manual",
         "daily_calories_kcal": 2000,
         "protein_percent": 30,
@@ -144,12 +194,15 @@ async def create_goal(
 
 async def create_body_weight(
     session: AsyncSession,
-    device_id: uuid.UUID,
+    device_id: uuid.UUID | None = None,
+    *,
+    user_id: uuid.UUID | None = None,
     **overrides,
 ) -> BodyWeight:
     """Create a test body weight entry."""
     defaults = {
         "device_id": device_id,
+        "user_id": user_id,
         "day": date.today(),
         "weight_kg": Decimal("70.5"),
     }

@@ -36,15 +36,15 @@ def _add(a: MacroTotals, b: MacroTotals) -> MacroTotals:
 async def get_day_stats(
     session: AsyncSession,
     *,
-    device_id: uuid.UUID,
+    user_id: uuid.UUID,
     day: date,
-    user_id: uuid.UUID | None = None,
+    device_id: uuid.UUID | None = None,
 ) -> tuple[MacroTotals, dict[MealType, MacroTotals]]:
     stmt = (
         select(FoodEntry, ProductPortion)
         .join(ProductPortion, ProductPortion.id == FoodEntry.portion_id)
         .where(
-            get_owner_filter(FoodEntry, user_id=user_id, device_id=device_id),
+            get_owner_filter(FoodEntry, user_id=user_id),
             FoodEntry.deleted_at.is_(None),
             FoodEntry.day == day,
             ProductPortion.deleted_at.is_(None),
@@ -75,10 +75,10 @@ async def get_day_stats(
 async def get_daily_stats(
     session: AsyncSession,
     *,
-    device_id: uuid.UUID,
+    user_id: uuid.UUID,
     from_day: date,
     to_day: date,
-    user_id: uuid.UUID | None = None,
+    device_id: uuid.UUID | None = None,
 ) -> list[tuple[date, MacroTotals]]:
     if to_day < from_day:
         return []
@@ -86,7 +86,7 @@ async def get_daily_stats(
     out: list[tuple[date, MacroTotals]] = []
     cur = from_day
     while cur <= to_day:
-        totals, _ = await get_day_stats(session, device_id=device_id, day=cur, user_id=user_id)
+        totals, _ = await get_day_stats(session, user_id=user_id, day=cur)
         out.append((cur, totals))
         cur += timedelta(days=1)
     return out

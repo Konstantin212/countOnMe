@@ -19,17 +19,17 @@ from app.features.products.service import (
     soft_delete_product,
     update_product,
 )
-from tests.factories import create_device
+from tests.factories import create_user
 
 
 @pytest.mark.asyncio
 async def test_create_product(db_session: AsyncSession):
     """Test creating a product."""
-    device = await create_device(db_session)
-    product = await create_product(db_session, device_id=device.id, name="Apple")
+    user = await create_user(db_session)
+    product = await create_product(db_session, user_id=user.id, name="Apple")
 
     assert product.id is not None
-    assert product.device_id == device.id
+    assert product.user_id == user.id
     assert product.name == "Apple"
     assert product.created_at is not None
     assert product.deleted_at is None
@@ -38,10 +38,10 @@ async def test_create_product(db_session: AsyncSession):
 @pytest.mark.asyncio
 async def test_create_product_with_id(db_session: AsyncSession):
     """Test creating a product with explicit ID."""
-    device = await create_device(db_session)
+    user = await create_user(db_session)
     product_id = uuid.uuid4()
     product = await create_product(
-        db_session, device_id=device.id, name="Banana", product_id=product_id
+        db_session, user_id=user.id, name="Banana", product_id=product_id
     )
 
     assert product.id == product_id
@@ -51,8 +51,8 @@ async def test_create_product_with_id(db_session: AsyncSession):
 @pytest.mark.asyncio
 async def test_list_products_empty(db_session: AsyncSession):
     """Test listing products when there are none."""
-    device = await create_device(db_session)
-    products = await list_products(db_session, device_id=device.id)
+    user = await create_user(db_session)
+    products = await list_products(db_session, user_id=user.id)
 
     assert products == []
 
@@ -60,12 +60,12 @@ async def test_list_products_empty(db_session: AsyncSession):
 @pytest.mark.asyncio
 async def test_list_products_alphabetical(db_session: AsyncSession):
     """Test that products are returned in alphabetical order."""
-    device = await create_device(db_session)
-    await create_product(db_session, device_id=device.id, name="Carrot")
-    await create_product(db_session, device_id=device.id, name="Apple")
-    await create_product(db_session, device_id=device.id, name="Banana")
+    user = await create_user(db_session)
+    await create_product(db_session, user_id=user.id, name="Carrot")
+    await create_product(db_session, user_id=user.id, name="Apple")
+    await create_product(db_session, user_id=user.id, name="Banana")
 
-    products = await list_products(db_session, device_id=device.id)
+    products = await list_products(db_session, user_id=user.id)
 
     assert len(products) == 3
     assert products[0].name == "Apple"
@@ -76,43 +76,43 @@ async def test_list_products_alphabetical(db_session: AsyncSession):
 @pytest.mark.asyncio
 async def test_list_products_excludes_deleted(db_session: AsyncSession):
     """Test that soft-deleted products are not listed."""
-    device = await create_device(db_session)
-    await create_product(db_session, device_id=device.id, name="Apple")
-    product2 = await create_product(db_session, device_id=device.id, name="Banana")
+    user = await create_user(db_session)
+    await create_product(db_session, user_id=user.id, name="Apple")
+    product2 = await create_product(db_session, user_id=user.id, name="Banana")
 
     # Soft delete product2
-    await soft_delete_product(db_session, device_id=device.id, product_id=product2.id)
+    await soft_delete_product(db_session, user_id=user.id, product_id=product2.id)
 
-    products = await list_products(db_session, device_id=device.id)
+    products = await list_products(db_session, user_id=user.id)
 
     assert len(products) == 1
     assert products[0].name == "Apple"
 
 
 @pytest.mark.asyncio
-async def test_list_products_device_scoped(db_session: AsyncSession):
-    """Test that products are scoped by device."""
-    device1 = await create_device(db_session)
-    device2 = await create_device(db_session)
-    await create_product(db_session, device_id=device1.id, name="Device1 Product")
-    await create_product(db_session, device_id=device2.id, name="Device2 Product")
+async def test_list_products_user_scoped(db_session: AsyncSession):
+    """Test that products are scoped by user."""
+    user1 = await create_user(db_session)
+    user2 = await create_user(db_session)
+    await create_product(db_session, user_id=user1.id, name="User1 Product")
+    await create_product(db_session, user_id=user2.id, name="User2 Product")
 
-    products1 = await list_products(db_session, device_id=device1.id)
-    products2 = await list_products(db_session, device_id=device2.id)
+    products1 = await list_products(db_session, user_id=user1.id)
+    products2 = await list_products(db_session, user_id=user2.id)
 
     assert len(products1) == 1
-    assert products1[0].name == "Device1 Product"
+    assert products1[0].name == "User1 Product"
     assert len(products2) == 1
-    assert products2[0].name == "Device2 Product"
+    assert products2[0].name == "User2 Product"
 
 
 @pytest.mark.asyncio
 async def test_get_product_found(db_session: AsyncSession):
     """Test getting a product by ID."""
-    device = await create_device(db_session)
-    product = await create_product(db_session, device_id=device.id, name="Apple")
+    user = await create_user(db_session)
+    product = await create_product(db_session, user_id=user.id, name="Apple")
 
-    result = await get_product(db_session, device_id=device.id, product_id=product.id)
+    result = await get_product(db_session, user_id=user.id, product_id=product.id)
 
     assert result is not None
     assert result.id == product.id
@@ -122,21 +122,21 @@ async def test_get_product_found(db_session: AsyncSession):
 @pytest.mark.asyncio
 async def test_get_product_not_found(db_session: AsyncSession):
     """Test getting a non-existent product."""
-    device = await create_device(db_session)
+    user = await create_user(db_session)
 
-    result = await get_product(db_session, device_id=device.id, product_id=uuid.uuid4())
+    result = await get_product(db_session, user_id=user.id, product_id=uuid.uuid4())
 
     assert result is None
 
 
 @pytest.mark.asyncio
-async def test_get_product_wrong_device(db_session: AsyncSession):
-    """Test that products from other devices cannot be accessed."""
-    device1 = await create_device(db_session)
-    device2 = await create_device(db_session)
-    product = await create_product(db_session, device_id=device1.id, name="Apple")
+async def test_get_product_wrong_user(db_session: AsyncSession):
+    """Test that products from other users cannot be accessed."""
+    user1 = await create_user(db_session)
+    user2 = await create_user(db_session)
+    product = await create_product(db_session, user_id=user1.id, name="Apple")
 
-    result = await get_product(db_session, device_id=device2.id, product_id=product.id)
+    result = await get_product(db_session, user_id=user2.id, product_id=product.id)
 
     assert result is None
 
@@ -144,11 +144,11 @@ async def test_get_product_wrong_device(db_session: AsyncSession):
 @pytest.mark.asyncio
 async def test_get_product_deleted(db_session: AsyncSession):
     """Test that soft-deleted products cannot be retrieved."""
-    device = await create_device(db_session)
-    product = await create_product(db_session, device_id=device.id, name="Apple")
-    await soft_delete_product(db_session, device_id=device.id, product_id=product.id)
+    user = await create_user(db_session)
+    product = await create_product(db_session, user_id=user.id, name="Apple")
+    await soft_delete_product(db_session, user_id=user.id, product_id=product.id)
 
-    result = await get_product(db_session, device_id=device.id, product_id=product.id)
+    result = await get_product(db_session, user_id=user.id, product_id=product.id)
 
     assert result is None
 
@@ -156,12 +156,12 @@ async def test_get_product_deleted(db_session: AsyncSession):
 @pytest.mark.asyncio
 async def test_update_product_name(db_session: AsyncSession):
     """Test updating a product's name."""
-    device = await create_device(db_session)
-    product = await create_product(db_session, device_id=device.id, name="Aple")
+    user = await create_user(db_session)
+    product = await create_product(db_session, user_id=user.id, name="Aple")
 
     updated = await update_product(
         db_session,
-        device_id=device.id,
+        user_id=user.id,
         product_id=product.id,
         name="Apple"
     )
@@ -175,11 +175,11 @@ async def test_update_product_name(db_session: AsyncSession):
 @pytest.mark.asyncio
 async def test_update_product_not_found(db_session: AsyncSession):
     """Test updating a non-existent product."""
-    device = await create_device(db_session)
+    user = await create_user(db_session)
 
     result = await update_product(
         db_session,
-        device_id=device.id,
+        user_id=user.id,
         product_id=uuid.uuid4(),
         name="New Name"
     )
@@ -190,55 +190,55 @@ async def test_update_product_not_found(db_session: AsyncSession):
 @pytest.mark.asyncio
 async def test_soft_delete_product_success(db_session: AsyncSession):
     """Test soft deleting a product."""
-    device = await create_device(db_session)
-    product = await create_product(db_session, device_id=device.id, name="Apple")
+    user = await create_user(db_session)
+    product = await create_product(db_session, user_id=user.id, name="Apple")
 
-    result = await soft_delete_product(db_session, device_id=device.id, product_id=product.id)
+    result = await soft_delete_product(db_session, user_id=user.id, product_id=product.id)
 
     assert result is True
     # Verify product is soft deleted
-    deleted = await get_product(db_session, device_id=device.id, product_id=product.id)
+    deleted = await get_product(db_session, user_id=user.id, product_id=product.id)
     assert deleted is None
 
 
 @pytest.mark.asyncio
 async def test_soft_delete_product_not_found(db_session: AsyncSession):
     """Test soft deleting a non-existent product."""
-    device = await create_device(db_session)
+    user = await create_user(db_session)
 
-    result = await soft_delete_product(db_session, device_id=device.id, product_id=uuid.uuid4())
+    result = await soft_delete_product(db_session, user_id=user.id, product_id=uuid.uuid4())
 
     assert result is False
 
 
 @pytest.mark.asyncio
 async def test_check_name_available_true(db_session: AsyncSession):
-    """No matching product → available=True."""
-    device = await create_device(db_session)
+    """No matching product -> available=True."""
+    user = await create_user(db_session)
 
-    result = await check_product_name_available(db_session, device_id=device.id, name="UniqueName123")
+    result = await check_product_name_available(db_session, user_id=user.id, name="UniqueName123")
 
     assert result is True
 
 
 @pytest.mark.asyncio
 async def test_check_name_available_false(db_session: AsyncSession):
-    """Exact case match → available=False."""
-    device = await create_device(db_session)
-    await create_product(db_session, device_id=device.id, name="Chicken")
+    """Exact case match -> available=False."""
+    user = await create_user(db_session)
+    await create_product(db_session, user_id=user.id, name="Chicken")
 
-    result = await check_product_name_available(db_session, device_id=device.id, name="Chicken")
+    result = await check_product_name_available(db_session, user_id=user.id, name="Chicken")
 
     assert result is False
 
 
 @pytest.mark.asyncio
 async def test_check_name_case_insensitive(db_session: AsyncSession):
-    """Case-insensitive match → available=False."""
-    device = await create_device(db_session)
-    await create_product(db_session, device_id=device.id, name="Chicken")
+    """Case-insensitive match -> available=False."""
+    user = await create_user(db_session)
+    await create_product(db_session, user_id=user.id, name="Chicken")
 
-    result = await check_product_name_available(db_session, device_id=device.id, name="chicken")
+    result = await check_product_name_available(db_session, user_id=user.id, name="chicken")
 
     assert result is False
 
@@ -246,23 +246,23 @@ async def test_check_name_case_insensitive(db_session: AsyncSession):
 @pytest.mark.asyncio
 async def test_check_name_ignores_deleted(db_session: AsyncSession):
     """Soft-deleted products don't affect availability."""
-    device = await create_device(db_session)
-    product = await create_product(db_session, device_id=device.id, name="Salmon")
-    await soft_delete_product(db_session, device_id=device.id, product_id=product.id)
+    user = await create_user(db_session)
+    product = await create_product(db_session, user_id=user.id, name="Salmon")
+    await soft_delete_product(db_session, user_id=user.id, product_id=product.id)
 
-    result = await check_product_name_available(db_session, device_id=device.id, name="Salmon")
+    result = await check_product_name_available(db_session, user_id=user.id, name="Salmon")
 
     assert result is True
 
 
 @pytest.mark.asyncio
-async def test_check_name_device_scoped(db_session: AsyncSession):
-    """Other device's product doesn't affect current device's availability."""
-    device1 = await create_device(db_session)
-    device2 = await create_device(db_session)
-    await create_product(db_session, device_id=device1.id, name="Tofu")
+async def test_check_name_user_scoped(db_session: AsyncSession):
+    """Other user's product doesn't affect current user's availability."""
+    user1 = await create_user(db_session)
+    user2 = await create_user(db_session)
+    await create_product(db_session, user_id=user1.id, name="Tofu")
 
-    result = await check_product_name_available(db_session, device_id=device2.id, name="Tofu")
+    result = await check_product_name_available(db_session, user_id=user2.id, name="Tofu")
 
     assert result is True
 
@@ -318,9 +318,9 @@ async def _make_catalog_product(
 async def test_search_starts_with_ranks_higher_than_contains(db_session: AsyncSession):
     """Starts-with matches rank before contains matches regardless of source."""
     marker = uuid.uuid4().hex[:8]
-    device = await create_device(db_session)
+    user = await create_user(db_session)
     # User product: contains match ("Apple" contains "pple")
-    await create_product(db_session, device_id=device.id, name=f"Apple{marker}")
+    await create_product(db_session, user_id=user.id, name=f"Apple{marker}")
     # Catalog product: starts-with match ("pple..." starts with "pple")
     await _make_catalog_product(
         db_session,
@@ -330,10 +330,10 @@ async def test_search_starts_with_ranks_higher_than_contains(db_session: AsyncSe
         base_amount=Decimal("100"),
     )
 
-    results = await search_products(db_session, device_id=device.id, q=f"pple{marker}")
+    results = await search_products(db_session, user_id=user.id, q=f"pple{marker}")
 
     assert len(results) == 2
-    # Catalog item starts with "pple" → rank 0; user item contains "pple" → rank 1
+    # Catalog item starts with "pple" -> rank 0; user item contains "pple" -> rank 1
     assert results[0].source == "catalog"
     assert results[1].source == "user"
 
@@ -342,10 +342,10 @@ async def test_search_starts_with_ranks_higher_than_contains(db_session: AsyncSe
 async def test_search_interleaves_by_relevance_not_source(db_session: AsyncSession):
     """User and catalog results are interleaved by relevance, not grouped by source."""
     marker = uuid.uuid4().hex[:8]
-    device = await create_device(db_session)
+    user = await create_user(db_session)
     # Two user products: one starts-with, one contains
-    await create_product(db_session, device_id=device.id, name=f"Food{marker}Alpha")
-    await create_product(db_session, device_id=device.id, name=f"XFood{marker}Beta")
+    await create_product(db_session, user_id=user.id, name=f"Food{marker}Alpha")
+    await create_product(db_session, user_id=user.id, name=f"XFood{marker}Beta")
     # Two catalog products: one starts-with, one contains
     await _make_catalog_product(
         db_session,
@@ -362,7 +362,7 @@ async def test_search_interleaves_by_relevance_not_source(db_session: AsyncSessi
         base_amount=Decimal("100"),
     )
 
-    results = await search_products(db_session, device_id=device.id, q=f"Food{marker}", limit=10)
+    results = await search_products(db_session, user_id=user.id, q=f"Food{marker}", limit=10)
 
     # Starts-with matches (rank 0): Food{marker}Alpha (user), Food{marker}Gamma (catalog)
     # Contains matches  (rank 1): XFood{marker}Beta (user), YFood{marker}Delta (catalog)
@@ -380,9 +380,9 @@ async def test_search_interleaves_by_relevance_not_source(db_session: AsyncSessi
 async def test_search_total_truncated_to_limit(db_session: AsyncSession):
     """Results are truncated to limit after merging both sources."""
     marker = uuid.uuid4().hex[:8]
-    device = await create_device(db_session)
+    user = await create_user(db_session)
     for i in range(4):
-        await create_product(db_session, device_id=device.id, name=f"Food{marker}{i}")
+        await create_product(db_session, user_id=user.id, name=f"Food{marker}{i}")
     for i in range(4):
         await _make_catalog_product(
             db_session,
@@ -392,7 +392,7 @@ async def test_search_total_truncated_to_limit(db_session: AsyncSession):
             base_amount=Decimal("100"),
         )
 
-    results = await search_products(db_session, device_id=device.id, q=f"Food{marker}", limit=5)
+    results = await search_products(db_session, user_id=user.id, q=f"Food{marker}", limit=5)
 
     assert len(results) == 5
 
@@ -401,7 +401,7 @@ async def test_search_total_truncated_to_limit(db_session: AsyncSession):
 async def test_search_calories_per_100g_computed(db_session: AsyncSession):
     """calories_per_100g = round(calories / base_amount * 100, 2)."""
     marker = uuid.uuid4().hex[:8]
-    device = await create_device(db_session)
+    user = await create_user(db_session)
     await _make_catalog_product(
         db_session,
         name=f"Beef{marker}",
@@ -409,7 +409,7 @@ async def test_search_calories_per_100g_computed(db_session: AsyncSession):
         base_amount=Decimal("100"),
     )
 
-    results = await search_products(db_session, device_id=device.id, q=f"Beef{marker}")
+    results = await search_products(db_session, user_id=user.id, q=f"Beef{marker}")
 
     catalog_results = [r for r in results if r.source == "catalog"]
     assert len(catalog_results) == 1
@@ -418,12 +418,12 @@ async def test_search_calories_per_100g_computed(db_session: AsyncSession):
 
 @pytest.mark.asyncio
 async def test_search_catalog_no_default_portion_null_calories(db_session: AsyncSession):
-    """Catalog product with no default portion → calories_per_100g=None."""
+    """Catalog product with no default portion -> calories_per_100g=None."""
     marker = uuid.uuid4().hex[:8]
-    device = await create_device(db_session)
+    user = await create_user(db_session)
     await _make_catalog_product(db_session, name=f"Rice{marker}")
 
-    results = await search_products(db_session, device_id=device.id, q=f"Rice{marker}")
+    results = await search_products(db_session, user_id=user.id, q=f"Rice{marker}")
 
     assert len(results) == 1
     assert results[0].source == "catalog"
@@ -434,9 +434,9 @@ async def test_search_catalog_no_default_portion_null_calories(db_session: Async
 async def test_search_limit_cap(db_session: AsyncSession):
     """Total results capped at limit param."""
     marker = uuid.uuid4().hex[:8]
-    device = await create_device(db_session)
+    user = await create_user(db_session)
     for i in range(5):
-        await create_product(db_session, device_id=device.id, name=f"Limitfood{marker}{i}")
+        await create_product(db_session, user_id=user.id, name=f"Limitfood{marker}{i}")
     for i in range(5):
         await _make_catalog_product(
             db_session,
@@ -445,7 +445,7 @@ async def test_search_limit_cap(db_session: AsyncSession):
             base_amount=Decimal("100"),
         )
 
-    results = await search_products(db_session, device_id=device.id, q=marker, limit=6)
+    results = await search_products(db_session, user_id=user.id, q=marker, limit=6)
 
     assert len(results) <= 6
 
@@ -454,26 +454,26 @@ async def test_search_limit_cap(db_session: AsyncSession):
 async def test_search_excludes_deleted_user_products(db_session: AsyncSession):
     """Soft-deleted user products not returned."""
     marker = uuid.uuid4().hex[:8]
-    device = await create_device(db_session)
-    product = await create_product(db_session, device_id=device.id, name=f"DeleteMe{marker}")
-    await soft_delete_product(db_session, device_id=device.id, product_id=product.id)
+    user = await create_user(db_session)
+    product = await create_product(db_session, user_id=user.id, name=f"DeleteMe{marker}")
+    await soft_delete_product(db_session, user_id=user.id, product_id=product.id)
 
-    results = await search_products(db_session, device_id=device.id, q=f"DeleteMe{marker}")
+    results = await search_products(db_session, user_id=user.id, q=f"DeleteMe{marker}")
 
     user_results = [r for r in results if r.source == "user"]
     assert len(user_results) == 0
 
 
 @pytest.mark.asyncio
-async def test_search_device_scoped_user_products(db_session: AsyncSession):
-    """Only current device's user products returned, not other devices'."""
+async def test_search_user_scoped_user_products(db_session: AsyncSession):
+    """Only current user's products returned, not other users'."""
     marker = uuid.uuid4().hex[:8]
-    device1 = await create_device(db_session)
-    device2 = await create_device(db_session)
-    await create_product(db_session, device_id=device1.id, name=f"ScopedItem{marker}")
-    await create_product(db_session, device_id=device2.id, name=f"ScopedItem{marker}")
+    user1 = await create_user(db_session)
+    user2 = await create_user(db_session)
+    await create_product(db_session, user_id=user1.id, name=f"ScopedItem{marker}")
+    await create_product(db_session, user_id=user2.id, name=f"ScopedItem{marker}")
 
-    results = await search_products(db_session, device_id=device1.id, q=f"ScopedItem{marker}")
+    results = await search_products(db_session, user_id=user1.id, q=f"ScopedItem{marker}")
 
     user_results = [r for r in results if r.source == "user"]
     assert len(user_results) == 1
@@ -483,7 +483,7 @@ async def test_search_device_scoped_user_products(db_session: AsyncSession):
 async def test_search_macros_per_100g_computed(db_session: AsyncSession):
     """protein/carbs/fat_per_100g are computed correctly from portion data."""
     marker = uuid.uuid4().hex[:8]
-    device = await create_device(db_session)
+    user = await create_user(db_session)
     await _make_catalog_product(
         db_session,
         name=f"MacroFood{marker}",
@@ -494,7 +494,7 @@ async def test_search_macros_per_100g_computed(db_session: AsyncSession):
         fat=Decimal("20"),
     )
 
-    results = await search_products(db_session, device_id=device.id, q=f"MacroFood{marker}")
+    results = await search_products(db_session, user_id=user.id, q=f"MacroFood{marker}")
 
     catalog_results = [r for r in results if r.source == "catalog"]
     assert len(catalog_results) == 1
@@ -509,9 +509,9 @@ async def test_search_macros_per_100g_computed(db_session: AsyncSession):
 
 @pytest.mark.asyncio
 async def test_search_catalog_no_macro_data_null(db_session: AsyncSession):
-    """Catalog product with protein=None on portion → protein_per_100g=None."""
+    """Catalog product with protein=None on portion -> protein_per_100g=None."""
     marker = uuid.uuid4().hex[:8]
-    device = await create_device(db_session)
+    user = await create_user(db_session)
     await _make_catalog_product(
         db_session,
         name=f"NoMacro{marker}",
@@ -522,7 +522,7 @@ async def test_search_catalog_no_macro_data_null(db_session: AsyncSession):
         fat=None,
     )
 
-    results = await search_products(db_session, device_id=device.id, q=f"NoMacro{marker}")
+    results = await search_products(db_session, user_id=user.id, q=f"NoMacro{marker}")
 
     catalog_results = [r for r in results if r.source == "catalog"]
     assert len(catalog_results) == 1
@@ -536,7 +536,7 @@ async def test_search_catalog_no_macro_data_null(db_session: AsyncSession):
 async def test_search_catalog_returns_display_name(db_session: AsyncSession):
     """display_name field is populated in catalog search results."""
     marker = uuid.uuid4().hex[:8]
-    device = await create_device(db_session)
+    user = await create_user(db_session)
     await _make_catalog_product(
         db_session,
         name=f"Chicken, breast, raw {marker}",
@@ -545,7 +545,7 @@ async def test_search_catalog_returns_display_name(db_session: AsyncSession):
         base_amount=Decimal("100"),
     )
 
-    results = await search_products(db_session, device_id=device.id, q=f"Chicken breast {marker}")
+    results = await search_products(db_session, user_id=user.id, q=f"Chicken breast {marker}")
 
     catalog_results = [r for r in results if r.source == "catalog"]
     assert len(catalog_results) == 1
@@ -556,7 +556,7 @@ async def test_search_catalog_returns_display_name(db_session: AsyncSession):
 async def test_search_catalog_returns_brand(db_session: AsyncSession):
     """brand field is populated for OFF items in catalog search results."""
     marker = uuid.uuid4().hex[:8]
-    device = await create_device(db_session)
+    user = await create_user(db_session)
     await _make_catalog_product(
         db_session,
         name=f"Protein Bar {marker}",
@@ -566,7 +566,7 @@ async def test_search_catalog_returns_brand(db_session: AsyncSession):
         base_amount=Decimal("100"),
     )
 
-    results = await search_products(db_session, device_id=device.id, q=f"Protein Bar {marker}")
+    results = await search_products(db_session, user_id=user.id, q=f"Protein Bar {marker}")
 
     catalog_results = [r for r in results if r.source == "catalog"]
     assert len(catalog_results) == 1

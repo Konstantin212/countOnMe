@@ -147,28 +147,60 @@ async def test_delete_product_not_found(authenticated_client: tuple[AsyncClient,
 
 
 @pytest.mark.asyncio
-async def test_device_scoping_prevents_cross_device_access(
+async def test_user_scoping_prevents_cross_user_access(
     app_client: AsyncClient,
     db_session,
 ):
-    """Test that device A cannot access device B's products."""
-    # Register device A
-    device_a_id = str(uuid.uuid4())
-    response_a = await app_client.post("/v1/devices/register", json={"device_id": device_a_id})
-    token_a = response_a.json()["device_token"]
+    """Test that user A cannot access user B's products."""
+    from datetime import UTC, datetime, timedelta
 
-    # Register device B
-    device_b_id = str(uuid.uuid4())
-    response_b = await app_client.post("/v1/devices/register", json={"device_id": device_b_id})
-    token_b = response_b.json()["device_token"]
+    import jwt as pyjwt
 
-    # Device A creates a product
-    app_client.headers["Authorization"] = f"Bearer {token_a}"
+    from app.features.auth.models import Device, User, UserDevice
+    from app.features.auth.service import SUPABASE_MANAGED_HASH
+    from tests.conftest import _TEST_EC_PRIVATE_KEY
+
+    # Create user A
+    sub_a = uuid.uuid4()
+    user_a = User(supabase_id=sub_a, email="a@test.com")
+    db_session.add(user_a)
+    await db_session.flush()
+    device_a = Device(id=uuid.uuid4(), token_hash=SUPABASE_MANAGED_HASH)
+    db_session.add(device_a)
+    await db_session.flush()
+    db_session.add(UserDevice(user_id=user_a.id, device_id=device_a.id))
+    await db_session.flush()
+
+    jwt_a = pyjwt.encode(
+        {"sub": str(sub_a), "email": "a@test.com", "aud": "authenticated",
+         "exp": datetime.now(UTC) + timedelta(hours=1), "iat": datetime.now(UTC)},
+        _TEST_EC_PRIVATE_KEY, algorithm="ES256",
+    )
+
+    # Create user B
+    sub_b = uuid.uuid4()
+    user_b = User(supabase_id=sub_b, email="b@test.com")
+    db_session.add(user_b)
+    await db_session.flush()
+    device_b = Device(id=uuid.uuid4(), token_hash=SUPABASE_MANAGED_HASH)
+    db_session.add(device_b)
+    await db_session.flush()
+    db_session.add(UserDevice(user_id=user_b.id, device_id=device_b.id))
+    await db_session.flush()
+
+    jwt_b = pyjwt.encode(
+        {"sub": str(sub_b), "email": "b@test.com", "aud": "authenticated",
+         "exp": datetime.now(UTC) + timedelta(hours=1), "iat": datetime.now(UTC)},
+        _TEST_EC_PRIVATE_KEY, algorithm="ES256",
+    )
+
+    # User A creates a product
+    app_client.headers["Authorization"] = f"Bearer {jwt_a}"
     product_id = str(uuid.uuid4())
-    await app_client.post("/v1/products", json={"id": product_id, "name": "Device A Product"})
+    await app_client.post("/v1/products", json={"id": product_id, "name": "User A Product"})
 
-    # Device B tries to access Device A's product
-    app_client.headers["Authorization"] = f"Bearer {token_b}"
+    # User B tries to access User A's product
+    app_client.headers["Authorization"] = f"Bearer {jwt_b}"
     response = await app_client.get(f"/v1/products/{product_id}")
     assert response.status_code == 404
 

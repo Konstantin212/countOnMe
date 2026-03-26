@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db import get_session
-from app.core.deps import get_current_device_id
+from app.core.deps import get_current_user_id
 from app.features.catalog.schemas import (
     CatalogPortionResponse,
     CatalogProductListItem,
@@ -30,7 +30,7 @@ async def catalog_products_list(
     search: str | None = Query(default=None, max_length=200, description="Filter by name substring"),
     limit: int = Query(default=50, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
-    _device_id: uuid.UUID = Depends(get_current_device_id),
+    _user_id: uuid.UUID = Depends(get_current_user_id),
     session: AsyncSession = Depends(get_session),
 ) -> list[CatalogProductListItem]:
     products = await list_catalog_products(
@@ -55,7 +55,7 @@ async def catalog_products_list(
 @router.get("/products/barcode/{barcode}", response_model=CatalogProductResponse)
 async def catalog_products_get_by_barcode(
     barcode: str = Path(..., min_length=1, max_length=50),
-    _device_id: uuid.UUID = Depends(get_current_device_id),
+    _user_id: uuid.UUID = Depends(get_current_user_id),
     session: AsyncSession = Depends(get_session),
 ) -> CatalogProductResponse:
     product = await get_catalog_product_by_barcode(session, barcode=barcode)
@@ -80,7 +80,7 @@ async def catalog_products_get_by_barcode(
 @router.get("/products/{catalog_product_id}", response_model=CatalogProductResponse)
 async def catalog_products_get(
     catalog_product_id: uuid.UUID,
-    _device_id: uuid.UUID = Depends(get_current_device_id),
+    _user_id: uuid.UUID = Depends(get_current_user_id),
     session: AsyncSession = Depends(get_session),
 ) -> CatalogProductResponse:
     product = await get_catalog_product(session, catalog_product_id=catalog_product_id)

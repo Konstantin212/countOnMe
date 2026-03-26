@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db import get_session
-from app.core.deps import get_current_device_id
+from app.core.deps import get_current_user_id, get_optional_device_id
 from app.features.goals.calculation import calculate_full_goal
 from app.features.goals.schemas import (
     GoalCalculateRequest,
@@ -33,7 +33,7 @@ router = APIRouter(prefix="/goals", tags=["goals"])
 @router.post("/calculate", response_model=GoalCalculateResponse)
 async def goals_calculate(
     body: GoalCalculateRequest,
-    device_id: uuid.UUID = Depends(get_current_device_id),
+    user_id: uuid.UUID = Depends(get_current_user_id),
 ) -> GoalCalculateResponse:
     """
     Calculate BMR/TDEE/targets without saving.
@@ -70,11 +70,11 @@ async def goals_calculate(
 
 @router.get("/current", response_model=GoalResponse | None)
 async def goals_get_current(
-    device_id: uuid.UUID = Depends(get_current_device_id),
+    user_id: uuid.UUID = Depends(get_current_user_id),
     session: AsyncSession = Depends(get_session),
 ) -> GoalResponse | None:
-    """Get the current active goal for this device."""
-    goal = await get_current_goal(session, device_id=device_id)
+    """Get the current active goal for this user."""
+    goal = await get_current_goal(session, user_id=user_id)
     if goal is None:
         return None
     return _goal_to_response(goal)
@@ -83,11 +83,11 @@ async def goals_get_current(
 @router.get("/{goal_id}", response_model=GoalResponse)
 async def goals_get(
     goal_id: uuid.UUID,
-    device_id: uuid.UUID = Depends(get_current_device_id),
+    user_id: uuid.UUID = Depends(get_current_user_id),
     session: AsyncSession = Depends(get_session),
 ) -> GoalResponse:
     """Get a specific goal by ID."""
-    goal = await get_goal(session, device_id=device_id, goal_id=goal_id)
+    goal = await get_goal(session, user_id=user_id, goal_id=goal_id)
     if goal is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Goal not found")
     return _goal_to_response(goal)
@@ -96,30 +96,32 @@ async def goals_get(
 @router.post("/calculated", response_model=GoalResponse, status_code=status.HTTP_201_CREATED)
 async def goals_create_calculated(
     body: GoalCreateCalculatedRequest,
-    device_id: uuid.UUID = Depends(get_current_device_id),
+    user_id: uuid.UUID = Depends(get_current_user_id),
+    device_id: uuid.UUID | None = Depends(get_optional_device_id),
     session: AsyncSession = Depends(get_session),
 ) -> GoalResponse:
     """
     Create a calculated goal from body metrics.
 
-    This will soft-delete any existing goals for this device.
+    This will soft-delete any existing goals for this user.
     """
-    goal = await create_calculated_goal(session, device_id=device_id, data=body)
+    goal = await create_calculated_goal(session, user_id=user_id, data=body, device_id=device_id)
     return _goal_to_response(goal)
 
 
 @router.post("/manual", response_model=GoalResponse, status_code=status.HTTP_201_CREATED)
 async def goals_create_manual(
     body: GoalCreateManualRequest,
-    device_id: uuid.UUID = Depends(get_current_device_id),
+    user_id: uuid.UUID = Depends(get_current_user_id),
+    device_id: uuid.UUID | None = Depends(get_optional_device_id),
     session: AsyncSession = Depends(get_session),
 ) -> GoalResponse:
     """
     Create a manual goal with direct calorie/macro input.
 
-    This will soft-delete any existing goals for this device.
+    This will soft-delete any existing goals for this user.
     """
-    goal = await create_manual_goal(session, device_id=device_id, data=body)
+    goal = await create_manual_goal(session, user_id=user_id, data=body, device_id=device_id)
     return _goal_to_response(goal)
 
 
@@ -127,19 +129,21 @@ async def goals_create_manual(
 async def goals_update(
     goal_id: uuid.UUID,
     body: GoalUpdateRequest,
-    device_id: uuid.UUID = Depends(get_current_device_id),
+    user_id: uuid.UUID = Depends(get_current_user_id),
+    device_id: uuid.UUID | None = Depends(get_optional_device_id),
     session: AsyncSession = Depends(get_session),
 ) -> GoalResponse:
     """Update goal targets (macros and water)."""
     goal = await update_goal(
         session,
-        device_id=device_id,
+        user_id=user_id,
         goal_id=goal_id,
         daily_calories_kcal=body.daily_calories_kcal,
         protein_percent=body.protein_percent,
         carbs_percent=body.carbs_percent,
         fat_percent=body.fat_percent,
         water_ml=body.water_ml,
+        device_id=device_id,
     )
     if goal is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Goal not found")
@@ -149,11 +153,12 @@ async def goals_update(
 @router.delete("/{goal_id}", status_code=status.HTTP_204_NO_CONTENT, response_model=None)
 async def goals_delete(
     goal_id: uuid.UUID,
-    device_id: uuid.UUID = Depends(get_current_device_id),
+    user_id: uuid.UUID = Depends(get_current_user_id),
+    device_id: uuid.UUID | None = Depends(get_optional_device_id),
     session: AsyncSession = Depends(get_session),
 ) -> None:
     """Delete a goal."""
-    ok = await soft_delete_goal(session, device_id=device_id, goal_id=goal_id)
+    ok = await soft_delete_goal(session, user_id=user_id, goal_id=goal_id, device_id=device_id)
     if not ok:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Goal not found")
 

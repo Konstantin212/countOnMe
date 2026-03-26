@@ -18,15 +18,15 @@ from app.features.goals.service import (
     soft_delete_goal,
     update_goal,
 )
-from tests.factories import create_device, create_goal
+from tests.factories import create_goal, create_user
 
 
 @pytest.mark.asyncio
 async def test_get_current_goal_none(db_session: AsyncSession):
     """Test getting current goal when there is none."""
-    device = await create_device(db_session)
+    user = await create_user(db_session)
 
-    result = await get_current_goal(db_session, device_id=device.id)
+    result = await get_current_goal(db_session, user_id=user.id)
 
     assert result is None
 
@@ -34,13 +34,13 @@ async def test_get_current_goal_none(db_session: AsyncSession):
 @pytest.mark.asyncio
 async def test_get_current_goal_latest(db_session: AsyncSession):
     """Test getting the most recent goal (soft deletes happen automatically)."""
-    device = await create_device(db_session)
+    user = await create_user(db_session)
     # First goal will be soft-deleted when creating second
-    goal1 = await create_goal(db_session, device.id, daily_calories_kcal=2000)
+    goal1 = await create_goal(db_session, user_id=user.id, daily_calories_kcal=2000)
 
     # Creating manual goal via service would soft-delete the first,
     # but factory doesn't - so just create one goal
-    result = await get_current_goal(db_session, device_id=device.id)
+    result = await get_current_goal(db_session, user_id=user.id)
 
     assert result is not None
     assert result.id == goal1.id
@@ -50,13 +50,13 @@ async def test_get_current_goal_latest(db_session: AsyncSession):
 @pytest.mark.asyncio
 async def test_get_current_goal_excludes_deleted(db_session: AsyncSession):
     """Test that soft-deleted goals are not returned."""
-    device = await create_device(db_session)
-    goal1 = await create_goal(db_session, device.id)
-    goal2 = await create_goal(db_session, device.id)
+    user = await create_user(db_session)
+    goal1 = await create_goal(db_session, user_id=user.id)
+    goal2 = await create_goal(db_session, user_id=user.id)
 
-    await soft_delete_goal(db_session, device_id=device.id, goal_id=goal2.id)
+    await soft_delete_goal(db_session, user_id=user.id, goal_id=goal2.id)
 
-    result = await get_current_goal(db_session, device_id=device.id)
+    result = await get_current_goal(db_session, user_id=user.id)
 
     assert result is not None
     assert result.id == goal1.id
@@ -65,7 +65,7 @@ async def test_get_current_goal_excludes_deleted(db_session: AsyncSession):
 @pytest.mark.asyncio
 async def test_create_manual_goal_with_macro_calc(db_session: AsyncSession):
     """Test creating a manual goal calculates macros."""
-    device = await create_device(db_session)
+    user = await create_user(db_session)
 
     data = GoalCreateManualRequest(
         daily_calories_kcal=2000,
@@ -75,7 +75,7 @@ async def test_create_manual_goal_with_macro_calc(db_session: AsyncSession):
         water_ml=2000,
     )
 
-    goal = await create_manual_goal(db_session, device_id=device.id, data=data)
+    goal = await create_manual_goal(db_session, user_id=user.id, data=data)
 
     assert goal.goal_type == GoalType.manual.value
     assert goal.daily_calories_kcal == 2000
@@ -88,8 +88,8 @@ async def test_create_manual_goal_with_macro_calc(db_session: AsyncSession):
 @pytest.mark.asyncio
 async def test_create_manual_goal_soft_deletes_existing(db_session: AsyncSession):
     """Test that creating a manual goal soft deletes existing goals."""
-    device = await create_device(db_session)
-    goal1 = await create_goal(db_session, device.id)
+    user = await create_user(db_session)
+    goal1 = await create_goal(db_session, user_id=user.id)
 
     data = GoalCreateManualRequest(
         daily_calories_kcal=2200,
@@ -99,7 +99,7 @@ async def test_create_manual_goal_soft_deletes_existing(db_session: AsyncSession
         water_ml=2000,
     )
 
-    goal2 = await create_manual_goal(db_session, device_id=device.id, data=data)
+    goal2 = await create_manual_goal(db_session, user_id=user.id, data=data)
 
     # Refresh goal1
     await db_session.refresh(goal1)
@@ -111,7 +111,7 @@ async def test_create_manual_goal_soft_deletes_existing(db_session: AsyncSession
 @pytest.mark.asyncio
 async def test_create_calculated_goal(db_session: AsyncSession):
     """Test creating a calculated goal."""
-    device = await create_device(db_session)
+    user = await create_user(db_session)
 
     data = GoalCreateCalculatedRequest(
         gender=Gender.male,
@@ -126,7 +126,7 @@ async def test_create_calculated_goal(db_session: AsyncSession):
         water_ml=2000,
     )
 
-    goal = await create_calculated_goal(db_session, device_id=device.id, data=data)
+    goal = await create_calculated_goal(db_session, user_id=user.id, data=data)
 
     assert goal.goal_type == GoalType.calculated.value
     assert goal.gender == Gender.male.value
@@ -141,12 +141,12 @@ async def test_create_calculated_goal(db_session: AsyncSession):
 @pytest.mark.asyncio
 async def test_update_goal_calories(db_session: AsyncSession):
     """Test updating goal calories."""
-    device = await create_device(db_session)
-    goal = await create_goal(db_session, device.id, daily_calories_kcal=2000)
+    user = await create_user(db_session)
+    goal = await create_goal(db_session, user_id=user.id, daily_calories_kcal=2000)
 
     updated = await update_goal(
         db_session,
-        device_id=device.id,
+        user_id=user.id,
         goal_id=goal.id,
         daily_calories_kcal=2200,
     )
@@ -158,10 +158,10 @@ async def test_update_goal_calories(db_session: AsyncSession):
 @pytest.mark.asyncio
 async def test_update_goal_macros_recalculates_grams(db_session: AsyncSession):
     """Test that updating macro percentages recalculates grams."""
-    device = await create_device(db_session)
+    user = await create_user(db_session)
     goal = await create_goal(
         db_session,
-        device.id,
+        user_id=user.id,
         daily_calories_kcal=2000,
         protein_percent=30,
         carbs_percent=40,
@@ -172,7 +172,7 @@ async def test_update_goal_macros_recalculates_grams(db_session: AsyncSession):
 
     updated = await update_goal(
         db_session,
-        device_id=device.id,
+        user_id=user.id,
         goal_id=goal.id,
         protein_percent=40,  # Change protein percentage
     )
@@ -185,11 +185,11 @@ async def test_update_goal_macros_recalculates_grams(db_session: AsyncSession):
 @pytest.mark.asyncio
 async def test_update_goal_not_found(db_session: AsyncSession):
     """Test updating a non-existent goal."""
-    device = await create_device(db_session)
+    user = await create_user(db_session)
 
     result = await update_goal(
         db_session,
-        device_id=device.id,
+        user_id=user.id,
         goal_id=uuid.uuid4(),
         daily_calories_kcal=2200,
     )
@@ -200,10 +200,10 @@ async def test_update_goal_not_found(db_session: AsyncSession):
 @pytest.mark.asyncio
 async def test_soft_delete_goal_success(db_session: AsyncSession):
     """Test soft deleting a goal."""
-    device = await create_device(db_session)
-    goal = await create_goal(db_session, device.id)
+    user = await create_user(db_session)
+    goal = await create_goal(db_session, user_id=user.id)
 
-    result = await soft_delete_goal(db_session, device_id=device.id, goal_id=goal.id)
+    result = await soft_delete_goal(db_session, user_id=user.id, goal_id=goal.id)
 
     assert result is True
 
@@ -211,8 +211,8 @@ async def test_soft_delete_goal_success(db_session: AsyncSession):
 @pytest.mark.asyncio
 async def test_soft_delete_goal_not_found(db_session: AsyncSession):
     """Test soft deleting a non-existent goal."""
-    device = await create_device(db_session)
+    user = await create_user(db_session)
 
-    result = await soft_delete_goal(db_session, device_id=device.id, goal_id=uuid.uuid4())
+    result = await soft_delete_goal(db_session, user_id=user.id, goal_id=uuid.uuid4())
 
     assert result is False

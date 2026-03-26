@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db import get_session
-from app.core.deps import get_current_device_id
+from app.core.deps import get_current_user_id
 from app.features.stats.schemas import (
     DailyStatsPoint,
     DailyStatsResponse,
@@ -29,10 +29,10 @@ def _totals(t) -> MacroTotalsResponse:
 @router.get("/day/{day}", response_model=DayStatsResponse)
 async def stats_day(
     day: date,
-    device_id: uuid.UUID = Depends(get_current_device_id),
+    user_id: uuid.UUID = Depends(get_current_user_id),
     session: AsyncSession = Depends(get_session),
 ) -> DayStatsResponse:
-    totals, by_meal = await get_day_stats(session, device_id=device_id, day=day)
+    totals, by_meal = await get_day_stats(session, user_id=user_id, day=day)
     return DayStatsResponse(
         day=day,
         totals=_totals(totals),
@@ -44,10 +44,10 @@ async def stats_day(
 async def stats_daily(
     from_day: date = Query(alias="from"),
     to_day: date = Query(alias="to"),
-    device_id: uuid.UUID = Depends(get_current_device_id),
+    user_id: uuid.UUID = Depends(get_current_user_id),
     session: AsyncSession = Depends(get_session),
 ) -> DailyStatsResponse:
-    points_raw = await get_daily_stats(session, device_id=device_id, from_day=from_day, to_day=to_day)
+    points_raw = await get_daily_stats(session, user_id=user_id, from_day=from_day, to_day=to_day)
     return DailyStatsResponse(
         from_day=from_day,
         to_day=to_day,
@@ -59,10 +59,10 @@ async def stats_daily(
 async def stats_weight(
     from_day: date = Query(alias="from"),
     to_day: date = Query(alias="to"),
-    device_id: uuid.UUID = Depends(get_current_device_id),
+    user_id: uuid.UUID = Depends(get_current_user_id),
     session: AsyncSession = Depends(get_session),
 ) -> WeightStatsResponse:
-    rows = await list_body_weights(session, device_id=device_id, from_day=from_day, to_day=to_day)
+    rows = await list_body_weights(session, user_id=user_id, from_day=from_day, to_day=to_day)
     return WeightStatsResponse(
         from_day=from_day,
         to_day=to_day,

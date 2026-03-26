@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db import get_session
-from app.core.deps import get_current_device_id
+from app.core.deps import get_current_user_id, get_optional_device_id
 from app.features.meals.schemas import (
     FoodEntryCreateRequest,
     FoodEntryResponse,
@@ -29,27 +29,29 @@ async def food_entries_list(
     day: date | None = Query(default=None),
     from_day: date | None = Query(default=None, alias="from"),
     to_day: date | None = Query(default=None, alias="to"),
-    device_id: uuid.UUID = Depends(get_current_device_id),
+    user_id: uuid.UUID = Depends(get_current_user_id),
     session: AsyncSession = Depends(get_session),
 ) -> list[FoodEntryResponse]:
-    return await list_food_entries(session, device_id=device_id, day=day, from_day=from_day, to_day=to_day)
+    return await list_food_entries(session, user_id=user_id, day=day, from_day=from_day, to_day=to_day)
 
 
 @router.post("", response_model=FoodEntryResponse, status_code=status.HTTP_201_CREATED)
 async def food_entries_create(
     body: FoodEntryCreateRequest,
-    device_id: uuid.UUID = Depends(get_current_device_id),
+    user_id: uuid.UUID = Depends(get_current_user_id),
+    device_id: uuid.UUID | None = Depends(get_optional_device_id),
     session: AsyncSession = Depends(get_session),
 ) -> FoodEntryResponse:
     entry = await create_food_entry(
         session,
-        device_id=device_id,
+        user_id=user_id,
         product_id=body.product_id,
         portion_id=body.portion_id,
         day=body.day,
         meal_type=body.meal_type,
         amount=body.amount,
         unit=body.unit,
+        device_id=device_id,
     )
     if entry is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
@@ -59,10 +61,10 @@ async def food_entries_create(
 @router.get("/{entry_id}", response_model=FoodEntryResponse)
 async def food_entries_get(
     entry_id: uuid.UUID,
-    device_id: uuid.UUID = Depends(get_current_device_id),
+    user_id: uuid.UUID = Depends(get_current_user_id),
     session: AsyncSession = Depends(get_session),
 ) -> FoodEntryResponse:
-    entry = await get_food_entry(session, device_id=device_id, entry_id=entry_id)
+    entry = await get_food_entry(session, user_id=user_id, entry_id=entry_id)
     if entry is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
     return entry
@@ -72,7 +74,8 @@ async def food_entries_get(
 async def food_entries_update(
     entry_id: uuid.UUID,
     body: FoodEntryUpdateRequest,
-    device_id: uuid.UUID = Depends(get_current_device_id),
+    user_id: uuid.UUID = Depends(get_current_user_id),
+    device_id: uuid.UUID | None = Depends(get_optional_device_id),
     session: AsyncSession = Depends(get_session),
 ) -> FoodEntryResponse:
     patch: dict = {}
@@ -81,7 +84,7 @@ async def food_entries_update(
         if val is not None:
             patch[key] = val
 
-    entry = await update_food_entry(session, device_id=device_id, entry_id=entry_id, patch=patch)
+    entry = await update_food_entry(session, user_id=user_id, entry_id=entry_id, patch=patch, device_id=device_id)
     if entry is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
     return entry
@@ -90,9 +93,10 @@ async def food_entries_update(
 @router.delete("/{entry_id}", status_code=status.HTTP_204_NO_CONTENT, response_model=None)
 async def food_entries_delete(
     entry_id: uuid.UUID,
-    device_id: uuid.UUID = Depends(get_current_device_id),
+    user_id: uuid.UUID = Depends(get_current_user_id),
+    device_id: uuid.UUID | None = Depends(get_optional_device_id),
     session: AsyncSession = Depends(get_session),
 ) -> None:
-    ok = await soft_delete_food_entry(session, device_id=device_id, entry_id=entry_id)
+    ok = await soft_delete_food_entry(session, user_id=user_id, entry_id=entry_id, device_id=device_id)
     if not ok:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")

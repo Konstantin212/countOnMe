@@ -115,12 +115,14 @@ class TestLinkDevice:
         sub = str(uuid.uuid4())
         jwt_token = _make_jwt(sub=sub, email="legacy@test.com")
 
-        # Register a device via the legacy endpoint
+        # Register a device via the legacy endpoint (requires allow_device_auth)
         device_id = uuid.uuid4()
-        reg_resp = await app_client.post(
-            "/v1/devices/register",
-            json={"device_id": str(device_id)},
-        )
+        with patch("app.features.auth.router.settings") as mock_settings:
+            mock_settings.allow_device_auth = True
+            reg_resp = await app_client.post(
+                "/v1/devices/register",
+                json={"device_id": str(device_id)},
+            )
         assert reg_resp.status_code == 200
         legacy_token = reg_resp.json()["device_token"]
 
@@ -145,12 +147,14 @@ class TestLinkDevice:
         sub = str(uuid.uuid4())
         jwt_token = _make_jwt(sub=sub, email="bad-legacy@test.com")
 
-        # Register a device first
+        # Register a device first (requires allow_device_auth)
         device_id = uuid.uuid4()
-        await app_client.post(
-            "/v1/devices/register",
-            json={"device_id": str(device_id)},
-        )
+        with patch("app.features.auth.router.settings") as mock_settings:
+            mock_settings.allow_device_auth = True
+            await app_client.post(
+                "/v1/devices/register",
+                json={"device_id": str(device_id)},
+            )
 
         response = await app_client.post(
             "/v1/auth/link-device",
@@ -171,12 +175,14 @@ class TestLinkDevice:
         sub = str(uuid.uuid4())
         jwt_token = _make_jwt(sub=sub, email="ownership@test.com")
 
-        # Register a device (gives it a real token_hash)
+        # Register a device (gives it a real token_hash; requires allow_device_auth)
         device_id = uuid.uuid4()
-        reg_resp = await app_client.post(
-            "/v1/devices/register",
-            json={"device_id": str(device_id)},
-        )
+        with patch("app.features.auth.router.settings") as mock_settings:
+            mock_settings.allow_device_auth = True
+            reg_resp = await app_client.post(
+                "/v1/devices/register",
+                json={"device_id": str(device_id)},
+            )
         assert reg_resp.status_code == 200
 
         # Try to link without legacy token — should get 403

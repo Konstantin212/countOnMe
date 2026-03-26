@@ -10,16 +10,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.enums import MealType
 from app.features.stats.service import get_day_stats
-from tests.factories import create_device, create_food_entry, create_portion, create_product
+from tests.factories import create_food_entry, create_portion, create_product, create_user
 
 
 @pytest.mark.asyncio
 async def test_get_day_stats_empty(db_session: AsyncSession):
     """Test getting stats for a day with no entries."""
-    device = await create_device(db_session)
+    user = await create_user(db_session)
     today = date.today()
 
-    totals, by_meal = await get_day_stats(db_session, device_id=device.id, day=today)
+    totals, by_meal = await get_day_stats(db_session, user_id=user.id, day=today)
 
     assert totals.calories == Decimal("0")
     assert totals.protein == Decimal("0")
@@ -31,12 +31,12 @@ async def test_get_day_stats_empty(db_session: AsyncSession):
 @pytest.mark.asyncio
 async def test_get_day_stats_single_entry(db_session: AsyncSession):
     """Test getting stats for a day with one entry."""
-    device = await create_device(db_session)
-    product = await create_product(db_session, device.id)
+    user = await create_user(db_session)
+    product = await create_product(db_session, user_id=user.id)
     portion = await create_portion(
         db_session,
-        device.id,
-        product.id,
+        user_id=user.id,
+        product_id=product.id,
         calories=Decimal("200"),
         protein=Decimal("10"),
         carbs=Decimal("20"),
@@ -47,15 +47,15 @@ async def test_get_day_stats_single_entry(db_session: AsyncSession):
 
     await create_food_entry(
         db_session,
-        device.id,
-        product.id,
-        portion.id,
+        user_id=user.id,
+        product_id=product.id,
+        portion_id=portion.id,
         day=today,
         meal_type=MealType.breakfast,
         amount=Decimal("100"),
     )
 
-    totals, by_meal = await get_day_stats(db_session, device_id=device.id, day=today)
+    totals, by_meal = await get_day_stats(db_session, user_id=user.id, day=today)
 
     assert totals.calories == Decimal("200")
     assert totals.protein == Decimal("10")
@@ -66,12 +66,12 @@ async def test_get_day_stats_single_entry(db_session: AsyncSession):
 @pytest.mark.asyncio
 async def test_get_day_stats_multiple_entries(db_session: AsyncSession):
     """Test getting stats for a day with multiple entries."""
-    device = await create_device(db_session)
-    product = await create_product(db_session, device.id)
+    user = await create_user(db_session)
+    product = await create_product(db_session, user_id=user.id)
     portion = await create_portion(
         db_session,
-        device.id,
-        product.id,
+        user_id=user.id,
+        product_id=product.id,
         calories=Decimal("100"),
         protein=Decimal("5"),
         carbs=Decimal("10"),
@@ -82,24 +82,24 @@ async def test_get_day_stats_multiple_entries(db_session: AsyncSession):
 
     await create_food_entry(
         db_session,
-        device.id,
-        product.id,
-        portion.id,
+        user_id=user.id,
+        product_id=product.id,
+        portion_id=portion.id,
         day=today,
         meal_type=MealType.breakfast,
         amount=Decimal("100"),
     )
     await create_food_entry(
         db_session,
-        device.id,
-        product.id,
-        portion.id,
+        user_id=user.id,
+        product_id=product.id,
+        portion_id=portion.id,
         day=today,
         meal_type=MealType.lunch,
         amount=Decimal("200"),
     )
 
-    totals, by_meal = await get_day_stats(db_session, device_id=device.id, day=today)
+    totals, by_meal = await get_day_stats(db_session, user_id=user.id, day=today)
 
     # 100 + 200 = 300 calories
     assert totals.calories == Decimal("300")
@@ -112,12 +112,12 @@ async def test_get_day_stats_multiple_entries(db_session: AsyncSession):
 @pytest.mark.asyncio
 async def test_get_day_stats_by_meal_type(db_session: AsyncSession):
     """Test stats grouped by meal type."""
-    device = await create_device(db_session)
-    product = await create_product(db_session, device.id)
+    user = await create_user(db_session)
+    product = await create_product(db_session, user_id=user.id)
     portion = await create_portion(
         db_session,
-        device.id,
-        product.id,
+        user_id=user.id,
+        product_id=product.id,
         calories=Decimal("100"),
         protein=Decimal("5"),
         carbs=Decimal("10"),
@@ -129,24 +129,24 @@ async def test_get_day_stats_by_meal_type(db_session: AsyncSession):
     # Two breakfast entries
     await create_food_entry(
         db_session,
-        device.id,
-        product.id,
-        portion.id,
+        user_id=user.id,
+        product_id=product.id,
+        portion_id=portion.id,
         day=today,
         meal_type=MealType.breakfast,
         amount=Decimal("100"),
     )
     await create_food_entry(
         db_session,
-        device.id,
-        product.id,
-        portion.id,
+        user_id=user.id,
+        product_id=product.id,
+        portion_id=portion.id,
         day=today,
         meal_type=MealType.breakfast,
         amount=Decimal("50"),
     )
 
-    totals, by_meal = await get_day_stats(db_session, device_id=device.id, day=today)
+    totals, by_meal = await get_day_stats(db_session, user_id=user.id, day=today)
 
     assert totals.calories == Decimal("150")
     assert by_meal[MealType.breakfast].calories == Decimal("150")
@@ -155,12 +155,12 @@ async def test_get_day_stats_by_meal_type(db_session: AsyncSession):
 @pytest.mark.asyncio
 async def test_get_day_stats_excludes_deleted(db_session: AsyncSession):
     """Test that soft-deleted entries are excluded from stats."""
-    device = await create_device(db_session)
-    product = await create_product(db_session, device.id)
+    user = await create_user(db_session)
+    product = await create_product(db_session, user_id=user.id)
     portion = await create_portion(
         db_session,
-        device.id,
-        product.id,
+        user_id=user.id,
+        product_id=product.id,
         calories=Decimal("100"),
         protein=Decimal("5"),
         carbs=Decimal("10"),
@@ -171,53 +171,53 @@ async def test_get_day_stats_excludes_deleted(db_session: AsyncSession):
 
     _entry1 = await create_food_entry(
         db_session,
-        device.id,
-        product.id,
-        portion.id,
+        user_id=user.id,
+        product_id=product.id,
+        portion_id=portion.id,
         day=today,
         amount=Decimal("100"),
     )
     entry2 = await create_food_entry(
         db_session,
-        device.id,
-        product.id,
-        portion.id,
+        user_id=user.id,
+        product_id=product.id,
+        portion_id=portion.id,
         day=today,
         amount=Decimal("100"),
     )
 
     # Soft delete entry2
     from app.features.meals.service import soft_delete_food_entry
-    await soft_delete_food_entry(db_session, device_id=device.id, entry_id=entry2.id)
+    await soft_delete_food_entry(db_session, user_id=user.id, entry_id=entry2.id)
 
-    totals, _by_meal = await get_day_stats(db_session, device_id=device.id, day=today)
+    totals, _by_meal = await get_day_stats(db_session, user_id=user.id, day=today)
 
     # Only entry1 should be counted
     assert totals.calories == Decimal("100")
 
 
 @pytest.mark.asyncio
-async def test_get_day_stats_device_scoped(db_session: AsyncSession):
-    """Test that stats are scoped by device."""
-    device1 = await create_device(db_session)
-    device2 = await create_device(db_session)
-    product1 = await create_product(db_session, device1.id)
-    product2 = await create_product(db_session, device2.id)
-    portion1 = await create_portion(db_session, device1.id, product1.id, calories=Decimal("100"))
-    portion2 = await create_portion(db_session, device2.id, product2.id, calories=Decimal("200"))
+async def test_get_day_stats_user_scoped(db_session: AsyncSession):
+    """Test that stats are scoped by user."""
+    user1 = await create_user(db_session)
+    user2 = await create_user(db_session)
+    product1 = await create_product(db_session, user_id=user1.id)
+    product2 = await create_product(db_session, user_id=user2.id)
+    portion1 = await create_portion(db_session, user_id=user1.id, product_id=product1.id, calories=Decimal("100"))
+    portion2 = await create_portion(db_session, user_id=user2.id, product_id=product2.id, calories=Decimal("200"))
     today = date.today()
 
     await create_food_entry(
-        db_session, device1.id, product1.id, portion1.id,
+        db_session, user_id=user1.id, product_id=product1.id, portion_id=portion1.id,
         day=today, amount=Decimal("100")
     )
     await create_food_entry(
-        db_session, device2.id, product2.id, portion2.id,
+        db_session, user_id=user2.id, product_id=product2.id, portion_id=portion2.id,
         day=today, amount=Decimal("100")
     )
 
-    totals1, _ = await get_day_stats(db_session, device_id=device1.id, day=today)
-    totals2, _ = await get_day_stats(db_session, device_id=device2.id, day=today)
+    totals1, _ = await get_day_stats(db_session, user_id=user1.id, day=today)
+    totals2, _ = await get_day_stats(db_session, user_id=user2.id, day=today)
 
     assert totals1.calories == Decimal("100")
     assert totals2.calories == Decimal("200")

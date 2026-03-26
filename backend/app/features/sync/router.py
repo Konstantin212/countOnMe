@@ -1,66 +1,103 @@
+"""Sync router — delta-based pull and batch push endpoints."""
+
 from __future__ import annotations
 
 import uuid
-from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db import get_session
-from app.core.deps import get_current_user_id
-from app.features.sync.schemas import SyncSinceResponse
-from app.features.sync.service import (
-    get_changed_food_entries,
-    get_changed_portions,
-    get_changed_products,
+from app.core.deps import get_current_user_id, get_optional_device_id
+from app.features.sync.schemas import (
+    BodyWeightChanges,
+    FoodEntryChanges,
+    GoalChanges,
+    PortionChanges,
+    ProductChanges,
+    SyncBodyWeight,
+    SyncFoodEntry,
+    SyncPortion,
+    SyncProduct,
+    SyncPullResponse,
+    SyncPushRequest,
+    SyncPushResponse,
+    SyncUserGoal,
+    SyncWaterLog,
+    WaterLogChanges,
 )
+from app.features.sync.service import compute_sync_cursor, get_deltas, process_push
 
 router = APIRouter(prefix="/sync", tags=["sync"])
 
-
-def _parse_cursor(cursor: str | None) -> tuple[datetime, uuid.UUID] | None:
-    if not cursor:
-        return None
-    try:
-        ts_raw, id_raw = cursor.split("|", 1)
-        # ISO 8601
-        ts = datetime.fromisoformat(ts_raw.replace("Z", "+00:00"))
-        if ts.tzinfo is None:
-            ts = ts.replace(tzinfo=UTC)
-        return ts, uuid.UUID(id_raw)
-    except Exception:
-        return None
+# Mapping from entity key to (changes schema class, item schema class)
+_ENTITY_SCHEMA_MAP: dict[str, tuple[type, type]] = {
+    "products": (ProductChanges, SyncProduct),
+    "portions": (PortionChanges, SyncPortion),
+    "food_entries": (FoodEntryChanges, SyncFoodEntry),
+    "goals": (GoalChanges, SyncUserGoal),
+    "body_weights": (BodyWeightChanges, SyncBodyWeight),
+    "water_logs": (WaterLogChanges, SyncWaterLog),
+}
 
 
-def _format_cursor(ts: datetime, id_: uuid.UUID) -> str:
-    return f"{ts.astimezone(UTC).isoformat().replace('+00:00', 'Z')}|{id_}"
+def _build_pull_response(
+    changes: dict[str, list],
+    has_more: bool,
+) -> SyncPullResponse:
+    """Convert raw ORM rows grouped by entity key into a SyncPullResponse."""
+    cursor = compute_sync_cursor(changes)
+
+    result: dict[str, object] = {}
+    for entity_key, rows in changes.items():
+        changes_cls, item_cls = _ENTITY_SCHEMA_MAP[entity_key]
+        upserts = []
+        deletes = []
+        for row in rows:
+            if row.deleted_at is not None:
+                deletes.append(row.id)
+            else:
+                upserts.append(item_cls.model_validate(row))
+        result[entity_key] = changes_cls(upserts=upserts, deletes=deletes)
+
+    return SyncPullResponse(
+        products=result.get("products", ProductChanges()),
+        portions=result.get("portions", PortionChanges()),
+        food_entries=result.get("food_entries", FoodEntryChanges()),
+        goals=result.get("goals", GoalChanges()),
+        body_weights=result.get("body_weights", BodyWeightChanges()),
+        water_logs=result.get("water_logs", WaterLogChanges()),
+        sync_cursor=cursor,
+        has_more=has_more,
+    )
 
 
-@router.get("/since", response_model=SyncSinceResponse)
-async def sync_since(
-    cursor: str | None = Query(default=None),
-    limit: int = Query(default=200, ge=1, le=500),
+@router.get("/pull", response_model=SyncPullResponse)
+async def sync_pull(
+    since_version: int = Query(default=0, ge=0),
+    limit: int = Query(default=500, ge=1, le=500),
     user_id: uuid.UUID = Depends(get_current_user_id),
     session: AsyncSession = Depends(get_session),
-) -> SyncSinceResponse:
-    since = _parse_cursor(cursor)
+) -> SyncPullResponse:
+    """Return delta changes across all syncable entities since a given sync_version."""
+    changes, has_more = await get_deltas(session, user_id, since_version, limit)
+    return _build_pull_response(changes, has_more)
 
-    prods = await get_changed_products(session, user_id, since, limit)
-    portions = await get_changed_portions(session, user_id, since, limit)
-    entries = await get_changed_food_entries(session, user_id, since, limit)
 
-    # Advance cursor to max(updated_at, id) across all returned rows.
-    max_pair: tuple[datetime, uuid.UUID] | None = None
-    for row in [*prods, *portions, *entries]:
-        pair = (row.updated_at, row.id)
-        if max_pair is None or pair > max_pair:
-            max_pair = pair
-
-    next_cursor = _format_cursor(max_pair[0], max_pair[1]) if max_pair else cursor
-
-    return SyncSinceResponse(
-        cursor=next_cursor,
-        products=prods,
-        portions=portions,
-        food_entries=entries,
+@router.post("/push", response_model=SyncPushResponse)
+async def sync_push(
+    body: SyncPushRequest,
+    user_id: uuid.UUID = Depends(get_current_user_id),
+    device_id: uuid.UUID | None = Depends(get_optional_device_id),
+    session: AsyncSession = Depends(get_session),
+) -> SyncPushResponse:
+    """Accept a batch of mutations with LWW conflict resolution."""
+    # Use device_id from header, fall back to body.device_id
+    effective_device_id = device_id or body.device_id
+    results = await process_push(
+        session,
+        user_id=user_id,
+        mutations=body.mutations,
+        device_id=effective_device_id,
     )
+    return SyncPushResponse(results=results)

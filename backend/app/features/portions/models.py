@@ -9,10 +9,10 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.db import Base
 from app.core.enums import Unit
-from app.core.mixins import TimestampMixin
+from app.core.mixins import SyncMixin, TimestampMixin
 
 
-class ProductPortion(Base, TimestampMixin):
+class ProductPortion(Base, TimestampMixin, SyncMixin):
     __tablename__ = "product_portions"
 
     __table_args__ = (

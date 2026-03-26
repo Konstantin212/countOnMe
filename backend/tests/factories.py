@@ -8,7 +8,7 @@ from decimal import Decimal
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.enums import MealType, Unit
+from app.core.enums import MealType, ModerationStatus, Unit, Visibility
 from app.features.auth.models import Device, User, UserDevice
 from app.features.auth.service import issue_device_token
 from app.features.catalog.models import CatalogPortion, CatalogProduct
@@ -16,6 +16,8 @@ from app.features.goals.models import UserGoal
 from app.features.meals.models import FoodEntry
 from app.features.portions.models import ProductPortion
 from app.features.products.models import Product
+from app.features.shared.models import SharedFood, SharedFoodPortion
+from app.features.water.models import WaterLog
 from app.features.weights.models import BodyWeight
 
 
@@ -271,3 +273,83 @@ async def create_catalog_portion(
     session.add(portion)
     await session.flush()
     return portion
+
+
+async def create_shared_food(
+    session: AsyncSession,
+    *,
+    owner_user_id: uuid.UUID,
+    name: str | None = None,
+    display_name: str | None = None,
+    visibility: Visibility = Visibility.private,
+    moderation_status: ModerationStatus = ModerationStatus.pending,
+    **overrides,
+) -> SharedFood:
+    """Create a test shared food."""
+    marker = uuid.uuid4().hex[:8]
+    defaults: dict = {
+        "owner_user_id": owner_user_id,
+        "name": name or f"Shared Food {marker}",
+        "display_name": display_name or name or f"Shared Food {marker}",
+        "visibility": visibility,
+        "moderation_status": moderation_status,
+    }
+    defaults.update(overrides)
+
+    food = SharedFood(**defaults)
+    session.add(food)
+    await session.flush()
+    await session.refresh(food)
+    return food
+
+
+async def create_shared_food_portion(
+    session: AsyncSession,
+    *,
+    shared_food_id: uuid.UUID,
+    label: str = "100 g",
+    base_amount: Decimal = Decimal("100"),
+    base_unit: Unit = Unit.g,
+    calories: Decimal = Decimal("200"),
+    is_default: bool = True,
+    **overrides,
+) -> SharedFoodPortion:
+    """Create a test shared food portion."""
+    defaults: dict = {
+        "shared_food_id": shared_food_id,
+        "label": label,
+        "base_amount": base_amount,
+        "base_unit": base_unit,
+        "calories": calories,
+        "is_default": is_default,
+    }
+    defaults.update(overrides)
+
+    portion = SharedFoodPortion(**defaults)
+    session.add(portion)
+    await session.flush()
+    await session.refresh(portion)
+    return portion
+
+
+async def create_water_log(
+    session: AsyncSession,
+    device_id: uuid.UUID | None = None,
+    *,
+    user_id: uuid.UUID | None = None,
+    **overrides,
+) -> WaterLog:
+    """Create a test water log entry."""
+    defaults: dict = {
+        "device_id": device_id,
+        "user_id": user_id,
+        "day": date.today(),
+        "amount_ml": 250,
+    }
+    defaults.update(overrides)
+
+    water_log = WaterLog(**defaults)
+    session.add(water_log)
+    await session.flush()
+    await session.refresh(water_log)
+    return water_log

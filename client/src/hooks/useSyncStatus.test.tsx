@@ -11,22 +11,30 @@ vi.mock("@react-native-community/netinfo", () => ({
 
 vi.mock("@services/api/config");
 vi.mock("@storage/device");
-vi.mock("@storage/syncQueue");
+vi.mock("@services/syncEngine", () => ({
+  getState: vi.fn(() => ({
+    status: "idle",
+    lastSyncAt: null,
+    lastError: null,
+    pendingCount: 0,
+  })),
+  subscribe: vi.fn(() => vi.fn()),
+  sync: vi.fn(() => Promise.resolve()),
+}));
 
 import NetInfo from "@react-native-community/netinfo";
 import * as config from "@services/api/config";
+import * as syncEngine from "@services/syncEngine";
 import * as device from "@storage/device";
-import * as syncQueue from "@storage/syncQueue";
 import { useSyncStatus } from "./useSyncStatus";
 
 const mockNetInfo = vi.mocked(NetInfo);
 const mockGetApiBaseUrl = vi.mocked(config.getApiBaseUrl);
 const mockGetOrCreateDeviceId = vi.mocked(device.getOrCreateDeviceId);
 const mockGetDeviceToken = vi.mocked(device.getDeviceToken);
-const mockGetQueue = vi.mocked(syncQueue.getQueue);
-const mockGetLastSyncAt = vi.mocked(syncQueue.getLastSyncAt);
-const mockGetLastSyncError = vi.mocked(syncQueue.getLastSyncError);
-const mockFlush = vi.mocked(syncQueue.flush);
+const mockSubscribe = vi.mocked(syncEngine.subscribe);
+const mockGetState = vi.mocked(syncEngine.getState);
+const mockSync = vi.mocked(syncEngine.sync);
 
 describe("useSyncStatus", () => {
   beforeEach(() => {
@@ -36,18 +44,14 @@ describe("useSyncStatus", () => {
     mockGetApiBaseUrl.mockReturnValue("http://localhost:8000");
     mockGetOrCreateDeviceId.mockResolvedValue("device-123");
     mockGetDeviceToken.mockResolvedValue("token-abc");
-    mockGetQueue.mockResolvedValue([]);
-    mockGetLastSyncAt.mockResolvedValue(null);
-    mockGetLastSyncError.mockResolvedValue(null);
-    mockFlush.mockResolvedValue({
-      attempted: 0,
-      succeeded: 0,
-      remaining: 0,
-      skipped: 0,
-      offline: false,
+    mockGetState.mockReturnValue({
+      status: "idle",
+      lastSyncAt: null,
+      lastError: null,
+      pendingCount: 0,
     });
-
-    // Mock NetInfo listener
+    mockSubscribe.mockReturnValue(() => {});
+    mockSync.mockResolvedValue();
     mockNetInfo.addEventListener.mockReturnValue(() => {});
   });
 
@@ -92,9 +96,10 @@ describe("useSyncStatus", () => {
   });
 
   it("tracks online status from NetInfo", async () => {
-    let netInfoListener: any;
+    let netInfoListener: ((state: { isConnected: boolean }) => void) | null =
+      null;
     mockNetInfo.addEventListener.mockImplementation((callback) => {
-      netInfoListener = callback;
+      netInfoListener = callback as (state: { isConnected: boolean }) => void;
       return () => {};
     });
 
@@ -104,113 +109,158 @@ describe("useSyncStatus", () => {
       expect(result.current.deviceId).not.toBe("");
     });
 
-    // Initial state (default mock isConnected: true from setup.ts won't apply here)
     // Trigger connection change
     act(() => {
-      netInfoListener({ isConnected: false });
+      netInfoListener?.({ isConnected: false });
     });
 
     expect(result.current.isOnline).toBe(false);
 
     act(() => {
-      netInfoListener({ isConnected: true });
+      netInfoListener?.({ isConnected: true });
     });
 
     expect(result.current.isOnline).toBe(true);
   });
 
-  it("returns queue size", async () => {
-    mockGetQueue.mockResolvedValue([
-      {
-        id: "1",
-        resource: "products",
-        action: "create",
-        payload: {},
-        createdAt: Date.now(),
-        attempts: 0,
-      },
-      {
-        id: "2",
-        resource: "goals",
-        action: "update",
-        payload: {},
-        createdAt: Date.now(),
-        attempts: 0,
-      },
-    ]);
+  it("returns pending count from sync engine", async () => {
+    mockGetState.mockReturnValue({
+      status: "idle",
+      lastSyncAt: null,
+      lastError: null,
+      pendingCount: 5,
+    });
 
     const { result } = renderHook(() => useSyncStatus());
 
-    await waitFor(() => {
-      expect(result.current.queueSize).toBe(2);
-    });
+    expect(result.current.queueSize).toBe(5);
   });
 
-  it("returns last sync timestamp", async () => {
+  it("returns last sync timestamp from sync engine", async () => {
     const timestamp = Date.now();
-    mockGetLastSyncAt.mockResolvedValue(timestamp);
+    mockGetState.mockReturnValue({
+      status: "idle",
+      lastSyncAt: timestamp,
+      lastError: null,
+      pendingCount: 0,
+    });
 
     const { result } = renderHook(() => useSyncStatus());
 
-    await waitFor(() => {
-      expect(result.current.lastSyncAt).toBe(timestamp);
-    });
+    expect(result.current.lastSyncAt).toBe(timestamp);
   });
 
-  it("returns last sync error", async () => {
-    mockGetLastSyncError.mockResolvedValue("Network timeout");
+  it("returns last sync error from sync engine", async () => {
+    mockGetState.mockReturnValue({
+      status: "error",
+      lastSyncAt: null,
+      lastError: "Network timeout",
+      pendingCount: 0,
+    });
 
     const { result } = renderHook(() => useSyncStatus());
 
-    await waitFor(() => {
-      expect(result.current.lastError).toBe("Network timeout");
-    });
+    expect(result.current.lastError).toBe("Network timeout");
   });
 
-  it("refreshes status", async () => {
+  it("subscribes to sync engine state changes", async () => {
+    let syncListener: ((state: syncEngine.SyncState) => void) | null = null;
+    mockSubscribe.mockImplementation((listener) => {
+      syncListener = listener;
+      return () => {};
+    });
+
     const { result } = renderHook(() => useSyncStatus());
 
     await waitFor(() => {
       expect(result.current.deviceId).not.toBe("");
     });
 
-    mockGetQueue.mockResolvedValue([
-      {
-        id: "3",
-        resource: "products",
-        action: "delete",
-        payload: {},
-        createdAt: Date.now(),
-        attempts: 0,
-      },
-    ]);
+    expect(mockSubscribe).toHaveBeenCalledTimes(1);
+
+    // Simulate sync engine state change
+    act(() => {
+      syncListener?.({
+        status: "pulling",
+        lastSyncAt: null,
+        lastError: null,
+        pendingCount: 3,
+      });
+    });
+
+    expect(result.current.flushing).toBe(true);
+    expect(result.current.queueSize).toBe(3);
+  });
+
+  it("refreshes device info", async () => {
+    const { result } = renderHook(() => useSyncStatus());
+
+    await waitFor(() => {
+      expect(result.current.deviceId).not.toBe("");
+    });
+
+    mockGetOrCreateDeviceId.mockResolvedValue("device-456");
+    mockGetDeviceToken.mockResolvedValue(null);
 
     await act(async () => {
       await result.current.refresh();
     });
 
-    expect(result.current.queueSize).toBe(1);
-    expect(mockGetQueue).toHaveBeenCalledTimes(2); // Once on mount, once on refresh
+    expect(result.current.deviceId).toBe("device-456");
+    expect(result.current.hasToken).toBe(false);
+    expect(mockGetOrCreateDeviceId).toHaveBeenCalledTimes(2);
   });
 
-  it("flushes sync queue", async () => {
+  it("calls sync engine sync on flushNow", async () => {
     const { result } = renderHook(() => useSyncStatus());
 
     await waitFor(() => {
       expect(result.current.deviceId).not.toBe("");
     });
 
-    expect(result.current.flushing).toBe(false);
-
-    const flushPromise = act(async () => {
+    await act(async () => {
       await result.current.flushNow();
     });
 
-    // flushing should be true during flush (but hard to test due to async)
+    expect(mockSync).toHaveBeenCalledTimes(1);
+  });
 
-    await flushPromise;
+  it("reports flushing=true when sync engine is pulling", async () => {
+    mockGetState.mockReturnValue({
+      status: "pulling",
+      lastSyncAt: null,
+      lastError: null,
+      pendingCount: 0,
+    });
+
+    const { result } = renderHook(() => useSyncStatus());
+
+    expect(result.current.flushing).toBe(true);
+  });
+
+  it("reports flushing=true when sync engine is pushing", async () => {
+    mockGetState.mockReturnValue({
+      status: "pushing",
+      lastSyncAt: null,
+      lastError: null,
+      pendingCount: 0,
+    });
+
+    const { result } = renderHook(() => useSyncStatus());
+
+    expect(result.current.flushing).toBe(true);
+  });
+
+  it("reports flushing=false when sync engine is idle", async () => {
+    mockGetState.mockReturnValue({
+      status: "idle",
+      lastSyncAt: null,
+      lastError: null,
+      pendingCount: 0,
+    });
+
+    const { result } = renderHook(() => useSyncStatus());
 
     expect(result.current.flushing).toBe(false);
-    expect(mockFlush).toHaveBeenCalledTimes(1);
   });
 });

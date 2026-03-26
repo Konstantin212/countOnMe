@@ -7,10 +7,10 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.db import Base
-from app.core.mixins import TimestampMixin
+from app.core.mixins import SyncMixin, TimestampMixin
 
 
-class Product(Base, TimestampMixin):
+class Product(Base, TimestampMixin, SyncMixin):
     __tablename__ = "products"
 
     __table_args__ = (

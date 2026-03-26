@@ -5,6 +5,12 @@ import * as storage from "@storage/storage";
 import { useWaterTracking } from "./useWaterTracking";
 
 vi.mock("@storage/storage");
+vi.mock("@storage/outbox", () => ({
+  enqueueOutbox: vi.fn(() => Promise.resolve()),
+}));
+vi.mock("@services/syncEngine", () => ({
+  debouncedSync: vi.fn(),
+}));
 vi.mock("uuid", () => ({
   v4: vi.fn(() => "test-uuid"),
 }));
@@ -28,6 +34,7 @@ describe("useWaterTracking", () => {
         day: TODAY,
         amountMl: 250,
         createdAt: "2025-06-01T08:00:00.000Z",
+        updatedAt: "2025-06-01T08:00:00.000Z",
       },
     ];
     mockLoadWaterLogs.mockResolvedValue(logs);
@@ -93,18 +100,21 @@ describe("useWaterTracking", () => {
         day: TODAY,
         amountMl: 250,
         createdAt: "2025-06-01T08:00:00.000Z",
+        updatedAt: "2025-06-01T08:00:00.000Z",
       },
       {
         id: "w2",
         day: TODAY,
         amountMl: 500,
         createdAt: "2025-06-01T12:00:00.000Z",
+        updatedAt: "2025-06-01T12:00:00.000Z",
       },
       {
         id: "w3",
         day: "2020-01-01",
         amountMl: 1000,
         createdAt: "2020-01-01T08:00:00.000Z",
+        updatedAt: "2020-01-01T08:00:00.000Z",
       },
     ];
     mockLoadWaterLogs.mockResolvedValue(logs);
@@ -124,12 +134,14 @@ describe("useWaterTracking", () => {
       day: TODAY,
       amountMl: 250,
       createdAt: "2025-06-01T08:00:00.000Z",
+      updatedAt: "2025-06-01T08:00:00.000Z",
     };
     const oldLog = {
       id: "w2",
       day: "2020-01-01",
       amountMl: 500,
       createdAt: "2020-01-01T08:00:00.000Z",
+      updatedAt: "2020-01-01T08:00:00.000Z",
     };
     mockLoadWaterLogs.mockResolvedValue([todayLog, oldLog]);
 
@@ -149,12 +161,14 @@ describe("useWaterTracking", () => {
         day: TODAY,
         amountMl: 250,
         createdAt: "2025-06-01T08:00:00.000Z",
+        updatedAt: "2025-06-01T08:00:00.000Z",
       },
       {
         id: "w2",
         day: TODAY,
         amountMl: 500,
         createdAt: "2025-06-01T12:00:00.000Z",
+        updatedAt: "2025-06-01T12:00:00.000Z",
       },
     ];
     mockLoadWaterLogs.mockResolvedValue(logs);
@@ -182,6 +196,7 @@ describe("useWaterTracking", () => {
         day: TODAY,
         amountMl: 500,
         createdAt: "2025-06-01T08:00:00.000Z",
+        updatedAt: "2025-06-01T08:00:00.000Z",
       },
     ];
     mockLoadWaterLogs.mockResolvedValue(logs);
@@ -209,6 +224,7 @@ describe("useWaterTracking", () => {
         day: TODAY,
         amountMl: 50,
         createdAt: "2025-06-01T08:00:00.000Z",
+        updatedAt: "2025-06-01T08:00:00.000Z",
       },
     ];
     mockLoadWaterLogs.mockResolvedValue(logs);
@@ -287,6 +303,7 @@ describe("useWaterTracking", () => {
         day: TODAY,
         amountMl: 500,
         createdAt: "2025-06-01T08:00:00.000Z",
+        updatedAt: "2025-06-01T08:00:00.000Z",
       },
     ];
     mockLoadWaterLogs.mockResolvedValue(updatedLogs);

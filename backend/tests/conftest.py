@@ -28,6 +28,8 @@ from app.features.goals.models import UserGoal
 from app.features.meals.models import FoodEntry
 from app.features.portions.models import ProductPortion
 from app.features.products.models import Product
+from app.features.shared.models import SharedFood, SharedFoodPortion
+from app.features.water.models import WaterLog
 from app.features.weights.models import BodyWeight
 from app.main import create_app
 
@@ -84,7 +86,7 @@ async def test_engine() -> AsyncIterator[AsyncEngine]:
     engine = create_async_engine(TEST_DATABASE_URL, echo=False, pool_pre_ping=True)
 
     # Import all models to ensure they're registered with Base
-    _ = (Device, User, UserDevice, Product, ProductPortion, FoodEntry, UserGoal, BodyWeight, CatalogProduct, CatalogPortion)
+    _ = (Device, User, UserDevice, Product, ProductPortion, FoodEntry, UserGoal, BodyWeight, WaterLog, CatalogProduct, CatalogPortion, SharedFood, SharedFoodPortion)
 
     # Create schema (reuse existing enums if they exist)
     async with engine.begin() as conn:
@@ -109,11 +111,93 @@ async def test_engine() -> AsyncIterator[AsyncEngine]:
             END $$;
             """)
         )
+        await conn.execute(
+            text("""
+            DO $$ BEGIN
+                CREATE TYPE visibility_enum AS ENUM ('private', 'unlisted', 'public');
+            EXCEPTION
+                WHEN duplicate_object THEN null;
+            END $$;
+            """)
+        )
+        await conn.execute(
+            text("""
+            DO $$ BEGIN
+                CREATE TYPE moderation_status_enum AS ENUM ('pending', 'approved', 'rejected');
+            EXCEPTION
+                WHEN duplicate_object THEN null;
+            END $$;
+            """)
+        )
+        # Create sync_version sequence if it doesn't exist
+        await conn.execute(
+            text("""
+            DO $$ BEGIN
+                CREATE SEQUENCE IF NOT EXISTS sync_version_seq;
+            END $$;
+            """)
+        )
+
         # Create tables (will fail if exist, but that's ok for now)
         try:
             await conn.run_sync(Base.metadata.create_all)
         except Exception:  # noqa: S110
             pass  # Tables already exist - expected in test environment
+
+        # Add sync columns to tables that may have been created before SyncMixin
+        # (create_all doesn't ALTER existing tables)
+        sync_tables = [
+            "products", "product_portions", "food_entries",
+            "user_goals", "body_weights", "water_logs",
+        ]
+        for tbl in sync_tables:
+            await conn.execute(
+                text(f"""
+                DO $$ BEGIN
+                    ALTER TABLE {tbl}
+                        ADD COLUMN IF NOT EXISTS server_updated_at
+                            timestamptz NOT NULL DEFAULT now();
+                EXCEPTION WHEN OTHERS THEN null;
+                END $$;
+                """)
+            )
+            await conn.execute(
+                text(f"""
+                DO $$ BEGIN
+                    ALTER TABLE {tbl}
+                        ADD COLUMN IF NOT EXISTS sync_version
+                            bigint NOT NULL DEFAULT nextval('sync_version_seq');
+                EXCEPTION WHEN OTHERS THEN null;
+                END $$;
+                """)
+            )
+
+        # Create trigger function that bumps sync_version on every write
+        await conn.execute(
+            text("""
+            CREATE OR REPLACE FUNCTION trg_bump_sync_version()
+            RETURNS TRIGGER AS $$
+            BEGIN
+                NEW.sync_version := nextval('sync_version_seq');
+                NEW.server_updated_at := now();
+                RETURN NEW;
+            END;
+            $$ LANGUAGE plpgsql;
+            """)
+        )
+
+        # Attach trigger to each syncable table
+        for tbl in sync_tables:
+            await conn.execute(
+                text(f"""
+                DO $$ BEGIN
+                    CREATE TRIGGER {tbl}_bump_sync_version
+                    BEFORE INSERT OR UPDATE ON {tbl}
+                    FOR EACH ROW EXECUTE FUNCTION trg_bump_sync_version();
+                EXCEPTION WHEN duplicate_object THEN null;
+                END $$;
+                """)
+            )
 
     yield engine
 

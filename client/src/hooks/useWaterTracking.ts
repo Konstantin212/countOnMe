@@ -3,6 +3,8 @@ import { v4 as uuid } from "uuid";
 
 import type { WaterLog } from "@models/types";
 import { loadWaterLogs, saveWaterLogs } from "@storage/storage";
+import { enqueueOutbox } from "@storage/outbox";
+import { debouncedSync } from "@services/syncEngine";
 
 const DEFAULT_WATER_GOAL_ML = 2000;
 
@@ -58,11 +60,13 @@ export const useWaterTracking = (
   }, [refresh]);
 
   const addWater = useCallback(async (amountMl: number): Promise<void> => {
+    const timestamp = new Date().toISOString();
     const newLog: WaterLog = {
       id: uuid(),
       day: getTodayDate(),
       amountMl,
-      createdAt: new Date().toISOString(),
+      createdAt: timestamp,
+      updatedAt: timestamp,
     };
 
     const updated = [...logsRef.current, newLog];
@@ -74,17 +78,28 @@ export const useWaterTracking = (
 
     try {
       await saveWaterLogs(updated);
+      await enqueueOutbox({
+        id: `water_log:${newLog.id}`,
+        entityType: "water_log",
+        action: "upsert",
+        entityId: newLog.id,
+        data: { day: newLog.day, amount_ml: newLog.amountMl },
+        updatedAt: newLog.updatedAt,
+      });
+      debouncedSync();
     } catch {
       // Storage failure — state already updated optimistically
     }
   }, []);
 
   const removeWater = useCallback(async (amountMl: number): Promise<void> => {
+    const timestamp = new Date().toISOString();
     const newLog: WaterLog = {
       id: uuid(),
       day: getTodayDate(),
       amountMl: -amountMl,
-      createdAt: new Date().toISOString(),
+      createdAt: timestamp,
+      updatedAt: timestamp,
     };
 
     const updated = [...logsRef.current, newLog];
@@ -96,6 +111,15 @@ export const useWaterTracking = (
 
     try {
       await saveWaterLogs(updated);
+      await enqueueOutbox({
+        id: `water_log:${newLog.id}`,
+        entityType: "water_log",
+        action: "upsert",
+        entityId: newLog.id,
+        data: { day: newLog.day, amount_ml: newLog.amountMl },
+        updatedAt: newLog.updatedAt,
+      });
+      debouncedSync();
     } catch {
       // Storage failure — state already updated optimistically
     }
@@ -111,6 +135,15 @@ export const useWaterTracking = (
 
     try {
       await saveWaterLogs(updated);
+      await enqueueOutbox({
+        id: `water_log:${id}`,
+        entityType: "water_log",
+        action: "delete",
+        entityId: id,
+        data: null,
+        updatedAt: new Date().toISOString(),
+      });
+      debouncedSync();
     } catch {
       // Storage failure — state already updated optimistically
     }

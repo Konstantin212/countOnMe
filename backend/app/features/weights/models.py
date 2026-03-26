@@ -9,10 +9,10 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.db import Base
-from app.core.mixins import TimestampMixin
+from app.core.mixins import SyncMixin, TimestampMixin
 
 
-class BodyWeight(Base, TimestampMixin):
+class BodyWeight(Base, TimestampMixin, SyncMixin):
     __tablename__ = "body_weights"
 
     __table_args__ = (

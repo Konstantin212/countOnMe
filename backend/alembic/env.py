@@ -17,6 +17,8 @@ from app.features.goals import models as _goals  # noqa: F401
 from app.features.meals import models as _meals  # noqa: F401
 from app.features.portions import models as _portions  # noqa: F401
 from app.features.products import models as _products  # noqa: F401
+from app.features.shared import models as _shared  # noqa: F401
+from app.features.water import models as _water  # noqa: F401
 from app.features.weights import models as _weights  # noqa: F401
 from app.settings import settings
 

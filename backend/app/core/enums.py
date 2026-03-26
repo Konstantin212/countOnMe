@@ -62,3 +62,19 @@ class WeightChangePace(StrEnum):
     slow = "slow"  # ~0.25 kg/week (-250 kcal/day)
     moderate = "moderate"  # ~0.5 kg/week (-500 kcal/day)
     aggressive = "aggressive"  # ~0.75 kg/week (-750 kcal/day)
+
+
+class Visibility(StrEnum):
+    """Visibility of shared content."""
+
+    private = "private"
+    unlisted = "unlisted"
+    public = "public"
+
+
+class ModerationStatus(StrEnum):
+    """Moderation status for shared content."""
+
+    pending = "pending"
+    approved = "approved"
+    rejected = "rejected"

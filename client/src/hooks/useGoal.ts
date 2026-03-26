@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from "react";
+import { v4 as uuid } from "uuid";
 
 import {
   GoalCalculateRequest,
@@ -6,25 +7,26 @@ import {
   GoalCreateCalculatedRequest,
   GoalCreateManualRequest,
   UserGoal,
-} from '@models/types';
+} from "@models/types";
 import {
   calculateGoal as apiCalculateGoal,
-  createCalculatedGoal as apiCreateCalculatedGoal,
-  createManualGoal as apiCreateManualGoal,
-  deleteGoal as apiDeleteGoal,
   getCurrentGoal as apiGetCurrentGoal,
-  updateGoal as apiUpdateGoal,
-} from '@services/api/goals';
-import { clearGoal, loadGoal, saveGoal } from '@storage/storage';
-import { enqueue } from '@storage/syncQueue';
+} from "@services/api/goals";
+import { clearGoal, loadGoal, saveGoal } from "@storage/storage";
+import { enqueueOutbox } from "@storage/outbox";
+import { debouncedSync } from "@services/syncEngine";
 
 export type UseGoalResult = {
   goal: UserGoal | null;
   loading: boolean;
   error: string | null;
   refresh: () => Promise<void>;
-  calculateGoal: (request: GoalCalculateRequest) => Promise<GoalCalculateResponse>;
-  saveCalculatedGoal: (request: GoalCreateCalculatedRequest) => Promise<UserGoal>;
+  calculateGoal: (
+    request: GoalCalculateRequest,
+  ) => Promise<GoalCalculateResponse>;
+  saveCalculatedGoal: (
+    request: GoalCreateCalculatedRequest,
+  ) => Promise<UserGoal>;
   saveManualGoal: (request: GoalCreateManualRequest) => Promise<UserGoal>;
   updateGoal: (patch: {
     dailyCaloriesKcal?: number;
@@ -35,6 +37,46 @@ export type UseGoalResult = {
   }) => Promise<UserGoal | null>;
   deleteGoal: () => Promise<boolean>;
 };
+
+/** Build full outbox data for a goal upsert. */
+const buildGoalOutboxData = (goal: UserGoal): Record<string, unknown> => ({
+  goal_type: goal.goalType,
+  gender: goal.gender,
+  birth_date: goal.birthDate,
+  height_cm: goal.heightCm,
+  current_weight_kg: goal.currentWeightKg,
+  activity_level: goal.activityLevel,
+  weight_goal_type: goal.weightGoalType,
+  target_weight_kg: goal.targetWeightKg,
+  weight_change_pace: goal.weightChangePace,
+  bmr_kcal: goal.bmrKcal,
+  tdee_kcal: goal.tdeeKcal,
+  daily_calories_kcal: goal.dailyCaloriesKcal,
+  protein_percent: goal.proteinPercent,
+  carbs_percent: goal.carbsPercent,
+  fat_percent: goal.fatPercent,
+  protein_grams: goal.proteinGrams,
+  carbs_grams: goal.carbsGrams,
+  fat_grams: goal.fatGrams,
+  water_ml: goal.waterMl,
+  healthy_weight_min_kg: goal.healthyWeightMinKg,
+  healthy_weight_max_kg: goal.healthyWeightMaxKg,
+  current_bmi: goal.currentBmi,
+  bmi_category: goal.bmiCategory,
+  created_at: goal.createdAt,
+});
+
+/** Compute macro grams from percent + daily calories. */
+const computeGrams = (
+  dailyCal: number,
+  protPct: number,
+  carbsPct: number,
+  fatPct: number,
+): { proteinGrams: number; carbsGrams: number; fatGrams: number } => ({
+  proteinGrams: Math.round((dailyCal * (protPct / 100)) / 4),
+  carbsGrams: Math.round((dailyCal * (carbsPct / 100)) / 4),
+  fatGrams: Math.round((dailyCal * (fatPct / 100)) / 9),
+});
 
 export const useGoal = (): UseGoalResult => {
   const [goal, setGoal] = useState<UserGoal | null>(null);
@@ -81,10 +123,9 @@ export const useGoal = (): UseGoalResult => {
         // Backend not available, use local data
         // This is expected in offline-first mode
       }
-    } catch (err) {
-      console.error('Failed to load goal', err);
+    } catch {
       if (isMountedRef.current) {
-        setError('Failed to load goal');
+        setError("Failed to load goal");
       }
     } finally {
       if (isMountedRef.current) {
@@ -102,12 +143,11 @@ export const useGoal = (): UseGoalResult => {
       try {
         return await apiCalculateGoal(request);
       } catch (err) {
-        console.error('Failed to calculate goal', err);
         // Re-throw with original error details for debugging
         if (err instanceof Error) {
           throw err;
         }
-        throw new Error('Failed to calculate goal. Please try again.');
+        throw new Error("Failed to calculate goal. Please try again.");
       }
     },
     [],
@@ -115,60 +155,111 @@ export const useGoal = (): UseGoalResult => {
 
   const saveCalculatedGoal = useCallback(
     async (request: GoalCreateCalculatedRequest): Promise<UserGoal> => {
-      try {
-        const newGoal = await apiCreateCalculatedGoal(request);
+      const timestamp = new Date().toISOString();
+      const grams = computeGrams(
+        request.proteinPercent ?? 30,
+        request.proteinPercent ?? 30,
+        request.carbsPercent ?? 40,
+        request.fatPercent ?? 30,
+      );
 
-        if (isMountedRef.current) {
-          goalRef.current = newGoal;
-          setGoal(newGoal);
-        }
+      // NOTE: For calculated goals, the server computes the full result.
+      // Offline we create a best-effort local entity; the sync push will
+      // reconcile with the server-calculated values on next pull.
+      const newGoal: UserGoal = {
+        id: request.id ?? uuid(),
+        goalType: "calculated",
+        gender: request.gender,
+        birthDate: request.birthDate,
+        heightCm: request.heightCm,
+        currentWeightKg: request.currentWeightKg,
+        activityLevel: request.activityLevel,
+        weightGoalType: request.weightGoalType,
+        targetWeightKg: request.targetWeightKg,
+        weightChangePace: request.weightChangePace,
+        dailyCaloriesKcal: 0, // Will be filled by server on sync
+        proteinPercent: request.proteinPercent ?? 30,
+        carbsPercent: request.carbsPercent ?? 40,
+        fatPercent: request.fatPercent ?? 30,
+        proteinGrams: grams.proteinGrams,
+        carbsGrams: grams.carbsGrams,
+        fatGrams: grams.fatGrams,
+        waterMl: request.waterMl ?? 2000,
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      };
 
-        // Save to local storage
-        await saveGoal(newGoal);
-
-        // Enqueue for sync (in case of future offline support)
-        await enqueue({
-          id: `goals.create:${newGoal.id}`,
-          resource: 'goals',
-          action: 'create',
-          payload: { id: newGoal.id, goalType: newGoal.goalType },
-        });
-
-        return newGoal;
-      } catch (err) {
-        console.error('Failed to save calculated goal', err);
-        throw new Error('Failed to save goal. Please try again.');
+      goalRef.current = newGoal;
+      if (isMountedRef.current) {
+        setGoal(newGoal);
       }
+
+      try {
+        await saveGoal(newGoal);
+        await enqueueOutbox({
+          id: `user_goal:${newGoal.id}`,
+          entityType: "user_goal",
+          action: "upsert",
+          entityId: newGoal.id,
+          data: buildGoalOutboxData(newGoal),
+          updatedAt: newGoal.updatedAt,
+        });
+        debouncedSync();
+      } catch {
+        // Storage failure -- state already updated optimistically
+      }
+
+      return newGoal;
     },
     [],
   );
 
   const saveManualGoal = useCallback(
     async (request: GoalCreateManualRequest): Promise<UserGoal> => {
-      try {
-        const newGoal = await apiCreateManualGoal(request);
+      const timestamp = new Date().toISOString();
+      const grams = computeGrams(
+        request.dailyCaloriesKcal,
+        request.proteinPercent,
+        request.carbsPercent,
+        request.fatPercent,
+      );
 
-        if (isMountedRef.current) {
-          goalRef.current = newGoal;
-          setGoal(newGoal);
-        }
+      const newGoal: UserGoal = {
+        id: request.id ?? uuid(),
+        goalType: "manual",
+        dailyCaloriesKcal: request.dailyCaloriesKcal,
+        proteinPercent: request.proteinPercent,
+        carbsPercent: request.carbsPercent,
+        fatPercent: request.fatPercent,
+        proteinGrams: grams.proteinGrams,
+        carbsGrams: grams.carbsGrams,
+        fatGrams: grams.fatGrams,
+        waterMl: request.waterMl,
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      };
 
-        // Save to local storage
-        await saveGoal(newGoal);
-
-        // Enqueue for sync
-        await enqueue({
-          id: `goals.create:${newGoal.id}`,
-          resource: 'goals',
-          action: 'create',
-          payload: { id: newGoal.id, goalType: newGoal.goalType },
-        });
-
-        return newGoal;
-      } catch (err) {
-        console.error('Failed to save manual goal', err);
-        throw new Error('Failed to save goal. Please try again.');
+      goalRef.current = newGoal;
+      if (isMountedRef.current) {
+        setGoal(newGoal);
       }
+
+      try {
+        await saveGoal(newGoal);
+        await enqueueOutbox({
+          id: `user_goal:${newGoal.id}`,
+          entityType: "user_goal",
+          action: "upsert",
+          entityId: newGoal.id,
+          data: buildGoalOutboxData(newGoal),
+          updatedAt: newGoal.updatedAt,
+        });
+        debouncedSync();
+      } catch {
+        // Storage failure -- state already updated optimistically
+      }
+
+      return newGoal;
     },
     [],
   );
@@ -186,30 +277,47 @@ export const useGoal = (): UseGoalResult => {
         return null;
       }
 
-      try {
-        const updatedGoal = await apiUpdateGoal(currentGoal.id, patch);
+      const timestamp = new Date().toISOString();
+      const dailyCal = patch.dailyCaloriesKcal ?? currentGoal.dailyCaloriesKcal;
+      const protPct = patch.proteinPercent ?? currentGoal.proteinPercent;
+      const carbsPct = patch.carbsPercent ?? currentGoal.carbsPercent;
+      const fatPct = patch.fatPercent ?? currentGoal.fatPercent;
+      const grams = computeGrams(dailyCal, protPct, carbsPct, fatPct);
 
-        if (isMountedRef.current) {
-          goalRef.current = updatedGoal;
-          setGoal(updatedGoal);
-        }
+      const updatedGoal: UserGoal = {
+        ...currentGoal,
+        dailyCaloriesKcal: dailyCal,
+        proteinPercent: protPct,
+        carbsPercent: carbsPct,
+        fatPercent: fatPct,
+        proteinGrams: grams.proteinGrams,
+        carbsGrams: grams.carbsGrams,
+        fatGrams: grams.fatGrams,
+        waterMl: patch.waterMl ?? currentGoal.waterMl,
+        updatedAt: timestamp,
+      };
 
-        // Save to local storage
-        await saveGoal(updatedGoal);
-
-        // Enqueue for sync
-        await enqueue({
-          id: `goals.update:${updatedGoal.id}:${updatedGoal.updatedAt}`,
-          resource: 'goals',
-          action: 'update',
-          payload: { id: updatedGoal.id },
-        });
-
-        return updatedGoal;
-      } catch (err) {
-        console.error('Failed to update goal', err);
-        throw new Error('Failed to update goal. Please try again.');
+      goalRef.current = updatedGoal;
+      if (isMountedRef.current) {
+        setGoal(updatedGoal);
       }
+
+      try {
+        await saveGoal(updatedGoal);
+        await enqueueOutbox({
+          id: `user_goal:${updatedGoal.id}`,
+          entityType: "user_goal",
+          action: "upsert",
+          entityId: updatedGoal.id,
+          data: buildGoalOutboxData(updatedGoal),
+          updatedAt: updatedGoal.updatedAt,
+        });
+        debouncedSync();
+      } catch {
+        // Storage failure -- state already updated optimistically
+      }
+
+      return updatedGoal;
     },
     [],
   );
@@ -220,30 +328,27 @@ export const useGoal = (): UseGoalResult => {
       return false;
     }
 
-    try {
-      await apiDeleteGoal(currentGoal.id);
-
-      if (isMountedRef.current) {
-        goalRef.current = null;
-        setGoal(null);
-      }
-
-      // Clear local storage
-      await clearGoal();
-
-      // Enqueue for sync
-      await enqueue({
-        id: `goals.delete:${currentGoal.id}:${new Date().toISOString()}`,
-        resource: 'goals',
-        action: 'delete',
-        payload: { id: currentGoal.id },
-      });
-
-      return true;
-    } catch (err) {
-      console.error('Failed to delete goal', err);
-      throw new Error('Failed to delete goal. Please try again.');
+    goalRef.current = null;
+    if (isMountedRef.current) {
+      setGoal(null);
     }
+
+    try {
+      await clearGoal();
+      await enqueueOutbox({
+        id: `user_goal:${currentGoal.id}`,
+        entityType: "user_goal",
+        action: "delete",
+        entityId: currentGoal.id,
+        data: null,
+        updatedAt: new Date().toISOString(),
+      });
+      debouncedSync();
+    } catch {
+      // Storage failure -- state already updated optimistically
+    }
+
+    return true;
   }, []);
 
   return {

@@ -4,7 +4,8 @@ import { v4 as uuid } from "uuid";
 import { Product, ScaleType, Unit } from "@models/types";
 import { SCALE_UNITS } from "@services/constants/scaleConstants";
 import { loadProducts, saveProducts } from "@storage/storage";
-import { enqueue } from "@storage/syncQueue";
+import { enqueueOutbox } from "@storage/outbox";
+import { debouncedSync } from "@services/syncEngine";
 
 export type NewProductInput = {
   name: string;
@@ -62,6 +63,26 @@ const normalizeName = (name: string): string => {
   const trimmed = name?.trim();
   return trimmed?.length ? trimmed : "Untitled product";
 };
+
+/** Build full outbox data for a product upsert. */
+const buildProductOutboxData = (product: Product): Record<string, unknown> => ({
+  name: product.name,
+  barcode: product.barcode,
+  category: product.category,
+  portion_size: product.portionSize,
+  scale_type: product.scaleType,
+  scale_unit: product.scaleUnit,
+  calories_per_base: product.caloriesPerBase,
+  protein_per_base: product.proteinPerBase,
+  carbs_per_base: product.carbsPerBase,
+  fat_per_base: product.fatPerBase,
+  calories_per_100g: product.caloriesPer100g,
+  protein_per_100g: product.proteinPer100g,
+  carbs_per_100g: product.carbsPer100g,
+  fat_per_100g: product.fatPer100g,
+  source: product.source,
+  created_at: product.createdAt,
+});
 
 const deriveAllowedUnits = (
   scaleType?: ScaleType,
@@ -222,9 +243,7 @@ export const useProducts = (): UseProductsResult => {
     async (input: NewProductInput) => {
       const barcode = input.barcode?.trim();
       if (barcode) {
-        const existing = productsRef.current.find(
-          (p) => p.barcode === barcode,
-        );
+        const existing = productsRef.current.find((p) => p.barcode === barcode);
         if (existing) {
           // Update existing product with latest scanned data
           const updated = {
@@ -245,12 +264,15 @@ export const useProducts = (): UseProductsResult => {
 
       const newProduct = createProductRecord(input);
       await applyChanges((prev) => [...prev, newProduct]);
-      await enqueue({
-        id: `products.create:${newProduct.id}`,
-        resource: "products",
-        action: "create",
-        payload: { id: newProduct.id, name: newProduct.name },
+      await enqueueOutbox({
+        id: `product:${newProduct.id}`,
+        entityType: "product",
+        action: "upsert",
+        entityId: newProduct.id,
+        data: buildProductOutboxData(newProduct),
+        updatedAt: newProduct.updatedAt,
       });
+      debouncedSync();
       return newProduct;
     },
     [applyChanges],
@@ -274,12 +296,15 @@ export const useProducts = (): UseProductsResult => {
       const updatedProduct =
         productsRef.current.find((p) => p.id === id) ?? null;
       if (updatedProduct) {
-        await enqueue({
-          id: `products.update:${updatedProduct.id}:${updatedProduct.updatedAt}`,
-          resource: "products",
-          action: "update",
-          payload: { id: updatedProduct.id, name: updatedProduct.name },
+        await enqueueOutbox({
+          id: `product:${updatedProduct.id}`,
+          entityType: "product",
+          action: "upsert",
+          entityId: updatedProduct.id,
+          data: buildProductOutboxData(updatedProduct),
+          updatedAt: updatedProduct.updatedAt,
         });
+        debouncedSync();
       }
       return updatedProduct;
     },
@@ -303,12 +328,15 @@ export const useProducts = (): UseProductsResult => {
       });
 
       if (removed) {
-        await enqueue({
-          id: `products.delete:${id}:${now()}`,
-          resource: "products",
+        await enqueueOutbox({
+          id: `product:${id}`,
+          entityType: "product",
           action: "delete",
-          payload: { id },
+          entityId: id,
+          data: null,
+          updatedAt: now(),
         });
+        debouncedSync();
       }
       return removed;
     },

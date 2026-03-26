@@ -268,12 +268,14 @@ describe("storage repositories", () => {
           day: "2025-06-01",
           amountMl: 250,
           createdAt: "2025-06-01T08:00:00.000Z",
+          updatedAt: "2025-06-01T08:00:00.000Z",
         },
         {
           id: "w2",
           day: "2025-06-01",
           amountMl: 500,
           createdAt: "2025-06-01T12:00:00.000Z",
+          updatedAt: "2025-06-01T12:00:00.000Z",
         },
       ];
       await saveWaterLogs(logs);

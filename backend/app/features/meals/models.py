@@ -10,10 +10,10 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.db import Base
 from app.core.enums import MealType, Unit
-from app.core.mixins import TimestampMixin
+from app.core.mixins import SyncMixin, TimestampMixin
 
 
-class FoodEntry(Base, TimestampMixin):
+class FoodEntry(Base, TimestampMixin, SyncMixin):
     __tablename__ = "food_entries"
 
     __table_args__ = (

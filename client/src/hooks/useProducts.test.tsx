@@ -10,8 +10,12 @@ vi.mock("../storage/storage", () => ({
   saveProducts: vi.fn(),
 }));
 
-vi.mock("../storage/syncQueue", () => ({
-  enqueue: vi.fn(),
+vi.mock("../storage/outbox", () => ({
+  enqueueOutbox: vi.fn(),
+}));
+
+vi.mock("../services/syncEngine", () => ({
+  debouncedSync: vi.fn(),
 }));
 
 vi.mock("uuid", () => ({

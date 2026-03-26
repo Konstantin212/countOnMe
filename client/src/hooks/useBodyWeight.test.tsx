@@ -4,20 +4,27 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { BodyWeightEntry } from "@models/types";
 import * as bodyWeightsApi from "@services/api/bodyWeights";
 import * as storage from "@storage/storage";
+import * as outbox from "@storage/outbox";
 import { useBodyWeight } from "./useBodyWeight";
 
 vi.mock("@services/api/bodyWeights");
 vi.mock("@storage/storage");
-vi.mock("@storage/syncQueue", () => ({
-  enqueue: vi.fn(() => Promise.resolve()),
+vi.mock("@storage/outbox", () => ({
+  enqueueOutbox: vi.fn(() => Promise.resolve()),
+}));
+
+vi.mock("@services/syncEngine", () => ({
+  debouncedSync: vi.fn(),
+}));
+
+vi.mock("uuid", () => ({
+  v4: vi.fn(() => "uuid-mock"),
 }));
 
 const mockListBodyWeights = vi.mocked(bodyWeightsApi.listBodyWeights);
-const mockCreateBodyWeight = vi.mocked(bodyWeightsApi.createBodyWeight);
-const mockUpdateBodyWeight = vi.mocked(bodyWeightsApi.updateBodyWeight);
-const mockDeleteBodyWeight = vi.mocked(bodyWeightsApi.deleteBodyWeight);
 const mockLoadBodyWeights = vi.mocked(storage.loadBodyWeights);
 const mockSaveBodyWeights = vi.mocked(storage.saveBodyWeights);
+const mockEnqueueOutbox = vi.mocked(outbox.enqueueOutbox);
 
 const makeBodyWeightEntry = (
   overrides: Partial<BodyWeightEntry> = {},
@@ -87,10 +94,8 @@ describe("useBodyWeight", () => {
     expect(result.current.error).toBeNull();
   });
 
-  it("logs new weight entry", async () => {
+  it("logs new weight entry locally and enqueues to outbox", async () => {
     mockLoadBodyWeights.mockResolvedValue([]);
-    const newEntry = makeBodyWeightEntry();
-    mockCreateBodyWeight.mockResolvedValue(newEntry);
 
     const { result } = renderHook(() => useBodyWeight());
 
@@ -103,34 +108,33 @@ describe("useBodyWeight", () => {
       createdEntry = await result.current.logWeight("2025-06-15", 80);
     });
 
-    expect(createdEntry).toEqual(newEntry);
-    expect(result.current.weights).toContainEqual(newEntry);
-    expect(mockSaveBodyWeights).toHaveBeenCalledWith([newEntry]);
+    expect(createdEntry).toBeDefined();
+    expect(createdEntry?.id).toBe("uuid-mock");
+    expect(createdEntry?.day).toBe("2025-06-15");
+    expect(createdEntry?.weightKg).toBe(80);
+    expect(result.current.weights).toHaveLength(1);
+    expect(mockSaveBodyWeights).toHaveBeenCalled();
+    expect(mockEnqueueOutbox).toHaveBeenCalledWith(
+      expect.objectContaining({
+        entityType: "body_weight",
+        action: "upsert",
+        entityId: "uuid-mock",
+        data: expect.objectContaining({
+          day: "2025-06-15",
+          weight_kg: 80,
+        }),
+      }),
+    );
   });
 
-  it("handles 409 conflict by updating existing entry", async () => {
-    mockLoadBodyWeights.mockResolvedValue([]);
-
-    // First call (create) throws 409
-    const conflictError: any = new Error("Conflict");
-    conflictError.status = 409;
-    mockCreateBodyWeight.mockRejectedValue(conflictError);
-
-    // listBodyWeights returns existing entry for that day
+  it("updates existing entry when logging weight for same day", async () => {
     const existingEntry = makeBodyWeightEntry({
       id: "existing-w1",
       day: "2025-06-15",
       weightKg: 79,
     });
+    mockLoadBodyWeights.mockResolvedValue([existingEntry]);
     mockListBodyWeights.mockResolvedValue([existingEntry]);
-
-    // updateBodyWeight succeeds
-    const updatedEntry = makeBodyWeightEntry({
-      id: "existing-w1",
-      day: "2025-06-15",
-      weightKg: 80,
-    });
-    mockUpdateBodyWeight.mockResolvedValue(updatedEntry);
 
     const { result } = renderHook(() => useBodyWeight());
 
@@ -143,18 +147,16 @@ describe("useBodyWeight", () => {
       resultEntry = await result.current.logWeight("2025-06-15", 80);
     });
 
-    expect(resultEntry).toEqual(updatedEntry);
-    expect(mockUpdateBodyWeight).toHaveBeenCalledWith("existing-w1", 80);
-    expect(result.current.weights).toContainEqual(updatedEntry);
+    expect(resultEntry?.id).toBe("existing-w1");
+    expect(resultEntry?.weightKg).toBe(80);
+    expect(result.current.weights).toHaveLength(1);
+    expect(result.current.weights[0].weightKg).toBe(80);
   });
 
-  it("updates weight entry", async () => {
+  it("updates weight entry locally and enqueues to outbox", async () => {
     const existingEntry = makeBodyWeightEntry();
     mockLoadBodyWeights.mockResolvedValue([existingEntry]);
     mockListBodyWeights.mockResolvedValue([existingEntry]);
-
-    const updatedEntry = makeBodyWeightEntry({ weightKg: 78 });
-    mockUpdateBodyWeight.mockResolvedValue(updatedEntry);
 
     const { result } = renderHook(() => useBodyWeight());
 
@@ -167,14 +169,40 @@ describe("useBodyWeight", () => {
       resultEntry = await result.current.updateWeight("w1", 78);
     });
 
-    expect(resultEntry).toEqual(updatedEntry);
-    expect(result.current.weights).toContainEqual(updatedEntry);
+    expect(resultEntry?.weightKg).toBe(78);
+    expect(result.current.weights[0].weightKg).toBe(78);
+    expect(mockSaveBodyWeights).toHaveBeenCalled();
+    expect(mockEnqueueOutbox).toHaveBeenCalledWith(
+      expect.objectContaining({
+        entityType: "body_weight",
+        action: "upsert",
+        data: expect.objectContaining({
+          weight_kg: 78,
+        }),
+      }),
+    );
   });
 
-  it("deletes weight entry", async () => {
+  it("throws when updating a non-existent weight entry", async () => {
+    mockLoadBodyWeights.mockResolvedValue([]);
+
+    const { result } = renderHook(() => useBodyWeight());
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
+    await expect(
+      act(async () => {
+        await result.current.updateWeight("nonexistent", 78);
+      }),
+    ).rejects.toThrow("Entry not found");
+  });
+
+  it("deletes weight entry locally and enqueues to outbox", async () => {
     const existingEntry = makeBodyWeightEntry();
     mockLoadBodyWeights.mockResolvedValue([existingEntry]);
-    mockDeleteBodyWeight.mockResolvedValue();
+    mockListBodyWeights.mockResolvedValue([existingEntry]);
 
     const { result } = renderHook(() => useBodyWeight());
 
@@ -188,7 +216,33 @@ describe("useBodyWeight", () => {
     });
 
     expect(success).toBe(true);
-    expect(result.current.weights).not.toContainEqual(existingEntry);
+    expect(result.current.weights).toHaveLength(0);
+    expect(mockSaveBodyWeights).toHaveBeenCalled();
+    expect(mockEnqueueOutbox).toHaveBeenCalledWith(
+      expect.objectContaining({
+        entityType: "body_weight",
+        action: "delete",
+        entityId: "w1",
+        data: null,
+      }),
+    );
+  });
+
+  it("returns false when deleting non-existent weight", async () => {
+    mockLoadBodyWeights.mockResolvedValue([]);
+
+    const { result } = renderHook(() => useBodyWeight());
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
+    let success: boolean = true;
+    await act(async () => {
+      success = await result.current.deleteWeight("nonexistent");
+    });
+
+    expect(success).toBe(false);
   });
 
   it("refreshes weights from storage and backend", async () => {

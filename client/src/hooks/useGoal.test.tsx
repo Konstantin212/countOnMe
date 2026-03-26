@@ -3,24 +3,30 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import * as goalsApi from "@services/api/goals";
 import * as storage from "@storage/storage";
+import * as outbox from "@storage/outbox";
 import { useGoal } from "./useGoal";
 import { makeUserGoal } from "../test/helpers";
 
 vi.mock("@services/api/goals");
 vi.mock("@storage/storage");
-vi.mock("@storage/syncQueue", () => ({
-  enqueue: vi.fn(() => Promise.resolve()),
+vi.mock("@storage/outbox", () => ({
+  enqueueOutbox: vi.fn(() => Promise.resolve()),
+}));
+
+vi.mock("@services/syncEngine", () => ({
+  debouncedSync: vi.fn(),
+}));
+
+vi.mock("uuid", () => ({
+  v4: vi.fn(() => "uuid-mock"),
 }));
 
 const mockApiGetCurrentGoal = vi.mocked(goalsApi.getCurrentGoal);
 const mockApiCalculateGoal = vi.mocked(goalsApi.calculateGoal);
-const mockApiCreateCalculatedGoal = vi.mocked(goalsApi.createCalculatedGoal);
-const mockApiCreateManualGoal = vi.mocked(goalsApi.createManualGoal);
-const mockApiUpdateGoal = vi.mocked(goalsApi.updateGoal);
-const mockApiDeleteGoal = vi.mocked(goalsApi.deleteGoal);
 const mockLoadGoal = vi.mocked(storage.loadGoal);
 const mockSaveGoal = vi.mocked(storage.saveGoal);
 const mockClearGoal = vi.mocked(storage.clearGoal);
+const mockEnqueueOutbox = vi.mocked(outbox.enqueueOutbox);
 
 describe("useGoal", () => {
   beforeEach(() => {
@@ -76,7 +82,7 @@ describe("useGoal", () => {
     expect(result.current.error).toBeNull();
   });
 
-  it("calculates goal", async () => {
+  it("calculates goal via API", async () => {
     mockLoadGoal.mockResolvedValue(null);
     const calculateResponse = {
       bmrKcal: 1800,
@@ -118,10 +124,8 @@ describe("useGoal", () => {
     expect(mockApiCalculateGoal).toHaveBeenCalledTimes(1);
   });
 
-  it("saves calculated goal", async () => {
+  it("saves calculated goal locally and enqueues to outbox", async () => {
     mockLoadGoal.mockResolvedValue(null);
-    const newGoal = makeUserGoal({ goalType: "calculated" });
-    mockApiCreateCalculatedGoal.mockResolvedValue(newGoal);
 
     const { result } = renderHook(() => useGoal());
 
@@ -140,14 +144,25 @@ describe("useGoal", () => {
       });
     });
 
-    expect(result.current.goal).toEqual(newGoal);
-    expect(mockSaveGoal).toHaveBeenCalledWith(newGoal);
+    expect(result.current.goal).toBeDefined();
+    expect(result.current.goal?.goalType).toBe("calculated");
+    expect(result.current.goal?.id).toBe("uuid-mock");
+    expect(mockSaveGoal).toHaveBeenCalled();
+    expect(mockEnqueueOutbox).toHaveBeenCalledWith(
+      expect.objectContaining({
+        entityType: "user_goal",
+        action: "upsert",
+        entityId: "uuid-mock",
+        data: expect.objectContaining({
+          goal_type: "calculated",
+          gender: "male",
+        }),
+      }),
+    );
   });
 
-  it("saves manual goal", async () => {
+  it("saves manual goal locally and enqueues to outbox", async () => {
     mockLoadGoal.mockResolvedValue(null);
-    const newGoal = makeUserGoal({ goalType: "manual" });
-    mockApiCreateManualGoal.mockResolvedValue(newGoal);
 
     const { result } = renderHook(() => useGoal());
 
@@ -165,15 +180,30 @@ describe("useGoal", () => {
       });
     });
 
-    expect(result.current.goal).toEqual(newGoal);
-    expect(mockSaveGoal).toHaveBeenCalledWith(newGoal);
+    expect(result.current.goal).toBeDefined();
+    expect(result.current.goal?.goalType).toBe("manual");
+    expect(result.current.goal?.dailyCaloriesKcal).toBe(2000);
+    expect(result.current.goal?.proteinPercent).toBe(30);
+    expect(mockSaveGoal).toHaveBeenCalled();
+    expect(mockEnqueueOutbox).toHaveBeenCalledWith(
+      expect.objectContaining({
+        entityType: "user_goal",
+        action: "upsert",
+        data: expect.objectContaining({
+          goal_type: "manual",
+          daily_calories_kcal: 2000,
+          protein_percent: 30,
+          carbs_percent: 40,
+          fat_percent: 30,
+          water_ml: 2000,
+        }),
+      }),
+    );
   });
 
-  it("updates goal", async () => {
+  it("updates goal locally and enqueues to outbox", async () => {
     const existingGoal = makeUserGoal();
-    const updatedGoal = makeUserGoal({ dailyCaloriesKcal: 2500 });
     mockLoadGoal.mockResolvedValue(existingGoal);
-    mockApiUpdateGoal.mockResolvedValue(updatedGoal);
 
     const { result } = renderHook(() => useGoal());
 
@@ -185,8 +215,17 @@ describe("useGoal", () => {
       await result.current.updateGoal({ dailyCaloriesKcal: 2500 });
     });
 
-    expect(result.current.goal).toEqual(updatedGoal);
-    expect(mockSaveGoal).toHaveBeenCalledWith(updatedGoal);
+    expect(result.current.goal?.dailyCaloriesKcal).toBe(2500);
+    expect(mockSaveGoal).toHaveBeenCalled();
+    expect(mockEnqueueOutbox).toHaveBeenCalledWith(
+      expect.objectContaining({
+        entityType: "user_goal",
+        action: "upsert",
+        data: expect.objectContaining({
+          daily_calories_kcal: 2500,
+        }),
+      }),
+    );
   });
 
   it("returns null when updating with no existing goal", async () => {
@@ -206,13 +245,12 @@ describe("useGoal", () => {
     });
 
     expect(updatedGoal).toBeNull();
-    expect(mockApiUpdateGoal).not.toHaveBeenCalled();
+    expect(mockEnqueueOutbox).not.toHaveBeenCalled();
   });
 
-  it("deletes goal", async () => {
+  it("deletes goal locally and enqueues to outbox", async () => {
     const existingGoal = makeUserGoal();
     mockLoadGoal.mockResolvedValue(existingGoal);
-    mockApiDeleteGoal.mockResolvedValue(undefined);
 
     const { result } = renderHook(() => useGoal());
 
@@ -228,6 +266,14 @@ describe("useGoal", () => {
     expect(success).toBe(true);
     expect(result.current.goal).toBeNull();
     expect(mockClearGoal).toHaveBeenCalledTimes(1);
+    expect(mockEnqueueOutbox).toHaveBeenCalledWith(
+      expect.objectContaining({
+        entityType: "user_goal",
+        action: "delete",
+        entityId: existingGoal.id,
+        data: null,
+      }),
+    );
   });
 
   it("returns false when deleting with no existing goal", async () => {
@@ -245,7 +291,7 @@ describe("useGoal", () => {
     });
 
     expect(success).toBe(false);
-    expect(mockApiDeleteGoal).not.toHaveBeenCalled();
+    expect(mockEnqueueOutbox).not.toHaveBeenCalled();
   });
 
   it("refreshes goal from storage and backend", async () => {

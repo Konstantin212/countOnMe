@@ -27,6 +27,7 @@ export const STORAGE_KEYS = {
   bodyWeights: `${STORAGE_PREFIX}/body-weights/${STORAGE_VERSION_V1}`,
   draftMeal: `${STORAGE_PREFIX}/draft-meal/${STORAGE_VERSION_V1}`,
   waterLogs: `${STORAGE_PREFIX}/water-logs/${STORAGE_VERSION_V1}`,
+  syncCursor: `${STORAGE_PREFIX}/sync-cursor/${STORAGE_VERSION_V1}`,
 } as const;
 
 const parseCollection = <T>(rawValue: string | null): T[] => {
@@ -321,6 +322,23 @@ export const clearDraftMeal = async (): Promise<void> => {
     console.error("Failed to clear draft meal", error);
     throw error;
   }
+};
+
+export const loadSyncCursor = async (): Promise<number> => {
+  try {
+    const raw = await AsyncStorage.getItem(STORAGE_KEYS.syncCursor);
+    if (!raw) {
+      return 0;
+    }
+    const parsed = Number(raw);
+    return Number.isFinite(parsed) ? parsed : 0;
+  } catch {
+    return 0;
+  }
+};
+
+export const saveSyncCursor = async (version: number): Promise<void> => {
+  await AsyncStorage.setItem(STORAGE_KEYS.syncCursor, String(version));
 };
 
 export const clearAllFoodData = async (): Promise<void> => {

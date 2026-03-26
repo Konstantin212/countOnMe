@@ -133,5 +133,6 @@ export const makeWaterLog = (overrides: Partial<WaterLog> = {}): WaterLog => ({
   day: "2025-06-01",
   amountMl: 250,
   createdAt: "2025-06-01T08:00:00.000Z",
+  updatedAt: "2025-06-01T08:00:00.000Z",
   ...overrides,
 });

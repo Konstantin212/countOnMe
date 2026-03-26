@@ -1,9 +1,14 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import NetInfo from '@react-native-community/netinfo';
+import { useCallback, useEffect, useMemo, useState } from "react";
+import NetInfo from "@react-native-community/netinfo";
 
-import { getApiBaseUrl } from '@services/api/config';
-import { getDeviceToken, getOrCreateDeviceId } from '@storage/device';
-import { flush, getLastSyncAt, getLastSyncError, getQueue } from '@storage/syncQueue';
+import { getApiBaseUrl } from "@services/api/config";
+import {
+  getState,
+  subscribe,
+  sync as syncNow,
+  type SyncState,
+} from "@services/syncEngine";
+import { getDeviceToken, getOrCreateDeviceId } from "@storage/device";
 
 export type SyncStatus = {
   baseUrl: string;
@@ -21,32 +26,32 @@ export type SyncStatus = {
 export const useSyncStatus = (): SyncStatus => {
   const baseUrl = useMemo(() => getApiBaseUrl(), []);
   const [isOnline, setIsOnline] = useState(true);
-  const [deviceId, setDeviceId] = useState('');
+  const [deviceId, setDeviceId] = useState("");
   const [hasToken, setHasToken] = useState(false);
-  const [queueSize, setQueueSize] = useState(0);
-  const [lastSyncAt, setLastSyncAtState] = useState<number | null>(null);
-  const [lastError, setLastErrorState] = useState<string | null>(null);
-  const [flushing, setFlushing] = useState(false);
+  const [syncState, setSyncState] = useState<SyncState>(getState);
 
+  // Subscribe to NetInfo for online status
   useEffect(() => {
-    const sub = NetInfo.addEventListener((state) => {
+    const unsubscribe = NetInfo.addEventListener((state) => {
       setIsOnline(Boolean(state.isConnected));
     });
-    return () => sub();
+    return () => unsubscribe();
   }, []);
 
+  // Subscribe to sync engine state changes
+  useEffect(() => {
+    const unsubscribe = subscribe((state) => {
+      setSyncState(state);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // Load device identity on mount
   const refresh = useCallback(async () => {
     const id = await getOrCreateDeviceId();
     const token = await getDeviceToken();
-    const queue = await getQueue();
-    const syncAt = await getLastSyncAt();
-    const err = await getLastSyncError();
-
     setDeviceId(id);
     setHasToken(Boolean(token));
-    setQueueSize(queue.length);
-    setLastSyncAtState(syncAt);
-    setLastErrorState(err);
   }, []);
 
   useEffect(() => {
@@ -54,26 +59,22 @@ export const useSyncStatus = (): SyncStatus => {
   }, [refresh]);
 
   const flushNow = useCallback(async () => {
-    setFlushing(true);
-    try {
-      await flush();
-    } finally {
-      setFlushing(false);
-      await refresh();
-    }
-  }, [refresh]);
+    await syncNow();
+  }, []);
+
+  const isSyncing =
+    syncState.status === "pulling" || syncState.status === "pushing";
 
   return {
     baseUrl,
     deviceId,
     hasToken,
     isOnline,
-    queueSize,
-    lastSyncAt,
-    lastError,
-    flushing,
+    queueSize: syncState.pendingCount,
+    lastSyncAt: syncState.lastSyncAt,
+    lastError: syncState.lastError,
+    flushing: isSyncing,
     refresh,
     flushNow,
   };
 };
-

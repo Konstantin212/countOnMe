@@ -257,6 +257,7 @@ export type WaterLog = {
   day: string; // YYYY-MM-DD
   amountMl: number;
   createdAt: ISODateString;
+  updatedAt: ISODateString;
 };
 
 /** Time period for stats aggregation. */

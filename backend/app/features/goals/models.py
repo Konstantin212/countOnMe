@@ -16,10 +16,10 @@ from app.core.enums import (
     WeightChangePace,
     WeightGoalType,
 )
-from app.core.mixins import TimestampMixin
+from app.core.mixins import SyncMixin, TimestampMixin
 
 
-class UserGoal(Base, TimestampMixin):
+class UserGoal(Base, TimestampMixin, SyncMixin):
     """User nutrition goal - either calculated from body metrics or manually entered."""
 
     __tablename__ = "user_goals"

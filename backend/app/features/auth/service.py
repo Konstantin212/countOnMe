@@ -259,11 +259,11 @@ async def _delete_supabase_auth_user(supabase_id: uuid.UUID) -> None:
     """Call Supabase Admin API to delete auth.users row.
 
     Best-effort: logs on failure, never raises.
-    Requires ``supabase_service_role_key`` and ``supabase_url`` in settings.
+    Requires ``supabase_secret_key`` and ``supabase_url`` in settings.
     """
-    service_role_key = settings.supabase_service_role_key
-    if not service_role_key:
-        logger.warning("SUPABASE_SERVICE_ROLE_KEY not set; skipping Supabase auth user deletion")
+    secret_key = settings.supabase_secret_key
+    if not secret_key:
+        logger.warning("SUPABASE_SECRET_KEY not set; skipping Supabase auth user deletion")
         return
 
     supabase_url = settings.supabase_url
@@ -273,8 +273,8 @@ async def _delete_supabase_auth_user(supabase_id: uuid.UUID) -> None:
 
     url = f"{supabase_url}/auth/v1/admin/users/{supabase_id}"
     headers = {
-        "Authorization": f"Bearer {service_role_key}",
-        "apikey": service_role_key,
+        "Authorization": f"Bearer {secret_key}",
+        "apikey": secret_key,
     }
 
     try:

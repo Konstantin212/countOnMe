@@ -34,7 +34,7 @@ TEST_DATABASE_URL = os.getenv(
 )
 os.environ.setdefault("DEVICE_TOKEN_PEPPER", "test-pepper-for-unit-tests-only")
 os.environ.setdefault("SUPABASE_JWT_SECRET", "test-jwt-secret-for-unit-tests-only")
-os.environ.setdefault("SUPABASE_SERVICE_ROLE_KEY", "test-service-role-key")
+os.environ.setdefault("SUPABASE_SECRET_KEY", "test-secret-key")
 
 
 @pytest_asyncio.fixture

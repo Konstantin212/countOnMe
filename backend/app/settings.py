@@ -28,7 +28,7 @@ class Settings(BaseSettings):
 
     # Supabase Auth — HS256 secret for JWT verification
     supabase_jwt_secret: str = ""
-    supabase_service_role_key: str = ""
+    supabase_secret_key: str = ""  # sb_secret_... — for admin operations (replaces legacy service_role)
     supabase_url: str = ""
 
 

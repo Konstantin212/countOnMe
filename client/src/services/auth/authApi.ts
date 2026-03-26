@@ -19,6 +19,10 @@ export type UserProfileResponse = {
   devices: UserDeviceResponse[];
 };
 
+export type ClaimDeviceDataResponse = {
+  claimed_counts: Record<string, number>;
+};
+
 // ---------------------------------------------------------------------------
 // API calls
 // ---------------------------------------------------------------------------
@@ -40,6 +44,15 @@ export const linkDevice = async (
 
 export const getProfile = async (): Promise<UserProfileResponse> => {
   return apiFetch<UserProfileResponse>("/v1/auth/me");
+};
+
+export const claimDeviceData = async (
+  deviceId: string,
+): Promise<ClaimDeviceDataResponse> => {
+  return apiFetch<ClaimDeviceDataResponse>("/v1/auth/claim-device-data", {
+    method: "POST",
+    body: { device_id: deviceId },
+  });
 };
 
 export const deleteAccount = async (): Promise<void> => {

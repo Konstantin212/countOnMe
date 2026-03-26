@@ -10,7 +10,11 @@ import { Platform } from "react-native";
 import * as Linking from "expo-linking";
 import { supabase } from "@services/supabase";
 import { getOrCreateDeviceId, getDeviceToken } from "@storage/device";
-import { linkDevice, deleteAccount as deleteAccountApi } from "./authApi";
+import {
+  linkDevice,
+  claimDeviceData,
+  deleteAccount as deleteAccountApi,
+} from "./authApi";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -75,6 +79,15 @@ const performLinkDevice = async (): Promise<void> => {
     const deviceId = await getOrCreateDeviceId();
     const legacyToken = await getDeviceToken();
     await linkDevice(deviceId, Platform.OS, legacyToken ?? undefined);
+
+    // Belt-and-suspenders: explicitly claim device data after linking.
+    // The backend auto-claims during link-device, but this ensures coverage
+    // if the backend claim path was skipped for any reason.
+    try {
+      await claimDeviceData(deviceId);
+    } catch {
+      // claim failure is non-fatal; data may already be claimed by link-device
+    }
   } catch {
     // link-device failure is non-fatal; user is still authenticated
   }

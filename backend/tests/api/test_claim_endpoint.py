@@ -1,0 +1,137 @@
+"""Integration tests for POST /v1/auth/claim-device-data."""
+
+from __future__ import annotations
+
+import uuid
+from datetime import UTC, datetime, timedelta
+
+import jwt as pyjwt
+import pytest
+from httpx import AsyncClient
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.settings import settings
+from tests.factories import create_product
+
+_JWT_SECRET = settings.supabase_jwt_secret
+
+
+def _make_jwt(
+    sub: str | None = None,
+    email: str | None = "test@example.com",
+    aud: str = "authenticated",
+    exp_delta: timedelta = timedelta(hours=1),
+) -> str:
+    payload: dict = {}
+    if sub is not None:
+        payload["sub"] = sub
+    if email is not None:
+        payload["email"] = email
+    payload["aud"] = aud
+    payload["exp"] = datetime.now(UTC) + exp_delta
+    payload["iat"] = datetime.now(UTC)
+    return pyjwt.encode(payload, _JWT_SECRET, algorithm="HS256")
+
+
+def _auth_headers(token: str) -> dict[str, str]:
+    return {"Authorization": f"Bearer {token}"}
+
+
+class TestClaimDeviceData:
+    @pytest.mark.asyncio
+    async def test_claim_device_data_success(
+        self, app_client: AsyncClient, db_session: AsyncSession,
+    ) -> None:
+        """Claiming a linked device with data returns counts."""
+        sub = str(uuid.uuid4())
+        token = _make_jwt(sub=sub, email="claim@test.com")
+        device_id = uuid.uuid4()
+
+        # Link device first (auto-creates user + device)
+        link_resp = await app_client.post(
+            "/v1/auth/link-device",
+            json={"device_id": str(device_id)},
+            headers=_auth_headers(token),
+        )
+        assert link_resp.status_code == 200
+
+        # Create a product directly in DB for this device
+        # The device was already created by link-device, so use device_id directly.
+        await create_product(db_session, device_id)
+        await db_session.commit()
+
+        # Call claim endpoint
+        resp = await app_client.post(
+            "/v1/auth/claim-device-data",
+            json={"device_id": str(device_id)},
+            headers=_auth_headers(token),
+        )
+
+        assert resp.status_code == 200
+        data = resp.json()
+        assert "claimed_counts" in data
+        counts = data["claimed_counts"]
+        assert counts["products"] >= 0
+        assert counts["portions"] >= 0
+        assert counts["food_entries"] >= 0
+        assert counts["goals"] >= 0
+        assert counts["body_weights"] >= 0
+
+    @pytest.mark.asyncio
+    async def test_claim_device_not_linked_returns_404(
+        self, app_client: AsyncClient, db_session: AsyncSession,
+    ) -> None:
+        """Claiming a device that is not linked returns 404."""
+        sub = str(uuid.uuid4())
+        token = _make_jwt(sub=sub, email="notlinked@test.com")
+
+        # Create user (via /me or any auth endpoint)
+        await app_client.get("/v1/auth/me", headers=_auth_headers(token))
+
+        resp = await app_client.post(
+            "/v1/auth/claim-device-data",
+            json={"device_id": str(uuid.uuid4())},
+            headers=_auth_headers(token),
+        )
+
+        assert resp.status_code == 404
+
+    @pytest.mark.asyncio
+    async def test_claim_device_no_auth_returns_401(
+        self, app_client: AsyncClient,
+    ) -> None:
+        resp = await app_client.post(
+            "/v1/auth/claim-device-data",
+            json={"device_id": str(uuid.uuid4())},
+        )
+        assert resp.status_code == 401
+
+
+class TestLinkDeviceAutoClaimCounts:
+    @pytest.mark.asyncio
+    async def test_link_device_returns_claimed_counts(
+        self, app_client: AsyncClient, db_session: AsyncSession,
+    ) -> None:
+        """Link-device response now includes claimed_counts."""
+        sub = str(uuid.uuid4())
+        device_id = uuid.uuid4()
+        token = _make_jwt(sub=sub, email="autoclaim@test.com")
+
+        resp = await app_client.post(
+            "/v1/auth/link-device",
+            json={"device_id": str(device_id), "device_name": "Auto Claim Phone"},
+            headers=_auth_headers(token),
+        )
+
+        assert resp.status_code == 200
+        data = resp.json()
+        assert "claimed_counts" in data
+        counts = data["claimed_counts"]
+        assert isinstance(counts["products"], int)
+        assert isinstance(counts["portions"], int)
+        assert isinstance(counts["food_entries"], int)
+        assert isinstance(counts["goals"], int)
+        assert isinstance(counts["body_weights"], int)
+        # Still has the link fields
+        assert data["device_id"] == str(device_id)
+        assert data["device_name"] == "Auto Claim Phone"

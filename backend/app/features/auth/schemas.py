@@ -43,3 +43,35 @@ class UserProfileResponse(APIModel):
     email: str | None
     created_at: datetime
     devices: list[UserDeviceResponse] = Field(validation_alias="user_devices")
+
+
+# ---------------------------------------------------------------------------
+# Claim device data
+# ---------------------------------------------------------------------------
+
+
+class ClaimDeviceDataRequest(APIModel):
+    device_id: UUID
+
+
+class ClaimCounts(APIModel):
+    products: int = 0
+    portions: int = 0
+    food_entries: int = 0
+    goals: int = 0
+    body_weights: int = 0
+
+
+class ClaimDeviceDataResponse(APIModel):
+    claimed_counts: ClaimCounts
+
+
+class LinkDeviceWithClaimResponse(APIModel):
+    """Response for link-device that includes auto-claim counts."""
+
+    id: UUID
+    device_id: UUID
+    device_name: str | None
+    linked_at: datetime
+    last_seen_at: datetime
+    claimed_counts: ClaimCounts

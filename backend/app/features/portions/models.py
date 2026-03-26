@@ -3,7 +3,7 @@ from __future__ import annotations
 import uuid
 from decimal import Decimal
 
-from sqlalchemy import Boolean, Enum, ForeignKey, Numeric, Text, func
+from sqlalchemy import Boolean, Enum, ForeignKey, Index, Numeric, Text, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -14,6 +14,10 @@ from app.core.mixins import TimestampMixin
 
 class ProductPortion(Base, TimestampMixin):
     __tablename__ = "product_portions"
+
+    __table_args__ = (
+        Index("ix_product_portions_user_id_deleted_at", "user_id", "deleted_at"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
@@ -26,6 +30,23 @@ class ProductPortion(Base, TimestampMixin):
         ForeignKey("devices.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
+    )
+
+    user_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+
+    created_on_device_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        nullable=True,
+    )
+
+    updated_on_device_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        nullable=True,
     )
 
     product_id: Mapped[uuid.UUID] = mapped_column(

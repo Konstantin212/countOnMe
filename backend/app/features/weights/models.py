@@ -4,7 +4,7 @@ import uuid
 from datetime import date
 from decimal import Decimal
 
-from sqlalchemy import Date, ForeignKey, Numeric, func
+from sqlalchemy import Date, ForeignKey, Index, Numeric, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -14,6 +14,10 @@ from app.core.mixins import TimestampMixin
 
 class BodyWeight(Base, TimestampMixin):
     __tablename__ = "body_weights"
+
+    __table_args__ = (
+        Index("ix_body_weights_user_id_deleted_at", "user_id", "deleted_at"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
@@ -26,6 +30,23 @@ class BodyWeight(Base, TimestampMixin):
         ForeignKey("devices.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
+    )
+
+    user_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+
+    created_on_device_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        nullable=True,
+    )
+
+    updated_on_device_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        nullable=True,
     )
 
     day: Mapped[date] = mapped_column(Date, nullable=False, index=True)

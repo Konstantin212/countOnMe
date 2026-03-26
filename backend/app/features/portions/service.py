@@ -6,6 +6,7 @@ from datetime import UTC, datetime
 from sqlalchemy import Select, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.ownership import get_owner_filter
 from app.features.portions.models import ProductPortion
 from app.features.products.service import get_product
 
@@ -19,10 +20,14 @@ async def list_portions(
     *,
     device_id: uuid.UUID,
     product_id: uuid.UUID,
+    user_id: uuid.UUID | None = None,
 ) -> list[ProductPortion]:
     stmt = (
         _not_deleted(select(ProductPortion))
-        .where(ProductPortion.device_id == device_id, ProductPortion.product_id == product_id)
+        .where(
+            get_owner_filter(ProductPortion, user_id=user_id, device_id=device_id),
+            ProductPortion.product_id == product_id,
+        )
         .order_by(ProductPortion.is_default.desc(), ProductPortion.label.asc())
     )
     res = await session.execute(stmt)
@@ -34,9 +39,10 @@ async def get_portion(
     *,
     device_id: uuid.UUID,
     portion_id: uuid.UUID,
+    user_id: uuid.UUID | None = None,
 ) -> ProductPortion | None:
     stmt = _not_deleted(select(ProductPortion)).where(
-        ProductPortion.device_id == device_id,
+        get_owner_filter(ProductPortion, user_id=user_id, device_id=device_id),
         ProductPortion.id == portion_id,
     )
     res = await session.execute(stmt)
@@ -56,12 +62,13 @@ async def create_portion(
     carbs,
     fat,
     is_default: bool,
+    user_id: uuid.UUID | None = None,
 ) -> ProductPortion | None:
-    product = await get_product(session, device_id=device_id, product_id=product_id)
+    product = await get_product(session, device_id=device_id, product_id=product_id, user_id=user_id)
     if product is None:
         return None
 
-    existing = await list_portions(session, device_id=device_id, product_id=product_id)
+    existing = await list_portions(session, device_id=device_id, product_id=product_id, user_id=user_id)
     should_be_default = True if len(existing) == 0 else is_default
 
     portion = ProductPortion(
@@ -106,8 +113,9 @@ async def update_portion(
     device_id: uuid.UUID,
     portion_id: uuid.UUID,
     patch: dict,
+    user_id: uuid.UUID | None = None,
 ) -> ProductPortion | None:
-    portion = await get_portion(session, device_id=device_id, portion_id=portion_id)
+    portion = await get_portion(session, device_id=device_id, portion_id=portion_id, user_id=user_id)
     if portion is None:
         return None
 
@@ -143,8 +151,9 @@ async def soft_delete_portion(
     *,
     device_id: uuid.UUID,
     portion_id: uuid.UUID,
+    user_id: uuid.UUID | None = None,
 ) -> bool:
-    portion = await get_portion(session, device_id=device_id, portion_id=portion_id)
+    portion = await get_portion(session, device_id=device_id, portion_id=portion_id, user_id=user_id)
     if portion is None:
         return False
 

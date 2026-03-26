@@ -12,15 +12,21 @@ from app.core.deps import get_current_user
 from app.core.rate_limit import device_register_limiter
 from app.features.auth.models import Device, User
 from app.features.auth.schemas import (
+    ClaimCounts,
+    ClaimDeviceDataRequest,
+    ClaimDeviceDataResponse,
     DeviceRegisterRequest,
     DeviceRegisterResponse,
     LinkDeviceRequest,
-    UserDeviceResponse,
+    LinkDeviceWithClaimResponse,
     UserProfileResponse,
 )
 from app.features.auth.service import (
+    DataClaimedByOther,
+    DeviceNotLinked,
     OwnershipProofRequired,
     _delete_supabase_auth_user,
+    claim_device_data,
     delete_user_account,
     get_device_by_id,
     get_user_profile,
@@ -87,13 +93,13 @@ async def register_device(
 # ---------------------------------------------------------------------------
 
 
-@auth_router.post("/link-device", response_model=UserDeviceResponse)
+@auth_router.post("/link-device", response_model=LinkDeviceWithClaimResponse)
 async def link_device(
     body: LinkDeviceRequest,
     user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
-) -> UserDeviceResponse:
-    """Link a device to the authenticated user. Idempotent."""
+) -> LinkDeviceWithClaimResponse:
+    """Link a device to the authenticated user and auto-claim device data. Idempotent."""
     try:
         user_device = await link_device_to_user(
             session,
@@ -113,8 +119,49 @@ async def link_device(
             detail="Invalid legacy device token",
         ) from None
 
+    # Auto-claim device data after linking
+    try:
+        counts = await claim_device_data(session, user_id=user.id, device_id=body.device_id)
+    except (DeviceNotLinked, DataClaimedByOther):
+        # Should not happen since we just linked, but log and continue
+        logger.warning(
+            "Auto-claim failed for device=%s user=%s", body.device_id, user.id,
+        )
+        counts = {"products": 0, "portions": 0, "food_entries": 0, "goals": 0, "body_weights": 0}
+
     await session.commit()
-    return UserDeviceResponse.model_validate(user_device)
+    return LinkDeviceWithClaimResponse(
+        id=user_device.id,
+        device_id=user_device.device_id,
+        device_name=user_device.device_name,
+        linked_at=user_device.linked_at,
+        last_seen_at=user_device.last_seen_at,
+        claimed_counts=ClaimCounts(**counts),
+    )
+
+
+@auth_router.post("/claim-device-data", response_model=ClaimDeviceDataResponse)
+async def claim_device_data_endpoint(
+    body: ClaimDeviceDataRequest,
+    user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+) -> ClaimDeviceDataResponse:
+    """Claim all unclaimed data on a device for the authenticated user."""
+    try:
+        counts = await claim_device_data(session, user_id=user.id, device_id=body.device_id)
+    except DeviceNotLinked:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Device not linked to your account",
+        ) from None
+    except DataClaimedByOther:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Device data is already claimed by another user",
+        ) from None
+
+    await session.commit()
+    return ClaimDeviceDataResponse(claimed_counts=ClaimCounts(**counts))
 
 
 @auth_router.get("/me", response_model=UserProfileResponse)

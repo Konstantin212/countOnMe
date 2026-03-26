@@ -9,9 +9,8 @@ from decimal import Decimal
 from sqlalchemy import Select, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.enums import (
-    GoalType,
-)
+from app.core.enums import GoalType
+from app.core.ownership import get_owner_filter
 from app.features.goals.calculation import (
     calculate_full_goal,
     calculate_macros_for_manual,
@@ -28,11 +27,12 @@ async def get_current_goal(
     session: AsyncSession,
     *,
     device_id: uuid.UUID,
+    user_id: uuid.UUID | None = None,
 ) -> UserGoal | None:
     """Get the current (most recent) active goal for a device."""
     stmt = (
         _not_deleted(select(UserGoal))
-        .where(UserGoal.device_id == device_id)
+        .where(get_owner_filter(UserGoal, user_id=user_id, device_id=device_id))
         .order_by(UserGoal.created_at.desc())
         .limit(1)
     )
@@ -45,10 +45,11 @@ async def get_goal(
     *,
     device_id: uuid.UUID,
     goal_id: uuid.UUID,
+    user_id: uuid.UUID | None = None,
 ) -> UserGoal | None:
     """Get a specific goal by ID (device-scoped)."""
     stmt = _not_deleted(select(UserGoal)).where(
-        UserGoal.device_id == device_id,
+        get_owner_filter(UserGoal, user_id=user_id, device_id=device_id),
         UserGoal.id == goal_id,
     )
     res = await session.execute(stmt)
@@ -60,6 +61,7 @@ async def create_calculated_goal(
     *,
     device_id: uuid.UUID,
     data: GoalCreateCalculatedRequest,
+    user_id: uuid.UUID | None = None,
 ) -> UserGoal:
     """Create a calculated goal from body metrics."""
     # Perform full calculation
@@ -78,7 +80,7 @@ async def create_calculated_goal(
     )
 
     # Soft delete any existing goals for this device
-    await _soft_delete_existing_goals(session, device_id=device_id)
+    await _soft_delete_existing_goals(session, device_id=device_id, user_id=user_id)
 
     # Create new goal
     goal = UserGoal(
@@ -155,6 +157,7 @@ async def create_manual_goal(
     *,
     device_id: uuid.UUID,
     data: GoalCreateManualRequest,
+    user_id: uuid.UUID | None = None,
 ) -> UserGoal:
     """Create a manual goal with direct calorie/macro input."""
     # Calculate macro grams
@@ -166,7 +169,7 @@ async def create_manual_goal(
     )
 
     # Soft delete any existing goals for this device
-    await _soft_delete_existing_goals(session, device_id=device_id)
+    await _soft_delete_existing_goals(session, device_id=device_id, user_id=user_id)
 
     # Create new goal
     goal = UserGoal(
@@ -212,9 +215,10 @@ async def update_goal(
     carbs_percent: int | None = None,
     fat_percent: int | None = None,
     water_ml: int | None = None,
+    user_id: uuid.UUID | None = None,
 ) -> UserGoal | None:
     """Update goal targets (macros and water only)."""
-    goal = await get_goal(session, device_id=device_id, goal_id=goal_id)
+    goal = await get_goal(session, device_id=device_id, goal_id=goal_id, user_id=user_id)
     if goal is None:
         return None
 
@@ -259,9 +263,10 @@ async def soft_delete_goal(
     *,
     device_id: uuid.UUID,
     goal_id: uuid.UUID,
+    user_id: uuid.UUID | None = None,
 ) -> bool:
     """Soft delete a goal."""
-    goal = await get_goal(session, device_id=device_id, goal_id=goal_id)
+    goal = await get_goal(session, device_id=device_id, goal_id=goal_id, user_id=user_id)
     if goal is None:
         return False
 
@@ -276,9 +281,12 @@ async def _soft_delete_existing_goals(
     session: AsyncSession,
     *,
     device_id: uuid.UUID,
+    user_id: uuid.UUID | None = None,
 ) -> None:
     """Soft delete all existing goals for a device."""
-    stmt = _not_deleted(select(UserGoal)).where(UserGoal.device_id == device_id)
+    stmt = _not_deleted(select(UserGoal)).where(
+        get_owner_filter(UserGoal, user_id=user_id, device_id=device_id),
+    )
     res = await session.execute(stmt)
     goals = res.scalars().all()
 

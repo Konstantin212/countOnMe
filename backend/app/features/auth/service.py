@@ -11,11 +11,16 @@ from typing import Any
 
 import httpx
 import jwt as pyjwt
-from sqlalchemy import delete, select
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.features.auth.models import Device, User, UserDevice
+from app.features.goals.models import UserGoal
+from app.features.meals.models import FoodEntry
+from app.features.portions.models import ProductPortion
+from app.features.products.models import Product
+from app.features.weights.models import BodyWeight
 from app.settings import settings
 
 logger = logging.getLogger(__name__)
@@ -285,3 +290,93 @@ async def _delete_supabase_auth_user(supabase_id: uuid.UUID) -> None:
                 )
     except httpx.HTTPError:
         logger.exception("Error calling Supabase Admin API for user %s", supabase_id)
+
+
+# ---------------------------------------------------------------------------
+# Claim device data
+# ---------------------------------------------------------------------------
+
+# Ordered list of (table_model, response_key) for bulk claim operations
+_CLAIMABLE_TABLES: list[tuple[type, str]] = [
+    (Product, "products"),
+    (ProductPortion, "portions"),
+    (FoodEntry, "food_entries"),
+    (UserGoal, "goals"),
+    (BodyWeight, "body_weights"),
+]
+
+
+class DeviceNotLinked(Exception):
+    """Raised when a device is not linked to the given user."""
+
+
+class DataClaimedByOther(Exception):
+    """Raised when device data is already claimed by a different user."""
+
+
+async def claim_device_data(
+    session: AsyncSession,
+    user_id: uuid.UUID,
+    device_id: uuid.UUID,
+) -> dict[str, int]:
+    """Claim all unclaimed data on *device_id* for *user_id*.
+
+    Preconditions checked:
+    - Device must be linked to user via user_devices (DeviceNotLinked if not).
+    - No row on this device may already be claimed by a *different* user
+      (DataClaimedByOther if so).
+
+    Returns a dict of table name -> number of rows claimed.
+    Idempotent: re-running returns 0 counts once all rows are claimed.
+    Caller is responsible for committing the transaction.
+    """
+    # 1. Validate device is linked to user
+    link_stmt = select(UserDevice).where(
+        UserDevice.user_id == user_id,
+        UserDevice.device_id == device_id,
+    )
+    result = await session.execute(link_stmt)
+    if result.scalar_one_or_none() is None:
+        raise DeviceNotLinked(f"Device {device_id} is not linked to user {user_id}")
+
+    # 2. Check for rows already claimed by a different user
+    for model, key in _CLAIMABLE_TABLES:
+        conflict_stmt = select(func.count()).select_from(model).where(
+            model.device_id == device_id,
+            model.user_id.isnot(None),
+            model.user_id != user_id,
+            model.deleted_at.is_(None),
+        )
+        conflict_result = await session.execute(conflict_stmt)
+        conflict_count = conflict_result.scalar_one()
+        if conflict_count > 0:
+            raise DataClaimedByOther(
+                f"Device {device_id} has {key} already claimed by a different user"
+            )
+
+    # 3. Bulk update unclaimed rows
+    counts: dict[str, int] = {}
+    for model, key in _CLAIMABLE_TABLES:
+        stmt = (
+            update(model)
+            .where(
+                model.device_id == device_id,
+                model.user_id.is_(None),
+                model.deleted_at.is_(None),
+            )
+            .values(
+                user_id=user_id,
+                created_on_device_id=device_id,
+                updated_on_device_id=device_id,
+            )
+        )
+        result = await session.execute(stmt)
+        counts[key] = result.rowcount  # type: ignore[assignment]
+
+    logger.info(
+        "Claimed device data device_id=%s user_id=%s counts=%s",
+        device_id,
+        user_id,
+        counts,
+    )
+    return counts

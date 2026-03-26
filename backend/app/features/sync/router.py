@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db import get_session
 from app.core.deps import get_current_device_id
+from app.core.ownership import get_owner_filter
 from app.features.meals.models import FoodEntry
 from app.features.portions.models import ProductPortion
 from app.features.products.models import Product
@@ -56,21 +57,21 @@ async def sync_since(
 
     prod_stmt = (
         select(Product)
-        .where(Product.device_id == device_id)
+        .where(get_owner_filter(Product, device_id=device_id))
         .where(_cursor_filter(Product, since))
         .order_by(Product.updated_at.asc(), Product.id.asc())
         .limit(limit)
     )
     portion_stmt = (
         select(ProductPortion)
-        .where(ProductPortion.device_id == device_id)
+        .where(get_owner_filter(ProductPortion, device_id=device_id))
         .where(_cursor_filter(ProductPortion, since))
         .order_by(ProductPortion.updated_at.asc(), ProductPortion.id.asc())
         .limit(limit)
     )
     entry_stmt = (
         select(FoodEntry)
-        .where(FoodEntry.device_id == device_id)
+        .where(get_owner_filter(FoodEntry, device_id=device_id))
         .where(_cursor_filter(FoodEntry, since))
         .order_by(FoodEntry.updated_at.asc(), FoodEntry.id.asc())
         .limit(limit)

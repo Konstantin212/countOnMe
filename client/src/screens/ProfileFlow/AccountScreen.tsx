@@ -235,6 +235,23 @@ const AccountScreen = () => {
           </View>
         </View>
 
+        {/* Data Status */}
+        {profile?.devices && profile.devices.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Data Status</Text>
+            <View style={styles.emailCard}>
+              <Ionicons
+                name="cloud-done-outline"
+                size={20}
+                color={colors.success}
+              />
+              <Text style={styles.emailText}>
+                Device data synced to your account
+              </Text>
+            </View>
+          </View>
+        )}
+
         {/* Devices */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Linked Devices</Text>

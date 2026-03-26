@@ -1,5 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { linkDevice, getProfile, deleteAccount } from "./authApi";
+import {
+  linkDevice,
+  getProfile,
+  deleteAccount,
+  claimDeviceData,
+} from "./authApi";
 
 // Mock apiFetch
 vi.mock("@services/api/http", () => ({
@@ -80,6 +85,29 @@ describe("authApi", () => {
       expect(mockApiFetch).toHaveBeenCalledWith("/v1/auth/account", {
         method: "DELETE",
       });
+    });
+  });
+
+  describe("claimDeviceData", () => {
+    it("calls POST /v1/auth/claim-device-data with device_id", async () => {
+      const mockResponse = {
+        claimed_counts: { products: 5, meals: 3 },
+      };
+      mockApiFetch.mockResolvedValue(mockResponse);
+
+      const result = await claimDeviceData("dev-123");
+
+      expect(mockApiFetch).toHaveBeenCalledWith("/v1/auth/claim-device-data", {
+        method: "POST",
+        body: { device_id: "dev-123" },
+      });
+      expect(result).toEqual(mockResponse);
+    });
+
+    it("propagates API errors", async () => {
+      mockApiFetch.mockRejectedValue(new Error("Network error"));
+
+      await expect(claimDeviceData("dev-123")).rejects.toThrow("Network error");
     });
   });
 });

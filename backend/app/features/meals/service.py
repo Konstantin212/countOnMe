@@ -6,6 +6,7 @@ from datetime import UTC, date, datetime
 from sqlalchemy import Select, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.ownership import get_owner_filter
 from app.features.meals.models import FoodEntry
 from app.features.portions.models import ProductPortion
 from app.features.products.service import get_product
@@ -20,12 +21,13 @@ async def _get_portion(
     *,
     device_id: uuid.UUID,
     portion_id: uuid.UUID,
+    user_id: uuid.UUID | None = None,
 ) -> ProductPortion | None:
     stmt = (
         select(ProductPortion)
         .where(
             ProductPortion.deleted_at.is_(None),
-            ProductPortion.device_id == device_id,
+            get_owner_filter(ProductPortion, user_id=user_id, device_id=device_id),
             ProductPortion.id == portion_id,
         )
         .limit(1)
@@ -44,12 +46,13 @@ async def create_food_entry(
     meal_type,
     amount,
     unit,
+    user_id: uuid.UUID | None = None,
 ) -> FoodEntry | None:
-    product = await get_product(session, device_id=device_id, product_id=product_id)
+    product = await get_product(session, device_id=device_id, product_id=product_id, user_id=user_id)
     if product is None:
         return None
 
-    portion = await _get_portion(session, device_id=device_id, portion_id=portion_id)
+    portion = await _get_portion(session, device_id=device_id, portion_id=portion_id, user_id=user_id)
     if portion is None or portion.product_id != product_id:
         return None
 
@@ -75,8 +78,11 @@ async def list_food_entries(
     day: date | None = None,
     from_day: date | None = None,
     to_day: date | None = None,
+    user_id: uuid.UUID | None = None,
 ) -> list[FoodEntry]:
-    stmt = _not_deleted(select(FoodEntry)).where(FoodEntry.device_id == device_id)
+    stmt = _not_deleted(select(FoodEntry)).where(
+        get_owner_filter(FoodEntry, user_id=user_id, device_id=device_id),
+    )
     if day is not None:
         stmt = stmt.where(FoodEntry.day == day)
     if from_day is not None:
@@ -93,8 +99,12 @@ async def get_food_entry(
     *,
     device_id: uuid.UUID,
     entry_id: uuid.UUID,
+    user_id: uuid.UUID | None = None,
 ) -> FoodEntry | None:
-    stmt = _not_deleted(select(FoodEntry)).where(FoodEntry.device_id == device_id, FoodEntry.id == entry_id)
+    stmt = _not_deleted(select(FoodEntry)).where(
+        get_owner_filter(FoodEntry, user_id=user_id, device_id=device_id),
+        FoodEntry.id == entry_id,
+    )
     res = await session.execute(stmt)
     return res.scalar_one_or_none()
 
@@ -105,13 +115,14 @@ async def update_food_entry(
     device_id: uuid.UUID,
     entry_id: uuid.UUID,
     patch: dict,
+    user_id: uuid.UUID | None = None,
 ) -> FoodEntry | None:
-    entry = await get_food_entry(session, device_id=device_id, entry_id=entry_id)
+    entry = await get_food_entry(session, device_id=device_id, entry_id=entry_id, user_id=user_id)
     if entry is None:
         return None
 
     if "portion_id" in patch:
-        portion = await _get_portion(session, device_id=device_id, portion_id=patch["portion_id"])
+        portion = await _get_portion(session, device_id=device_id, portion_id=patch["portion_id"], user_id=user_id)
         if portion is None or portion.product_id != entry.product_id:
             return None
 
@@ -129,8 +140,9 @@ async def soft_delete_food_entry(
     *,
     device_id: uuid.UUID,
     entry_id: uuid.UUID,
+    user_id: uuid.UUID | None = None,
 ) -> bool:
-    entry = await get_food_entry(session, device_id=device_id, entry_id=entry_id)
+    entry = await get_food_entry(session, device_id=device_id, entry_id=entry_id, user_id=user_id)
     if entry is None:
         return False
 

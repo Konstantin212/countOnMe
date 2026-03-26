@@ -9,6 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.enums import MealType
+from app.core.ownership import get_owner_filter
 from app.features.meals.models import FoodEntry
 from app.features.portions.models import ProductPortion
 from app.features.stats.calculation import MacroTotals, calc_totals_for_entry
@@ -37,12 +38,13 @@ async def get_day_stats(
     *,
     device_id: uuid.UUID,
     day: date,
+    user_id: uuid.UUID | None = None,
 ) -> tuple[MacroTotals, dict[MealType, MacroTotals]]:
     stmt = (
         select(FoodEntry, ProductPortion)
         .join(ProductPortion, ProductPortion.id == FoodEntry.portion_id)
         .where(
-            FoodEntry.device_id == device_id,
+            get_owner_filter(FoodEntry, user_id=user_id, device_id=device_id),
             FoodEntry.deleted_at.is_(None),
             FoodEntry.day == day,
             ProductPortion.deleted_at.is_(None),
@@ -76,6 +78,7 @@ async def get_daily_stats(
     device_id: uuid.UUID,
     from_day: date,
     to_day: date,
+    user_id: uuid.UUID | None = None,
 ) -> list[tuple[date, MacroTotals]]:
     if to_day < from_day:
         return []
@@ -83,7 +86,7 @@ async def get_daily_stats(
     out: list[tuple[date, MacroTotals]] = []
     cur = from_day
     while cur <= to_day:
-        totals, _ = await get_day_stats(session, device_id=device_id, day=cur)
+        totals, _ = await get_day_stats(session, device_id=device_id, day=cur, user_id=user_id)
         out.append((cur, totals))
         cur += timedelta(days=1)
     return out

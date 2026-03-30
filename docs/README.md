@@ -10,23 +10,31 @@
 - [`features/barcode-scanner.md`](features/barcode-scanner.md) — Barcode scanning, catalog + OFF lookup, portion modes, direct meal tracking
 - [`features/catalog-seeding.md`](features/catalog-seeding.md) — Global USDA product catalog, seed script, API endpoints
 - [`features/goal-system.md`](features/goal-system.md) — Nutrition goals (calculated via BMR/TDEE or manual), BMI, macros
-- [`features/device-auth.md`](features/device-auth.md) — Anonymous device authentication, token lifecycle
-- [`features/sync-system.md`](features/sync-system.md) — Offline-first sync, queue, cursor-based sync endpoint
+- [`features/supabase-auth.md`](features/supabase-auth.md) — Supabase email magic link auth, JWT verification, JWKS, device linking
+- [`features/device-auth.md`](features/device-auth.md) — **Deprecated.** Legacy anonymous device authentication (see supabase-auth)
+- [`features/sync-system.md`](features/sync-system.md) — Delta-based pull/push sync, LWW, dirty tracking, offline-first
+- [`features/sqlite-cache.md`](features/sqlite-cache.md) — SQLite local database, repository pattern, change tracking
+- [`features/shared-foods.md`](features/shared-foods.md) — Community food sharing, publish, search, import, visibility model
+- [`features/moderation.md`](features/moderation.md) — User reports, blocking, admin moderation, abuse controls
 - [`features/theme-system.md`](features/theme-system.md) — Light/dark/system themes, color tokens, persistence
 - [`features/analytics-mypath.md`](features/analytics-mypath.md) — MyPath analytics dashboard, charts, streaks, insights
 - [`features/profile-screen.md`](features/profile-screen.md) — Profile hub, theme selector, sync status, data management
 
 ### API Reference
 - [`api/README.md`](api/README.md) — Overview, auth, conventions, enumerations
-- [`api/devices.md`](api/devices.md) — Device registration
+- [`api/auth.md`](api/auth.md) — Supabase JWT auth, device linking, account deletion
+- [`api/devices.md`](api/devices.md) — Device registration (legacy)
 - [`api/products.md`](api/products.md) — Product CRUD, search, name check
 - [`api/portions.md`](api/portions.md) — Product portion CRUD
 - [`api/food-entries.md`](api/food-entries.md) — Daily food entry CRUD
 - [`api/goals.md`](api/goals.md) — Nutrition goal CRUD + calculation
 - [`api/stats.md`](api/stats.md) — Day stats, daily trends, weight trends
 - [`api/body-weights.md`](api/body-weights.md) — Body weight CRUD
-- [`api/sync.md`](api/sync.md) — Cursor-based incremental sync
+- [`api/water-logs.md`](api/water-logs.md) — Water log CRUD
+- [`api/sync.md`](api/sync.md) — Delta-based pull/push sync
 - [`api/catalog.md`](api/catalog.md) — Global product catalog search
+- [`api/shared-foods.md`](api/shared-foods.md) — Community food CRUD, publish, import, search
+- [`api/moderation.md`](api/moderation.md) — User reports, blocks, admin moderation
 
 ### Architecture
 - [`architecture/overview.md`](architecture/overview.md) — System architecture, component diagram, data flow

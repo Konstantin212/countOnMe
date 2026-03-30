@@ -1,16 +1,21 @@
 ---
 type: feature
-status: current
-last-updated: 2026-03-15
+status: deprecated
+last-updated: 2026-03-30
 related-features:
   - sync-system
+  - supabase-auth
 ---
 
-# Device Authentication
+# Device Authentication (Deprecated)
 
 ## Overview
 
-CountOnMe uses anonymous device-based authentication. There are no user accounts, no email, no passwords. Each mobile device gets a unique identifier and an auth token. This token is used to authenticate all API requests and scope data to the originating device.
+**This feature is deprecated.** As of Phase 3, CountOnMe transitioned to Supabase email-based authentication. See [`supabase-auth.md`](supabase-auth.md) for the current auth model.
+
+This document describes the legacy anonymous device-based authentication system. Devices still exist in the schema for backward compatibility and device-linking during auth migration, but new users authenticate via Supabase JWT.
+
+Previously, each mobile device got a unique identifier and an auth token. This token was used to authenticate API requests and scope data to the originating device.
 
 ## How It Works
 

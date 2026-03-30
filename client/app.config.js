@@ -41,6 +41,8 @@ module.exports = {
           cameraPermission: "CountOnMe needs camera access to scan barcodes.",
         },
       ],
+      "expo-secure-store",
+      "expo-sqlite",
     ],
     extra: {
       // Pass env vars to the app

@@ -50,9 +50,11 @@ export const useBodyWeight = (): UseBodyWeightResult => {
           weightsRef.current = remoteWeights;
           setWeights(remoteWeights);
           // Update local storage with remote data
-          for (const entry of remoteWeights) {
-            await bodyWeightRepository.upsert(db, userId, entry);
-          }
+          await db.withTransactionAsync(async () => {
+            for (const entry of remoteWeights) {
+              await bodyWeightRepository.upsert(db, userId, entry);
+            }
+          });
         }
       } catch {
         // Backend not available, use local data

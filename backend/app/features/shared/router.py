@@ -328,6 +328,15 @@ async def import_food(
     session: AsyncSession = Depends(get_session),
 ) -> SharedFoodImportResponse:
     """Import a shared food into the user's private collection."""
+    # Block check: if the food owner is blocked by the requester, return 404
+    food = await get_shared_food(session, shared_food_id=shared_food_id)
+    if food is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
+
+    blocked_ids = await get_blocked_user_ids(session, user_id=user_id)
+    if food.owner_user_id in blocked_ids:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
+
     result = await import_shared_food_to_private(
         session, user_id=user_id, shared_food_id=shared_food_id,
     )

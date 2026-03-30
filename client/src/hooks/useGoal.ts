@@ -111,7 +111,9 @@ export const useGoal = (): UseGoalResult => {
           if (remoteGoal) {
             goalRef.current = remoteGoal;
             setGoal(remoteGoal);
-            await goalRepository.upsert(db, userId, remoteGoal);
+            await db.withTransactionAsync(async () => {
+              await goalRepository.upsert(db, userId, remoteGoal);
+            });
           }
         }
       } catch {

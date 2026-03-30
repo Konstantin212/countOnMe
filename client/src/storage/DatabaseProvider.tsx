@@ -82,7 +82,7 @@ export const DatabaseProvider = ({
     return () => {
       cancelled = true;
     };
-  }, [injectedDb]);
+  }, [injectedDb, userId]);
 
   if (!db) {
     // DB is still initialising — render nothing (parent can show splash)

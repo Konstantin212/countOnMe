@@ -164,6 +164,10 @@ async def resolve_report(
     if report is None:
         return None
 
+    # Idempotent: already resolved, return as-is
+    if report.resolved_at is not None:
+        return report
+
     report.resolved_at = datetime.now(UTC)
     report.resolved_by_user_id = admin_user_id
     report.resolution_note = resolution_note
@@ -306,6 +310,14 @@ async def admin_approve_food(
     if food is None:
         return None
 
+    if food.moderation_status != ModerationStatus.pending:
+        logger.warning(
+            "Admin %s approving shared food %s with non-pending status '%s'",
+            admin_user_id,
+            shared_food_id,
+            food.moderation_status.value,
+        )
+
     food.moderation_status = ModerationStatus.approved
     food.updated_at = datetime.now(UTC)
     session.add(food)
@@ -331,6 +343,14 @@ async def admin_reject_food(
     food = result.scalars().first()
     if food is None:
         return None
+
+    if food.moderation_status != ModerationStatus.pending:
+        logger.warning(
+            "Admin %s rejecting shared food %s with non-pending status '%s'",
+            admin_user_id,
+            shared_food_id,
+            food.moderation_status.value,
+        )
 
     food.moderation_status = ModerationStatus.rejected
     food.updated_at = datetime.now(UTC)

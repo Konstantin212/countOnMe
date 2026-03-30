@@ -47,7 +47,11 @@ class RateLimiter:
 
 
 class UserBasedRateLimiter:
-    """Sliding-window rate limiter keyed by user_id string."""
+    """Sliding-window rate limiter keyed by user_id string.
+
+    NOTE: In-memory state — not shared across workers and resets on restart.
+    Use Redis for production deployments with multiple workers.
+    """
 
     def __init__(self, max_requests: int, window_seconds: int) -> None:
         self.max_requests = max_requests

@@ -6,7 +6,12 @@ import { goalRepository, outboxRepository } from "@storage/repositories";
 import { useGoal } from "./useGoal";
 import { makeUserGoal } from "../test/helpers";
 
-const mockDbContext = { db: {}, userId: "test-user" };
+const mockDbContext = {
+  db: {
+    withTransactionAsync: vi.fn(async (fn: () => Promise<void>) => await fn()),
+  },
+  userId: "test-user",
+};
 vi.mock("../storage/DatabaseProvider", () => ({
   useDatabaseContext: vi.fn(() => mockDbContext),
 }));

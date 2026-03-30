@@ -42,21 +42,21 @@ Fetch records updated since the last sync version. Returns all entity types grou
 ```
 POST /v1/sync/push
 Authorization: Bearer {supabase_jwt}
-X-Device-Id: {device_id}
 Body: {
-  products: { upserts: [...], deletes: [...] },
-  portions: { upserts: [...], deletes: [...] },
-  food_entries: { upserts: [...], deletes: [...] },
-  goals: { upserts: [...], deletes: [...] },
-  body_weights: { upserts: [...], deletes: [...] },
-  water_logs: { upserts: [...], deletes: [...] }
+  mutations: [
+    {
+      entity_type: "products" | "portions" | "food_entries" | "goals" | "body_weights" | "water_logs",
+      action: "upsert" | "delete",
+      id: UUID,
+      data?: {...},
+      client_updated_at: datetime
+    }
+  ],
+  device_id?: UUID
 }
 ```
 
-Send local dirty rows to the server.
-
-**Headers:**
-- `X-Device-Id` (optional) — Device ID for metadata (created_on_device_id, updated_on_device_id)
+Send local dirty rows to the server. Each mutation specifies the entity type, action, and data.
 
 | Status | Response |
 |--------|----------|
@@ -64,13 +64,19 @@ Send local dirty rows to the server.
 | 400 Bad Request | Invalid input |
 | 401 Unauthorized | Invalid JWT |
 
-**Response:** For each entity type, returns the list of successfully upserted/deleted rows with updated server_updated_at values.
+**Response:** List of mutation results with status (applied, conflict, error) and server_updated_at for successful mutations.
 
 ## Schemas
 
-**SyncPullResponse**: All entity type changes
+**SyncPullResponse**: All entity type changes with grouped upserts/deletes per type
 
-**SyncPushRequest**: All entity type upserts/deletes
+**SyncPushRequest**: Flat list of mutations (entity_type, action, id, data, client_updated_at)
+
+**MutationAction**: `upsert | delete`
+
+**MutationResult**: `id`, `status` (applied | conflict | error), `server_updated_at?`, `message?`
+
+**SyncPushResponse**: List of mutation results
 
 **SyncProduct**: `id`, `name`, `barcode?`, `created_at`, `updated_at`, `deleted_at?`
 

@@ -18,7 +18,7 @@ Shared foods is a community feature (Phases 4-7) where users can publish their p
 ### Visibility Enum
 
 - **private** — Only the owner sees it
-- **draft** — Only the owner sees it (working copy)
+- **unlisted** — Accessible only if you have a direct link
 - **public** — All authenticated users can discover and import
 
 ### Moderation Status Enum
@@ -26,9 +26,8 @@ Shared foods is a community feature (Phases 4-7) where users can publish their p
 - **pending** — Awaiting admin review (published but not visible)
 - **approved** — Admin approved (visible to all)
 - **rejected** — Admin rejected (owner only, cannot be re-published)
-- **disabled** — Admin disabled (was approved, now hidden)
 
-**Default:** Private (unpublished). When owner calls "publish", status moves from private → pending (awaiting moderation).
+**Default:** Private (unpublished). When owner calls "publish", visibility becomes public and moderation_status becomes pending (awaiting admin approval).
 
 ## Publish & Import Flow
 

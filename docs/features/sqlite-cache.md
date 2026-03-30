@@ -102,7 +102,9 @@ Old AsyncStorage-based products are migrated on first app launch via a one-time 
 
 - `client/src/storage/database.ts` — Database interface, schema, initialization
 - `client/src/storage/DatabaseProvider.tsx` — React Provider for DI
-- `client/src/storage/repositories/ProductRepository.ts` — Product CRUD + dirty tracking
-- `client/src/storage/repositories/PortionRepository.ts` — Portion CRUD
-- `client/src/storage/repositories/FoodEntryRepository.ts` — Food entry CRUD
-- `client/src/hooks/useSync.ts` — Sync engine using pull/push endpoints
+- `client/src/storage/repositories/productRepository.ts` — Product CRUD + dirty tracking
+- `client/src/storage/repositories/goalRepository.ts` — User goal CRUD
+- `client/src/storage/repositories/bodyWeightRepository.ts` — Body weight CRUD
+- `client/src/storage/repositories/waterLogRepository.ts` — Water log CRUD
+- `client/src/storage/repositories/outboxRepository.ts` — Mutation queue for sync
+- `client/src/hooks/useSyncStatus.ts` — Sync engine using pull/push endpoints

@@ -31,7 +31,7 @@ Report a shared food item for policy violation.
 | Status | Response |
 |--------|----------|
 | 201 Created | `ReportResponse` |
-| 403 Forbidden | Cannot report own food |
+| 400 Bad Request | Cannot report own food |
 | 404 Not Found | Food not found |
 | 429 Too Many Requests | Rate limited (10/hour) |
 | 401 Unauthorized | Invalid JWT |
@@ -39,7 +39,7 @@ Report a shared food item for policy violation.
 ### List My Reports
 
 ```
-GET /v1/moderation/reports?limit=50&offset=0
+GET /v1/moderation/reports/mine?limit=50&offset=0
 Authorization: Bearer {supabase_jwt}
 ```
 
@@ -63,7 +63,7 @@ Block a user (prevents them from seeing your shared foods and vice versa).
 | Status | Response |
 |--------|----------|
 | 201 Created | `BlockResponse` |
-| 403 Forbidden | Cannot block yourself |
+| 400 Bad Request | Cannot block yourself |
 | 404 Not Found | User not found |
 | 429 Too Many Requests | Rate limited (100/hour) |
 | 401 Unauthorized | Invalid JWT |
@@ -102,7 +102,7 @@ List users blocked by the authenticated user.
 ### Get Pending Reports
 
 ```
-GET /v1/moderation/admin/reports?limit=50&offset=0
+GET /v1/admin/moderation/reports?limit=50&offset=0
 Authorization: Bearer {admin_jwt}
 ```
 
@@ -110,38 +110,33 @@ List reports awaiting admin action (status = pending).
 
 | Status | Response |
 |--------|----------|
-| 200 OK | `AdminReportItem[]` |
+| 200 OK | `ReportResponse[]` |
 | 403 Forbidden | Admin access required |
 | 401 Unauthorized | Invalid JWT |
 
 ### Resolve Report
 
 ```
-POST /v1/moderation/admin/reports/{report_id}/resolve
+POST /v1/admin/moderation/reports/{report_id}/resolve
 Authorization: Bearer {admin_jwt}
 Body: {
-  action: "approve" | "reject" | "dismiss",
   resolution_note?: string
 }
 ```
 
-Admin resolves a pending report. Action determines the outcome:
-
-- **approve** — Admin approves the report (food will be rejected)
-- **reject** — Admin rejects the report (no action on food)
-- **dismiss** — Admin dismisses the report (no action on food)
+Admin resolves a pending report.
 
 | Status | Response |
 |--------|----------|
 | 200 OK | `ReportResponse` |
-| 403 Forbidden | Admin access required or report already resolved |
+| 403 Forbidden | Admin access required |
 | 404 Not Found | Report not found |
 | 401 Unauthorized | Invalid JWT |
 
 ### Approve Food
 
 ```
-POST /v1/moderation/admin/foods/{food_id}/approve
+POST /v1/admin/moderation/foods/{food_id}/approve
 Authorization: Bearer {admin_jwt}
 ```
 
@@ -157,7 +152,7 @@ Approve a pending shared food (make it visible).
 ### Reject Food
 
 ```
-POST /v1/moderation/admin/foods/{food_id}/reject
+POST /v1/admin/moderation/foods/{food_id}/reject
 Authorization: Bearer {admin_jwt}
 Body: { reason?: string }
 ```
@@ -174,7 +169,7 @@ Reject a pending shared food (hide it, owner only).
 ### Moderation Stats
 
 ```
-GET /v1/moderation/admin/stats
+GET /v1/admin/moderation/stats
 Authorization: Bearer {admin_jwt}
 ```
 
@@ -186,7 +181,7 @@ Admin dashboard statistics.
 | 403 Forbidden | Admin access required |
 | 401 Unauthorized | Invalid JWT |
 
-**Response:** pending_reports, pending_foods, active_blocks, total_users, etc.
+**Response:** pending_reports, pending_foods
 
 ## Schemas
 
@@ -198,7 +193,7 @@ Admin dashboard statistics.
 
 **BlockResponse**: `id`, `blocker_user_id`, `blocked_user_id`, `created_at`
 
-**ResolveReportRequest**: `action` (enum), `resolution_note?`
+**ResolveReportRequest**: `resolution_note?`
 
 ## Key Files
 

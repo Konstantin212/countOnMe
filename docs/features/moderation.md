@@ -26,7 +26,7 @@ Body: { shared_food_id, reason }
 User reports a shared food with a reason (spam, offensive, inaccurate, etc.).
 
 **Validation:**
-- User cannot report their own food (403)
+- User cannot report their own food (400 Bad Request)
 - Shared food must exist and be visible to the reporter (404 if not)
 
 **Rate limiting:** 10 reports per user per hour
@@ -34,7 +34,7 @@ User reports a shared food with a reason (spam, offensive, inaccurate, etc.).
 ### List My Reports
 
 ```
-GET /v1/moderation/reports?limit=50&offset=0
+GET /v1/moderation/reports/mine?limit=50&offset=0
 Authorization: Bearer {supabase_jwt}
 ```
 
@@ -53,7 +53,7 @@ Body: { target_user_id }
 Block another user (cannot see their shared foods, they cannot see yours).
 
 **Validation:**
-- Cannot block yourself (403)
+- Cannot block yourself (400 Bad Request)
 - Target user must exist (404)
 
 ### Unblock User
@@ -79,7 +79,7 @@ Returns the authenticated user's block list.
 ### Approve Food
 
 ```
-POST /v1/moderation/foods/{food_id}/approve
+POST /v1/admin/moderation/foods/{food_id}/approve
 Authorization: Bearer {admin_jwt}
 ```
 
@@ -88,7 +88,7 @@ Approves a pending shared food. Sets moderation_status to approved. Food becomes
 ### Reject Food
 
 ```
-POST /v1/moderation/foods/{food_id}/reject
+POST /v1/admin/moderation/foods/{food_id}/reject
 Authorization: Bearer {admin_jwt}
 Body: { reason? }
 ```
@@ -98,7 +98,7 @@ Rejects a pending shared food. Sets moderation_status to rejected. Food is hidde
 ### Get Pending Reports
 
 ```
-GET /v1/moderation/admin/reports?limit=50&offset=0
+GET /v1/admin/moderation/reports?limit=50&offset=0
 Authorization: Bearer {admin_jwt}
 ```
 
@@ -107,24 +107,21 @@ Returns reports awaiting admin action (status = pending).
 ### Resolve Report
 
 ```
-POST /v1/moderation/admin/reports/{report_id}/resolve
+POST /v1/admin/moderation/reports/{report_id}/resolve
 Authorization: Bearer {admin_jwt}
-Body: { action: "approve" | "reject" | "dismiss" }
+Body: { resolution_note? }
 ```
 
-**Actions:**
-- **approve** — Admin approves the food (user's report was justified)
-- **reject** — Admin rejects the food (user's report was justified)
-- **dismiss** — Admin dismisses the report (no action taken)
+Resolves a report. The resolution note is recorded for admin reference.
 
 ### Moderation Stats (Admin)
 
 ```
-GET /v1/moderation/admin/stats
+GET /v1/admin/moderation/stats
 Authorization: Bearer {admin_jwt}
 ```
 
-Returns counts: pending_reports, pending_foods, total_blocks, etc.
+Returns counts: pending_reports, pending_foods.
 
 ## Auto-Hide Logic
 

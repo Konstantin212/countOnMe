@@ -72,7 +72,7 @@ Full-text search across public+approved shared foods (excludes blocked users).
 
 | Status | Response |
 |--------|----------|
-| 200 OK | `SearchResultItem[]` |
+| 200 OK | `SharedFoodListItem[]` |
 | 401 Unauthorized | Invalid JWT |
 
 ### Update Shared Food
@@ -136,7 +136,7 @@ Import a public+approved shared food as a new private product in your collection
 
 | Status | Response |
 |--------|----------|
-| 201 Created | `ImportedProductResponse` |
+| 201 Created | `SharedFoodImportResponse` |
 | 404 Not Found | Food not found or not accessible |
 | 401 Unauthorized | Invalid JWT |
 
@@ -181,9 +181,9 @@ Soft-delete a shared food (owner only).
 
 **SharedFoodResponse**: `id`, `owner_user_id`, `name`, `display_name`, `description?`, `brand?`, `barcode?`, `category?`, `visibility`, `moderation_status`, `created_at`, `updated_at`, `portions[]`
 
-**SharedFoodListItem**: `id`, `display_name`, `brand?`, `visibility`, `moderation_status`, `import_count`
+**SharedFoodListItem**: `id`, `owner_user_id`, `name`, `display_name`, `brand?`, `barcode?`, `category?`, `visibility`, `moderation_status`, `default_portion?`
 
-**SearchResultItem**: `id`, `display_name`, `brand?`, `category?`, `avg_rating`, `import_count`
+**SharedFoodImportResponse**: `product_id`, `portion_count`
 
 **SharedFoodPortionResponse**: `id`, `shared_food_id`, `label`, `base_amount`, `base_unit`, `gram_weight?`, `calories`, `protein?`, `carbs?`, `fat?`, `is_default`
 

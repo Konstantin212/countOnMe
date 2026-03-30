@@ -186,7 +186,7 @@ async def update_food(
     if food is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
     if food.owner_user_id != user_id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
 
     updated = await update_shared_food(
         session,
@@ -217,7 +217,7 @@ async def delete_food(
     if food is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
     if food.owner_user_id != user_id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
 
     await soft_delete_shared_food(
         session, owner_user_id=user_id, shared_food_id=shared_food_id,
@@ -289,7 +289,7 @@ async def add_portion(
     if food is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
     if food.owner_user_id != user_id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
 
     portion = await add_portion_to_shared_food(
         session,

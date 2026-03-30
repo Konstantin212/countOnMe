@@ -54,6 +54,16 @@ def _patch_jwks_client():
         yield
 
 
+@pytest.fixture(autouse=True)
+def _reset_auth_rate_limiter():
+    """Clear auth_action_limiter state between tests to prevent cross-test 429s."""
+    from app.core.rate_limit import auth_action_limiter
+
+    auth_action_limiter._hits.clear()
+    yield
+    auth_action_limiter._hits.clear()
+
+
 def _auth_headers(token: str) -> dict[str, str]:
     return {"Authorization": f"Bearer {token}"}
 

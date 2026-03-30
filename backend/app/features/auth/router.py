@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db import get_session
 from app.core.deps import get_current_user
-from app.core.rate_limit import device_register_limiter
+from app.core.rate_limit import auth_action_limiter, device_register_limiter
 from app.features.auth.models import Device, User
 from app.features.auth.schemas import (
     ClaimCounts,
@@ -100,7 +100,11 @@ async def register_device(
 # ---------------------------------------------------------------------------
 
 
-@auth_router.post("/link-device", response_model=LinkDeviceWithClaimResponse)
+@auth_router.post(
+    "/link-device",
+    response_model=LinkDeviceWithClaimResponse,
+    dependencies=[Depends(auth_action_limiter)],
+)
 async def link_device(
     body: LinkDeviceRequest,
     user: User = Depends(get_current_user),
@@ -147,7 +151,11 @@ async def link_device(
     )
 
 
-@auth_router.post("/claim-device-data", response_model=ClaimDeviceDataResponse)
+@auth_router.post(
+    "/claim-device-data",
+    response_model=ClaimDeviceDataResponse,
+    dependencies=[Depends(auth_action_limiter)],
+)
 async def claim_device_data_endpoint(
     body: ClaimDeviceDataRequest,
     user: User = Depends(get_current_user),
@@ -183,7 +191,11 @@ async def get_me(
     return UserProfileResponse.model_validate(profile)
 
 
-@auth_router.delete("/account", status_code=status.HTTP_204_NO_CONTENT)
+@auth_router.delete(
+    "/account",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(auth_action_limiter)],
+)
 async def delete_account(
     user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),

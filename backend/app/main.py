@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.features.auth.router import auth_router
 from app.features.auth.router import router as devices_router
@@ -17,10 +18,26 @@ from app.features.stats.router import router as stats_router
 from app.features.sync.router import router as sync_router
 from app.features.water.router import router as water_logs_router
 from app.features.weights.router import router as weights_router
+from app.settings import settings
 
 
 def create_app() -> FastAPI:
-    app = FastAPI(title="CountOnMe API", version="0.1.0")
+    is_local = settings.env == "local"
+    app = FastAPI(
+        title="CountOnMe API",
+        version="0.1.0",
+        docs_url="/docs" if is_local else None,
+        redoc_url="/redoc" if is_local else None,
+        openapi_url="/openapi.json" if is_local else None,
+    )
+
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.cors_origins,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
     app.get("/health", tags=["health"])(lambda: {"ok": True})
 

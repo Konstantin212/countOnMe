@@ -85,3 +85,6 @@ device_register_limiter = RateLimiter(max_requests=10, window_seconds=60)
 
 # Publish rate limiter: 10 publishes per hour per user
 publish_rate_limiter = UserBasedRateLimiter(max_requests=10, window_seconds=3600)
+
+# Auth sensitive-action limiter: 5 requests per minute per IP
+auth_action_limiter = RateLimiter(max_requests=5, window_seconds=60)

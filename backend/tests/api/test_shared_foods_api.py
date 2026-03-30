@@ -319,11 +319,11 @@ async def test_update_shared_food_success(
 
 
 @pytest.mark.asyncio
-async def test_update_shared_food_not_owner_403(
+async def test_update_shared_food_not_owner_404(
     app_client: AsyncClient,
     db_session: AsyncSession,
 ) -> None:
-    """PATCH by non-owner returns 403."""
+    """PATCH by non-owner returns 404 (don't leak existence)."""
     user_a = await create_user(db_session)
     await db_session.commit()
 
@@ -343,7 +343,7 @@ async def test_update_shared_food_not_owner_403(
         f"/v1/shared/foods/{food.id}",
         json={"display_name": "Hacked"},
     )
-    assert response.status_code == 403
+    assert response.status_code == 404
 
     app_client.headers.pop("Authorization", None)
 
@@ -379,11 +379,11 @@ async def test_delete_shared_food_success(
 
 
 @pytest.mark.asyncio
-async def test_delete_shared_food_not_owner_403(
+async def test_delete_shared_food_not_owner_404(
     app_client: AsyncClient,
     db_session: AsyncSession,
 ) -> None:
-    """DELETE by non-owner returns 403."""
+    """DELETE by non-owner returns 404 (don't leak existence)."""
     user_a = await create_user(db_session)
     await db_session.commit()
 
@@ -400,7 +400,7 @@ async def test_delete_shared_food_not_owner_403(
 
     app_client.headers["Authorization"] = f"Bearer {jwt_b}"
     response = await app_client.delete(f"/v1/shared/foods/{food.id}")
-    assert response.status_code == 403
+    assert response.status_code == 404
 
     app_client.headers.pop("Authorization", None)
 
@@ -517,11 +517,11 @@ async def test_add_portion_success(
 
 
 @pytest.mark.asyncio
-async def test_add_portion_not_owner_403(
+async def test_add_portion_not_owner_404(
     app_client: AsyncClient,
     db_session: AsyncSession,
 ) -> None:
-    """POST /v1/shared/foods/{id}/portions by non-owner returns 403."""
+    """POST /v1/shared/foods/{id}/portions by non-owner returns 404 (don't leak existence)."""
     user_a = await create_user(db_session)
     await db_session.commit()
 
@@ -546,7 +546,7 @@ async def test_add_portion_not_owner_403(
             "calories": "300",
         },
     )
-    assert response.status_code == 403
+    assert response.status_code == 404
 
     app_client.headers.pop("Authorization", None)
 

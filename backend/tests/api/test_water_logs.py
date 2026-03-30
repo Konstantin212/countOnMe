@@ -33,15 +33,36 @@ async def test_create_water_log(authenticated_client: tuple[AsyncClient, uuid.UU
 
 
 @pytest.mark.asyncio
-async def test_create_water_log_negative_amount(authenticated_client: tuple[AsyncClient, uuid.UUID]) -> None:
-    """Negative amount_ml is allowed (water removal)."""
+async def test_create_water_log_negative_amount_rejected(authenticated_client: tuple[AsyncClient, uuid.UUID]) -> None:
+    """Negative amount_ml is rejected (must be > 0)."""
     client, _ = authenticated_client
     response = await client.post(
         "/v1/water-logs",
         json={"day": date.today().isoformat(), "amount_ml": -100},
     )
-    assert response.status_code == 201
-    assert response.json()["amount_ml"] == -100
+    assert response.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_create_water_log_zero_amount_rejected(authenticated_client: tuple[AsyncClient, uuid.UUID]) -> None:
+    """Zero amount_ml is rejected (must be > 0)."""
+    client, _ = authenticated_client
+    response = await client.post(
+        "/v1/water-logs",
+        json={"day": date.today().isoformat(), "amount_ml": 0},
+    )
+    assert response.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_create_water_log_exceeds_max_rejected(authenticated_client: tuple[AsyncClient, uuid.UUID]) -> None:
+    """amount_ml exceeding 50000 is rejected."""
+    client, _ = authenticated_client
+    response = await client.post(
+        "/v1/water-logs",
+        json={"day": date.today().isoformat(), "amount_ml": 50001},
+    )
+    assert response.status_code == 422
 
 
 @pytest.mark.asyncio

@@ -30,6 +30,9 @@ class Settings(BaseSettings):
     supabase_secret_key: str = ""  # sb_secret_... — for admin operations (replaces legacy service_role)
     supabase_url: str = ""
 
+    # CORS origins allowed for cross-origin requests
+    cors_origins: list[str] = ["http://localhost:8081", "http://localhost:3000"]
+
     # Legacy device-token auth — set to True to allow fallback to device tokens
     allow_device_auth: bool = False
 

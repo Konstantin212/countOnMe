@@ -12,12 +12,12 @@ from app.core.schemas import APIModel
 class ProductCreateRequest(APIModel):
     id: UUID | None = None
     name: str = Field(min_length=1, max_length=200)
-    barcode: str | None = None
+    barcode: str | None = Field(default=None, max_length=50)
 
 
 class ProductUpdateRequest(APIModel):
     name: str | None = Field(default=None, min_length=1, max_length=200)
-    barcode: str | None = None
+    barcode: str | None = Field(default=None, max_length=50)
 
 
 class ProductResponse(APIModel):

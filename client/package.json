@@ -4,7 +4,7 @@
   "main": "index.ts",
   "scripts": {
     "start": "node scripts/adb-connect.js && expo start",
-    "start:phone": "node scripts/adb-connect.js && expo start --dev-client",
+    "start:phone": "node scripts/start-phone.js",
     "start:c": "npx expo start -c",
     "android": "expo run:android",
     "ios": "expo run:ios",

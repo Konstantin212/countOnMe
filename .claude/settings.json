@@ -269,6 +269,28 @@
           }
         ]
       }
+    ],
+    "SubagentStop": [
+      {
+        "matcher": "fe-developer",
+        "hooks": [
+          {
+            "type": "agent",
+            "prompt": "Review all recent client/ changes. Run `cd client && git diff HEAD -- '*.ts' '*.tsx'` to find changes. If no client changes, output 'No client changes to review' and stop. Otherwise: 1) Run `cd client && npx tsc --noEmit 2>&1 | head -80` for type errors. 2) Read each changed file. 3) Check: theme colors from useTheme() not hardcoded hex, particle usage for forms (FormField/Input from @particles), hook state immutability (no .push/.splice mutations), no raw setState exposure from hooks, no console.log with tokens, import aliases (@hooks/@models/@services) for cross-folder imports, StyleSheet.create not inline styles, FlatList for lists not ScrollView+map. 4) Output structured report: CRITICAL/HIGH/MEDIUM/LOW findings with file:line, then verdict APPROVE/CHANGES REQUESTED/BLOCKED.",
+            "timeout": 300
+          }
+        ]
+      },
+      {
+        "matcher": "backend-developer",
+        "hooks": [
+          {
+            "type": "agent",
+            "prompt": "Review all recent backend/ changes. Run `cd backend && git diff HEAD -- '*.py'` to find changes. If no backend changes, output 'No backend changes to review' and stop. Otherwise: 1) Run `cd backend && ruff check app/ 2>&1 | head -80`. 2) Read each changed file. 3) Check: device_id scoping on EVERY query, deleted_at.is_(None) soft-delete filter, no SQL in routers (service layer only), type hints on public functions, no hardcoded secrets, bcrypt token hashing (never plaintext), parameterized queries (no f-strings in SQL), async-only DB calls, transaction safety (async with session.begin() for multi-step mutations), cross-device access returns 404 not 403. 4) Output structured report: CRITICAL/HIGH/MEDIUM/LOW findings with file:line, then verdict APPROVE/CHANGES REQUESTED/BLOCKED.",
+            "timeout": 300
+          }
+        ]
+      }
     ]
   }
 }

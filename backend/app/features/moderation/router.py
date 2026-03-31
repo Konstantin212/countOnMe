@@ -109,7 +109,7 @@ async def block_user_endpoint(
     return BlockResponse.model_validate(block)
 
 
-@router.delete("/blocks/{blocked_user_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/blocks/{blocked_user_id}", status_code=status.HTTP_204_NO_CONTENT, response_model=None)
 async def unblock_user_endpoint(
     blocked_user_id: uuid.UUID,
     user_id: uuid.UUID = Depends(get_current_user_id),

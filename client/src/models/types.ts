@@ -206,6 +206,8 @@ export type MealItem = {
   productId: string;
   amount: number;
   unit: Unit;
+  /** Set for catalog items; absent for user-created products. */
+  catalogPortionId?: string;
 };
 
 /**
@@ -228,9 +230,10 @@ export type Meal = {
  */
 export type EnrichedFoodEntry = {
   id: string;
-  productId: string;
+  productId: string | null;
   productName: string;
-  portionId: string;
+  portionId: string | null;
+  catalogPortionId: string | null;
   amount: number;
   unit: Unit;
   calories: number;

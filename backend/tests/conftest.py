@@ -164,6 +164,46 @@ async def test_engine() -> AsyncIterator[AsyncEngine]:
             """)
         )
 
+        # ADR-010: Add catalog_portion_id to food_entries, make product_id/portion_id nullable
+        await conn.execute(
+            text("""
+            DO $$ BEGIN
+                ALTER TABLE food_entries
+                    ADD COLUMN IF NOT EXISTS catalog_portion_id uuid
+                    REFERENCES catalog_portions(id) ON DELETE RESTRICT;
+            EXCEPTION WHEN OTHERS THEN null;
+            END $$;
+            """)
+        )
+        await conn.execute(
+            text("""
+            DO $$ BEGIN
+                ALTER TABLE food_entries ALTER COLUMN product_id DROP NOT NULL;
+            EXCEPTION WHEN OTHERS THEN null;
+            END $$;
+            """)
+        )
+        await conn.execute(
+            text("""
+            DO $$ BEGIN
+                ALTER TABLE food_entries ALTER COLUMN portion_id DROP NOT NULL;
+            EXCEPTION WHEN OTHERS THEN null;
+            END $$;
+            """)
+        )
+        # Unique constraint on catalog_portions for UPSERT
+        await conn.execute(
+            text("""
+            DO $$ BEGIN
+                ALTER TABLE catalog_portions
+                    ADD CONSTRAINT uq_catalog_portions_product_label_unit
+                    UNIQUE (catalog_product_id, label, base_unit);
+            EXCEPTION WHEN duplicate_object THEN null;
+            WHEN OTHERS THEN null;
+            END $$;
+            """)
+        )
+
         # Add sync columns to tables that may have been created before SyncMixin
         # (create_all doesn't ALTER existing tables)
         sync_tables = [

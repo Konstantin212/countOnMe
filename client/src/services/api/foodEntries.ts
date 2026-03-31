@@ -7,8 +7,9 @@ export type MealType = "breakfast" | "lunch" | "dinner" | "snacks" | "water";
 // API response type (Decimal amount comes as string from backend)
 type FoodEntryApiResponse = {
   id: string;
-  product_id: string;
-  portion_id: string;
+  product_id: string | null;
+  portion_id: string | null;
+  catalog_portion_id: string | null;
   day: string; // YYYY-MM-DD
   meal_type: MealType;
   amount: string | number; // Decimal from backend
@@ -20,8 +21,9 @@ type FoodEntryApiResponse = {
 // Frontend type with parsed number
 export type FoodEntry = {
   id: string;
-  productId: string;
-  portionId: string;
+  productId: string | null;
+  portionId: string | null;
+  catalogPortionId: string | null;
   day: string; // YYYY-MM-DD
   mealType: MealType;
   amount: number;
@@ -30,14 +32,28 @@ export type FoodEntry = {
   updatedAt: string;
 };
 
-export type FoodEntryCreateRequest = {
+/** Private product path (user-created products). */
+type PrivateProductCreateRequest = {
   product_id: string;
   portion_id: string;
-  day: string; // YYYY-MM-DD
+  day: string;
   meal_type: MealType;
   amount: string | number;
   unit: Unit;
 };
+
+/** Catalog path (catalog products with direct portion reference). */
+type CatalogCreateRequest = {
+  catalog_portion_id: string;
+  day: string;
+  meal_type: MealType;
+  amount: string | number;
+  unit: Unit;
+};
+
+export type FoodEntryCreateRequest =
+  | PrivateProductCreateRequest
+  | CatalogCreateRequest;
 
 export type FoodEntryUpdateRequest = Partial<{
   portion_id: string;
@@ -59,6 +75,7 @@ const transformFoodEntryResponse = (
     id: response.id,
     productId: response.product_id,
     portionId: response.portion_id,
+    catalogPortionId: response.catalog_portion_id,
     day: response.day,
     mealType: response.meal_type,
     amount,

@@ -201,14 +201,9 @@ class OffSeeder(AbstractSeeder):
             )
             id_map: dict[str, Any] = {row["source_id"]: row["id"] for row in id_rows}
 
-            # Delete existing portions for this batch
-            product_ids = list(id_map.values())
-            await conn.execute(
-                "DELETE FROM catalog_portions WHERE catalog_product_id = ANY($1::uuid[])",
-                product_ids,
-            )
-
-            # Build all portion rows for this batch
+            # UPSERT portions (ON CONFLICT on unique constraint)
+            # ON DELETE RESTRICT prevents deletion of referenced catalog portions,
+            # so we use UPSERT instead of DELETE+INSERT (ADR-010).
             portion_rows: list[tuple[Any, ...]] = []
             for item in batch:
                 product_id = id_map.get(item["barcode"])
@@ -255,6 +250,15 @@ class OffSeeder(AbstractSeeder):
                     VALUES
                         (gen_random_uuid(), $1, $2, $3, $4,
                          $5, $6, $7, $8, $9, $10, now(), now())
+                    ON CONFLICT (catalog_product_id, label, base_unit) DO UPDATE SET
+                        base_amount = EXCLUDED.base_amount,
+                        gram_weight = EXCLUDED.gram_weight,
+                        calories = EXCLUDED.calories,
+                        protein = EXCLUDED.protein,
+                        carbs = EXCLUDED.carbs,
+                        fat = EXCLUDED.fat,
+                        is_default = EXCLUDED.is_default,
+                        updated_at = now()
                     """,
                     portion_rows,
                 )

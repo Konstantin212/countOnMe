@@ -194,6 +194,7 @@ async def get_me(
 @auth_router.delete(
     "/account",
     status_code=status.HTTP_204_NO_CONTENT,
+    response_model=None,
     dependencies=[Depends(auth_action_limiter)],
 )
 async def delete_account(

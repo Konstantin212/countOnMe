@@ -143,6 +143,7 @@ async def create_food_entry(
     portion_id: uuid.UUID | None = None,
     *,
     user_id: uuid.UUID | None = None,
+    catalog_portion_id: uuid.UUID | None = None,
     **overrides,
 ) -> FoodEntry:
     """Create a test food entry."""
@@ -151,6 +152,7 @@ async def create_food_entry(
         "user_id": user_id,
         "product_id": product_id,
         "portion_id": portion_id,
+        "catalog_portion_id": catalog_portion_id,
         "day": date.today(),
         "meal_type": MealType.breakfast,
         "amount": Decimal("100"),

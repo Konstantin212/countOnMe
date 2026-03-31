@@ -206,7 +206,7 @@ async def update_food(
     return SharedFoodResponse.model_validate(updated)
 
 
-@router.delete("/foods/{shared_food_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/foods/{shared_food_id}", status_code=status.HTTP_204_NO_CONTENT, response_model=None)
 async def delete_food(
     shared_food_id: uuid.UUID,
     user_id: uuid.UUID = Depends(get_current_user_id),

@@ -58,7 +58,8 @@ _PUSH_FIELDS: dict[str, set[str]] = {
         "calories", "protein", "carbs", "fat", "is_default",
     },
     "food_entries": {
-        "product_id", "portion_id", "day", "meal_type", "amount", "unit",
+        "product_id", "portion_id", "catalog_portion_id",
+        "day", "meal_type", "amount", "unit",
     },
     "body_weights": {"day", "weight_kg"},
     "goals": {

@@ -17,6 +17,7 @@ import { useProducts } from "@hooks/useProducts";
 import { useFoodEntries } from "@hooks/useFoodEntries";
 import { useTheme } from "@hooks/useTheme";
 import { CatalogPortionData } from "@hooks/useBarcodeLookup";
+import { setCatalogPortionInfo } from "@hooks/useMealTypeEntries";
 import { MealTypeKey, Unit } from "@models/types";
 import { Scale, SCALE_OPTIONS, toGrams } from "@services/utils/scales";
 import {
@@ -148,6 +149,7 @@ const CatalogTrackScreen = ({
         ? `${externalProduct.name} (${externalProduct.brands})`
         : externalProduct.name;
 
+      // Still create local product copy for display name resolution (favorites, recents)
       const newProduct = await addProduct({
         name: productName,
         barcode: externalProduct.code,
@@ -166,6 +168,24 @@ const CatalogTrackScreen = ({
 
       const entryUnit: Unit = "g";
 
+      // Only use catalog path for real catalog portions (not synthesized OFF fallbacks)
+      const isRealCatalogPortion =
+        selectedPortion.id !== "off-100g" &&
+        !selectedPortion.id.startsWith("off-");
+
+      if (isRealCatalogPortion) {
+        // Cache catalog portion info for meal type entries enrichment
+        setCatalogPortionInfo(selectedPortion.id, {
+          productName,
+          baseAmount: selectedPortion.baseAmount,
+          baseUnit: selectedPortion.baseUnit,
+          calories: selectedPortion.calories,
+          protein: selectedPortion.protein ?? 0,
+          carbs: selectedPortion.carbs ?? 0,
+          fat: selectedPortion.fat ?? 0,
+        });
+      }
+
       await saveMealToBackend(
         mealType,
         [
@@ -173,6 +193,9 @@ const CatalogTrackScreen = ({
             productId: newProduct.id,
             amount: entryAmount,
             unit: entryUnit,
+            ...(isRealCatalogPortion
+              ? { catalogPortionId: selectedPortion.id }
+              : {}),
           },
         ],
         [newProduct],

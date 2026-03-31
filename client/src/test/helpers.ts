@@ -48,6 +48,23 @@ export const makeFoodEntry = (
   id: "entry-1",
   productId: "prod-1",
   portionId: "portion-1",
+  catalogPortionId: null,
+  day: "2025-06-01",
+  mealType: "breakfast",
+  amount: 200,
+  unit: "g",
+  createdAt: "2025-06-01T08:00:00Z",
+  updatedAt: "2025-06-01T08:00:00Z",
+  ...overrides,
+});
+
+export const makeCatalogFoodEntry = (
+  overrides: Partial<FoodEntry> = {},
+): FoodEntry => ({
+  id: "catalog-entry-1",
+  productId: null,
+  portionId: null,
+  catalogPortionId: "cat-portion-1",
   day: "2025-06-01",
   mealType: "breakfast",
   amount: 200,

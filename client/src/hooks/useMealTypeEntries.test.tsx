@@ -12,6 +12,7 @@ import { listPortions, Portion } from "@services/api/portions";
 
 import {
   clearMealTypeEntriesCache,
+  setCatalogPortionInfo,
   useMealTypeEntries,
 } from "./useMealTypeEntries";
 
@@ -53,12 +54,11 @@ const mockListPortions = listPortions as Mock;
 
 // ── Helpers ────────────────────────────────────────────────────────
 
-const makeFoodEntry = (
-  overrides: Partial<FoodEntry> = {},
-): FoodEntry => ({
+const makeFoodEntry = (overrides: Partial<FoodEntry> = {}): FoodEntry => ({
   id: "entry-1",
   productId: "prod-1",
   portionId: "portion-1",
+  catalogPortionId: null,
   day: "2025-06-01",
   mealType: "breakfast",
   amount: 200,
@@ -77,9 +77,7 @@ const makeProduct = (overrides: Partial<Product> = {}): Product => ({
   ...overrides,
 });
 
-const makePortion = (
-  overrides: Partial<Portion> = {},
-): Portion => ({
+const makePortion = (overrides: Partial<Portion> = {}): Portion => ({
   id: "portion-1",
   productId: "prod-1",
   label: "100g",
@@ -269,6 +267,100 @@ describe("useMealTypeEntries", () => {
 
       expect(success).toBe(false);
       expect(result.current.error).toBe("Failed to update entry");
+    });
+  });
+
+  describe("catalog entry enrichment", () => {
+    it("enriches catalog entry from cached catalog portion info", async () => {
+      // Pre-populate the catalog portion cache
+      setCatalogPortionInfo("cat-portion-1", {
+        productName: "Catalog Chicken",
+        baseAmount: 100,
+        baseUnit: "g",
+        calories: 200,
+        protein: 30,
+        carbs: 5,
+        fat: 8,
+      });
+
+      const catalogEntry = makeFoodEntry({
+        id: "cat-entry-1",
+        productId: null,
+        portionId: null,
+        catalogPortionId: "cat-portion-1",
+        amount: 150,
+        mealType: "breakfast",
+      });
+
+      const { result } = await setupHook([catalogEntry], [], []);
+
+      expect(result.current.entries).toHaveLength(1);
+      const enriched = result.current.entries[0];
+      expect(enriched.productName).toBe("Catalog Chicken");
+      expect(enriched.catalogPortionId).toBe("cat-portion-1");
+      expect(enriched.productId).toBeNull();
+      // 150g / 100g base = 1.5 ratio -> 200 * 1.5 = 300
+      expect(enriched.calories).toBe(300);
+      expect(enriched.protein).toBe(45);
+      expect(enriched.fat).toBe(12);
+    });
+
+    it("drops catalog entry when cache is empty (graceful degradation)", async () => {
+      // No cache populated for this catalog portion
+      const catalogEntry = makeFoodEntry({
+        id: "cat-entry-2",
+        productId: null,
+        portionId: null,
+        catalogPortionId: "unknown-cat-portion",
+        mealType: "breakfast",
+      });
+
+      const { result } = await setupHook([catalogEntry], [], []);
+
+      // Entry is filtered out because enrichment returns null
+      expect(result.current.entries).toHaveLength(0);
+    });
+
+    it("handles mixed private and catalog entries", async () => {
+      setCatalogPortionInfo("cat-portion-1", {
+        productName: "Catalog Rice",
+        baseAmount: 100,
+        baseUnit: "g",
+        calories: 130,
+        protein: 2.7,
+        carbs: 28,
+        fat: 0.3,
+      });
+
+      const privateEntry = makeFoodEntry({
+        id: "priv-1",
+        productId: "prod-1",
+        portionId: "portion-1",
+        catalogPortionId: null,
+        amount: 200,
+        mealType: "breakfast",
+      });
+      const catalogEntry = makeFoodEntry({
+        id: "cat-1",
+        productId: null,
+        portionId: null,
+        catalogPortionId: "cat-portion-1",
+        amount: 100,
+        mealType: "breakfast",
+      });
+
+      const product = makeProduct();
+      const portion = makePortion();
+
+      const { result } = await setupHook(
+        [privateEntry, catalogEntry],
+        [product],
+        [portion],
+      );
+
+      expect(result.current.entries).toHaveLength(2);
+      expect(result.current.entries[0].productName).toBe("Chicken");
+      expect(result.current.entries[1].productName).toBe("Catalog Rice");
     });
   });
 });

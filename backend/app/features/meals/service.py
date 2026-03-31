@@ -7,12 +7,14 @@ from sqlalchemy import Select, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.ownership import get_owner_filter
+from app.features.catalog.models import CatalogPortion, CatalogProduct
 from app.features.meals.models import FoodEntry
 from app.features.portions.models import ProductPortion
+from app.features.products.models import Product
 from app.features.products.service import get_product
 
 
-def _not_deleted(stmt: Select):
+def _not_deleted(stmt: Select) -> Select:
     return stmt.where(FoodEntry.deleted_at.is_(None))
 
 
@@ -36,18 +38,58 @@ async def _get_portion(
     return res.scalar_one_or_none()
 
 
+async def _get_catalog_portion(
+    session: AsyncSession,
+    catalog_portion_id: uuid.UUID,
+) -> CatalogPortion | None:
+    """Validate that a catalog portion exists (global, no device scoping)."""
+    stmt = (
+        select(CatalogPortion)
+        .where(CatalogPortion.id == catalog_portion_id)
+        .limit(1)
+    )
+    res = await session.execute(stmt)
+    return res.scalar_one_or_none()
+
+
 async def create_food_entry(
     session: AsyncSession,
     *,
     user_id: uuid.UUID,
-    product_id: uuid.UUID,
-    portion_id: uuid.UUID,
+    product_id: uuid.UUID | None = None,
+    portion_id: uuid.UUID | None = None,
+    catalog_portion_id: uuid.UUID | None = None,
     day: date,
-    meal_type,
-    amount,
-    unit,
+    meal_type: str,
+    amount: str | int | float,
+    unit: str,
     device_id: uuid.UUID | None = None,
 ) -> FoodEntry | None:
+    if catalog_portion_id is not None:
+        # Catalog path: validate portion exists (global, no device scoping)
+        cat_portion = await _get_catalog_portion(session, catalog_portion_id)
+        if cat_portion is None:
+            return None
+
+        entry = FoodEntry(
+            user_id=user_id,
+            device_id=device_id,
+            created_on_device_id=device_id,
+            catalog_portion_id=catalog_portion_id,
+            day=day,
+            meal_type=meal_type,
+            amount=amount,
+            unit=unit,
+        )
+        session.add(entry)
+        await session.commit()
+        await session.refresh(entry)
+        return entry
+
+    # Private product path (existing)
+    if product_id is None or portion_id is None:
+        return None
+
     product = await get_product(session, user_id=user_id, product_id=product_id)
     if product is None:
         return None
@@ -123,7 +165,16 @@ async def update_food_entry(
     if entry is None:
         return None
 
+    # Catalog entries only allow amount/unit updates (reject portion_id patches)
+    if entry.catalog_portion_id is not None:
+        disallowed = {"portion_id", "product_id", "catalog_portion_id"}
+        if disallowed & set(patch.keys()):
+            return None
+
     if "portion_id" in patch:
+        # Private entry: validate portion belongs to same product
+        if entry.product_id is None:
+            return None
         portion = await _get_portion(session, user_id=user_id, portion_id=patch["portion_id"])
         if portion is None or portion.product_id != entry.product_id:
             return None
@@ -155,3 +206,53 @@ async def soft_delete_food_entry(
     session.add(entry)
     await session.commit()
     return True
+
+
+async def enrich_food_entry_response(
+    session: AsyncSession,
+    entry: FoodEntry,
+) -> dict:
+    """Resolve product name and calories for a food entry.
+
+    Returns a dict with resolved_product_name and resolved_calories.
+    Works for both private product entries and catalog entries.
+    """
+    resolved_product_name: str | None = None
+    resolved_calories: str | None = None
+
+    if entry.catalog_portion_id is not None:
+        # Catalog path: join catalog_portion -> catalog_product
+        stmt = (
+            select(CatalogPortion, CatalogProduct)
+            .join(CatalogProduct, CatalogProduct.id == CatalogPortion.catalog_product_id)
+            .where(CatalogPortion.id == entry.catalog_portion_id)
+        )
+        res = await session.execute(stmt)
+        row = res.one_or_none()
+        if row is not None:
+            portion, product = row
+            resolved_product_name = product.display_name
+            resolved_calories = portion.calories
+    elif entry.product_id is not None and entry.portion_id is not None:
+        # Private product path
+        stmt = (
+            select(Product, ProductPortion)
+            .join(ProductPortion, ProductPortion.product_id == Product.id)
+            .where(
+                Product.id == entry.product_id,
+                ProductPortion.id == entry.portion_id,
+                Product.deleted_at.is_(None),
+                ProductPortion.deleted_at.is_(None),
+            )
+        )
+        res = await session.execute(stmt)
+        row = res.one_or_none()
+        if row is not None:
+            product, portion = row
+            resolved_product_name = product.name
+            resolved_calories = portion.calories
+
+    return {
+        "resolved_product_name": resolved_product_name,
+        "resolved_calories": resolved_calories,
+    }

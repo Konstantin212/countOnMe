@@ -15,6 +15,7 @@ from app.features.meals.schemas import (
 )
 from app.features.meals.service import (
     create_food_entry,
+    enrich_food_entry_response,
     get_food_entry,
     list_food_entries,
     soft_delete_food_entry,
@@ -22,6 +23,26 @@ from app.features.meals.service import (
 )
 
 router = APIRouter(prefix="/food-entries", tags=["food-entries"])
+
+
+def _to_response(entry, enrichment: dict) -> FoodEntryResponse:
+    """Convert a FoodEntry ORM object to response with enrichment."""
+    return FoodEntryResponse.model_validate(
+        {
+            "id": entry.id,
+            "product_id": entry.product_id,
+            "portion_id": entry.portion_id,
+            "catalog_portion_id": entry.catalog_portion_id,
+            "day": entry.day,
+            "meal_type": entry.meal_type,
+            "amount": entry.amount,
+            "unit": entry.unit,
+            "resolved_product_name": enrichment.get("resolved_product_name"),
+            "resolved_calories": enrichment.get("resolved_calories"),
+            "created_at": entry.created_at,
+            "updated_at": entry.updated_at,
+        }
+    )
 
 
 @router.get("", response_model=list[FoodEntryResponse])
@@ -32,7 +53,12 @@ async def food_entries_list(
     user_id: uuid.UUID = Depends(get_current_user_id),
     session: AsyncSession = Depends(get_session),
 ) -> list[FoodEntryResponse]:
-    return await list_food_entries(session, user_id=user_id, day=day, from_day=from_day, to_day=to_day)
+    entries = await list_food_entries(session, user_id=user_id, day=day, from_day=from_day, to_day=to_day)
+    results: list[FoodEntryResponse] = []
+    for entry in entries:
+        enrichment = await enrich_food_entry_response(session, entry)
+        results.append(_to_response(entry, enrichment))
+    return results
 
 
 @router.post("", response_model=FoodEntryResponse, status_code=status.HTTP_201_CREATED)
@@ -47,6 +73,7 @@ async def food_entries_create(
         user_id=user_id,
         product_id=body.product_id,
         portion_id=body.portion_id,
+        catalog_portion_id=body.catalog_portion_id,
         day=body.day,
         meal_type=body.meal_type,
         amount=body.amount,
@@ -55,7 +82,8 @@ async def food_entries_create(
     )
     if entry is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
-    return entry
+    enrichment = await enrich_food_entry_response(session, entry)
+    return _to_response(entry, enrichment)
 
 
 @router.get("/{entry_id}", response_model=FoodEntryResponse)
@@ -67,7 +95,8 @@ async def food_entries_get(
     entry = await get_food_entry(session, user_id=user_id, entry_id=entry_id)
     if entry is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
-    return entry
+    enrichment = await enrich_food_entry_response(session, entry)
+    return _to_response(entry, enrichment)
 
 
 @router.patch("/{entry_id}", response_model=FoodEntryResponse)
@@ -87,7 +116,8 @@ async def food_entries_update(
     entry = await update_food_entry(session, user_id=user_id, entry_id=entry_id, patch=patch, device_id=device_id)
     if entry is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
-    return entry
+    enrichment = await enrich_food_entry_response(session, entry)
+    return _to_response(entry, enrichment)
 
 
 @router.delete("/{entry_id}", status_code=status.HTTP_204_NO_CONTENT, response_model=None)

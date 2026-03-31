@@ -18,6 +18,12 @@ class FoodEntry(Base, TimestampMixin, SyncMixin):
 
     __table_args__ = (
         Index("ix_food_entries_user_id_deleted_at", "user_id", "deleted_at"),
+        # Staged deployment: uncomment after all clients send valid data (Phase 4)
+        # CheckConstraint(
+        #     "(portion_id IS NOT NULL AND catalog_portion_id IS NULL) OR "
+        #     "(portion_id IS NULL AND catalog_portion_id IS NOT NULL)",
+        #     name="ck_food_entries_portion_xor",
+        # ),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(
@@ -50,17 +56,24 @@ class FoodEntry(Base, TimestampMixin, SyncMixin):
         nullable=True,
     )
 
-    product_id: Mapped[uuid.UUID] = mapped_column(
+    product_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("products.id", ondelete="CASCADE"),
-        nullable=False,
+        nullable=True,
         index=True,
     )
 
-    portion_id: Mapped[uuid.UUID] = mapped_column(
+    portion_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("product_portions.id", ondelete="RESTRICT"),
-        nullable=False,
+        nullable=True,
+        index=True,
+    )
+
+    catalog_portion_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("catalog_portions.id", ondelete="RESTRICT"),
+        nullable=True,
         index=True,
     )
 

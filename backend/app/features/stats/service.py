@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.enums import MealType
 from app.core.ownership import get_owner_filter
+from app.features.catalog.models import CatalogPortion
 from app.features.meals.models import FoodEntry
 from app.features.portions.models import ProductPortion
 from app.features.stats.calculation import MacroTotals, calc_totals_for_entry
@@ -33,29 +34,13 @@ def _add(a: MacroTotals, b: MacroTotals) -> MacroTotals:
     )
 
 
-async def get_day_stats(
-    session: AsyncSession,
-    *,
-    user_id: uuid.UUID,
-    day: date,
-    device_id: uuid.UUID | None = None,
+def _accumulate(
+    results: list,
+    totals: MacroTotals,
+    by_meal: dict[MealType, MacroTotals],
 ) -> tuple[MacroTotals, dict[MealType, MacroTotals]]:
-    stmt = (
-        select(FoodEntry, ProductPortion)
-        .join(ProductPortion, ProductPortion.id == FoodEntry.portion_id)
-        .where(
-            get_owner_filter(FoodEntry, user_id=user_id),
-            FoodEntry.deleted_at.is_(None),
-            FoodEntry.day == day,
-            ProductPortion.deleted_at.is_(None),
-        )
-    )
-    res = await session.execute(stmt)
-
-    totals = _zero()
-    by_meal: dict[MealType, MacroTotals] = defaultdict(_zero)
-
-    for entry, portion in res.all():
+    """Accumulate nutrition totals from (entry, portion) result pairs."""
+    for entry, portion in results:
         entry_totals = calc_totals_for_entry(
             entry_amount=entry.amount,
             entry_unit=entry.unit,
@@ -68,6 +53,49 @@ async def get_day_stats(
         )
         totals = _add(totals, entry_totals)
         by_meal[entry.meal_type] = _add(by_meal[entry.meal_type], entry_totals)
+    return totals, by_meal
+
+
+async def get_day_stats(
+    session: AsyncSession,
+    *,
+    user_id: uuid.UUID,
+    day: date,
+    device_id: uuid.UUID | None = None,
+) -> tuple[MacroTotals, dict[MealType, MacroTotals]]:
+    # Query 1: entries with private portions
+    private_stmt = (
+        select(FoodEntry, ProductPortion)
+        .join(ProductPortion, ProductPortion.id == FoodEntry.portion_id)
+        .where(
+            get_owner_filter(FoodEntry, user_id=user_id),
+            FoodEntry.deleted_at.is_(None),
+            FoodEntry.day == day,
+            FoodEntry.portion_id.is_not(None),
+            ProductPortion.deleted_at.is_(None),
+        )
+    )
+
+    # Query 2: entries with catalog portions
+    catalog_stmt = (
+        select(FoodEntry, CatalogPortion)
+        .join(CatalogPortion, CatalogPortion.id == FoodEntry.catalog_portion_id)
+        .where(
+            get_owner_filter(FoodEntry, user_id=user_id),
+            FoodEntry.deleted_at.is_(None),
+            FoodEntry.day == day,
+            FoodEntry.catalog_portion_id.is_not(None),
+        )
+    )
+
+    private_res = await session.execute(private_stmt)
+    catalog_res = await session.execute(catalog_stmt)
+
+    totals = _zero()
+    by_meal: dict[MealType, MacroTotals] = defaultdict(_zero)
+
+    totals, by_meal = _accumulate(private_res.all(), totals, by_meal)
+    totals, by_meal = _accumulate(catalog_res.all(), totals, by_meal)
 
     return totals, dict(by_meal)
 

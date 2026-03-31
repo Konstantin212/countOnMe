@@ -179,27 +179,39 @@ export const useFoodEntries = (): UseFoodEntriesResult => {
             continue;
           }
 
-          // Get or create default portion for this product
-          let portionId: string;
-          try {
-            portionId = await getOrCreateDefaultPortion(
-              item.productId,
-              product,
-            );
-          } catch (err) {
-            console.error("Failed to get/create portion:", err);
-            continue;
-          }
+          let request: FoodEntryCreateRequest;
 
-          // Create food entry
-          const request: FoodEntryCreateRequest = {
-            product_id: item.productId,
-            portion_id: portionId,
-            day: entryDay,
-            meal_type: mealType,
-            amount: item.amount,
-            unit: item.unit,
-          };
+          if (item.catalogPortionId) {
+            // Catalog path -- single API call, no product/portion creation
+            request = {
+              catalog_portion_id: item.catalogPortionId,
+              day: entryDay,
+              meal_type: mealType,
+              amount: item.amount,
+              unit: item.unit,
+            };
+          } else {
+            // Private product path -- existing flow
+            let portionId: string;
+            try {
+              portionId = await getOrCreateDefaultPortion(
+                item.productId,
+                product,
+              );
+            } catch (err) {
+              console.error("Failed to get/create portion:", err);
+              continue;
+            }
+
+            request = {
+              product_id: item.productId,
+              portion_id: portionId,
+              day: entryDay,
+              meal_type: mealType,
+              amount: item.amount,
+              unit: item.unit,
+            };
+          }
 
           try {
             const entry = await createFoodEntry(request);

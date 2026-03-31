@@ -142,6 +142,78 @@ describe("useFoodEntries", () => {
       expect(mockCreateFoodEntry).toHaveBeenCalledTimes(1);
     });
 
+    it("uses catalog path when item has catalogPortionId", async () => {
+      const product = makeProduct({ id: "p1" });
+      const items = [
+        makeMealItem({
+          productId: "p1",
+          amount: 150,
+          unit: "g",
+          catalogPortionId: "cat-portion-1",
+        }),
+      ];
+
+      mockCreateFoodEntry.mockResolvedValue(
+        makeFoodEntry({ id: "ce-1", catalogPortionId: "cat-portion-1" }),
+      );
+
+      const { result } = renderHook(() => useFoodEntries());
+
+      let entries: any[] = [];
+      await act(async () => {
+        entries = await result.current.saveMealToBackend(
+          "breakfast",
+          items,
+          [product],
+          "2025-06-01",
+        );
+      });
+
+      expect(entries).toHaveLength(1);
+      // Should call createFoodEntry with catalog_portion_id, not product_id/portion_id
+      expect(mockCreateFoodEntry).toHaveBeenCalledWith({
+        catalog_portion_id: "cat-portion-1",
+        day: "2025-06-01",
+        meal_type: "breakfast",
+        amount: 150,
+        unit: "g",
+      });
+      // Should NOT call ensureProductInBackend or getOrCreateDefaultPortion
+      expect(mockGetProduct).not.toHaveBeenCalled();
+      expect(mockListPortions).not.toHaveBeenCalled();
+      expect(mockCreatePortion).not.toHaveBeenCalled();
+    });
+
+    it("uses private path when item has no catalogPortionId", async () => {
+      const product = makeProduct({ id: "p1" });
+      const portion = makePortion({ id: "portion-1", productId: "p1" });
+      const items = [makeMealItem({ productId: "p1", amount: 200, unit: "g" })];
+
+      mockGetProduct.mockResolvedValue(product as any);
+      mockListPortions.mockResolvedValue([portion]);
+      mockCreateFoodEntry.mockResolvedValue(makeFoodEntry());
+
+      const { result } = renderHook(() => useFoodEntries());
+
+      await act(async () => {
+        await result.current.saveMealToBackend(
+          "breakfast",
+          items,
+          [product],
+          "2025-06-01",
+        );
+      });
+
+      // Should use private path
+      expect(mockGetProduct).toHaveBeenCalled();
+      expect(mockCreateFoodEntry).toHaveBeenCalledWith(
+        expect.objectContaining({
+          product_id: "p1",
+          portion_id: "portion-1",
+        }),
+      );
+    });
+
     it("returns empty array for empty items", async () => {
       const { result } = renderHook(() => useFoodEntries());
 

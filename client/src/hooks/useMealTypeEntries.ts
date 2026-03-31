@@ -46,6 +46,32 @@ const MAX_PORTION_CACHE_SIZE = 100;
 const portionCache = new Map<string, Portion[]>();
 
 /**
+ * Cached catalog portion info for enriching catalog food entries.
+ * Populated by ProductConfirmScreen when tracking catalog food.
+ */
+export type CatalogPortionInfo = {
+  productName: string;
+  baseAmount: number;
+  baseUnit: string;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+};
+
+const catalogPortionCache = new Map<string, CatalogPortionInfo>();
+
+/**
+ * Store catalog portion info for later enrichment of food entries.
+ */
+export const setCatalogPortionInfo = (
+  catalogPortionId: string,
+  info: CatalogPortionInfo,
+): void => {
+  catalogPortionCache.set(catalogPortionId, info);
+};
+
+/**
  * Get portions for a product (with LRU caching).
  */
 const getPortionsForProduct = async (productId: string): Promise<Portion[]> => {
@@ -100,11 +126,69 @@ export const useMealTypeEntries = (
   /**
    * Enrich a raw food entry with product details and calculated nutrition.
    */
+  /**
+   * Enrich a catalog food entry using cached catalog portion info.
+   */
+  const enrichCatalogEntry = useCallback(
+    (entry: FoodEntry): EnrichedFoodEntry | null => {
+      const catalogPortionId = entry.catalogPortionId;
+      if (!catalogPortionId) return null;
+
+      const cached = catalogPortionCache.get(catalogPortionId);
+      if (!cached) return null;
+
+      const amount = entry.amount;
+      const unit = entry.unit as Unit;
+      const converted = convertUnit(amount, unit, cached.baseUnit as Unit);
+
+      let calories = 0;
+      let protein = 0;
+      let carbs = 0;
+      let fat = 0;
+
+      if (converted !== null && cached.baseAmount > 0) {
+        const ratio = converted / cached.baseAmount;
+        calories = cached.calories * ratio;
+        protein = cached.protein * ratio;
+        carbs = cached.carbs * ratio;
+        fat = cached.fat * ratio;
+      }
+
+      return {
+        id: entry.id,
+        productId: entry.productId,
+        productName: cached.productName,
+        portionId: entry.portionId,
+        catalogPortionId: entry.catalogPortionId,
+        amount,
+        unit,
+        calories: Math.round(calories),
+        protein: Math.round(protein * 10) / 10,
+        carbs: Math.round(carbs * 10) / 10,
+        fat: Math.round(fat * 10) / 10,
+        allowedUnits: getCompatibleUnits(unit),
+        createdAt: entry.createdAt,
+      };
+    },
+    [],
+  );
+
+  /**
+   * Enrich a raw food entry with product details and calculated nutrition.
+   */
   const enrichEntry = useCallback(
     async (
       entry: FoodEntry,
       productsMap: Map<string, Product>,
     ): Promise<EnrichedFoodEntry | null> => {
+      // Catalog entry path -- use cached catalog portion info
+      if (entry.catalogPortionId !== null) {
+        return enrichCatalogEntry(entry);
+      }
+
+      // Private product path -- requires productId
+      if (entry.productId === null) return null;
+
       const product = productsMap.get(entry.productId);
       if (!product) return null;
 
@@ -119,7 +203,9 @@ export const useMealTypeEntries = (
 
       try {
         const portions = await getPortionsForProduct(entry.productId);
-        const portion = portions.find((p) => p.id === entry.portionId);
+        const portion = entry.portionId
+          ? portions.find((p) => p.id === entry.portionId)
+          : undefined;
 
         if (portion) {
           // Calculate based on portion's base values
@@ -160,6 +246,7 @@ export const useMealTypeEntries = (
         productId: entry.productId,
         productName: product.name,
         portionId: entry.portionId,
+        catalogPortionId: entry.catalogPortionId,
         amount,
         unit,
         calories: Math.round(calories),
@@ -170,7 +257,7 @@ export const useMealTypeEntries = (
         createdAt: entry.createdAt,
       };
     },
-    [],
+    [enrichCatalogEntry],
   );
 
   /**
@@ -342,4 +429,5 @@ export const useMealTypeEntries = (
  */
 export const clearMealTypeEntriesCache = (): void => {
   portionCache.clear();
+  catalogPortionCache.clear();
 };

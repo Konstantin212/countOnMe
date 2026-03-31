@@ -27,8 +27,12 @@ class FoodEntryCreateRequest(APIModel):
 
     @model_validator(mode="after")
     def check_portion_xor(self) -> Self:
-        has_private = self.product_id is not None and self.portion_id is not None
+        has_product = self.product_id is not None
+        has_portion = self.portion_id is not None
         has_catalog = self.catalog_portion_id is not None
+        if has_product != has_portion:
+            raise ValueError("product_id and portion_id must be provided together")
+        has_private = has_product and has_portion
         if has_private == has_catalog:
             raise ValueError(
                 "Provide either (product_id + portion_id) or catalog_portion_id, not both/neither"

@@ -52,7 +52,7 @@ const portionCache = new Map<string, Portion[]>();
 export type CatalogPortionInfo = {
   productName: string;
   baseAmount: number;
-  baseUnit: string;
+  baseUnit: Unit;
   calories: number;
   protein: number;
   carbs: number;
@@ -124,9 +124,6 @@ export const useMealTypeEntries = (
   }, []);
 
   /**
-   * Enrich a raw food entry with product details and calculated nutrition.
-   */
-  /**
    * Enrich a catalog food entry using cached catalog portion info.
    */
   const enrichCatalogEntry = useCallback(
@@ -139,7 +136,7 @@ export const useMealTypeEntries = (
 
       const amount = entry.amount;
       const unit = entry.unit as Unit;
-      const converted = convertUnit(amount, unit, cached.baseUnit as Unit);
+      const converted = convertUnit(amount, unit, cached.baseUnit);
 
       let calories = 0;
       let protein = 0;
@@ -331,7 +328,30 @@ export const useMealTypeEntries = (
           prev.map((entry) => {
             if (entry.id !== entryId) return entry;
 
-            // Recalculate with new amount/unit (use ref for consistency)
+            // Catalog entry path -- recalculate from cached catalog portion
+            if (entry.catalogPortionId) {
+              const cached = catalogPortionCache.get(entry.catalogPortionId);
+              if (cached && cached.baseAmount > 0) {
+                const converted = convertUnit(amount, unit, cached.baseUnit);
+                const ratio =
+                  converted !== null ? converted / cached.baseAmount : 0;
+                return {
+                  ...entry,
+                  amount,
+                  unit,
+                  calories: Math.round(cached.calories * ratio),
+                  protein:
+                    Math.round(cached.protein * ratio * 10) / 10,
+                  carbs:
+                    Math.round(cached.carbs * ratio * 10) / 10,
+                  fat: Math.round(cached.fat * ratio * 10) / 10,
+                  allowedUnits: getCompatibleUnits(unit),
+                };
+              }
+              return { ...entry, amount, unit };
+            }
+
+            // Private product path -- recalculate from product data
             const product = productsRef.current.find(
               (p) => p.id === entry.productId,
             );

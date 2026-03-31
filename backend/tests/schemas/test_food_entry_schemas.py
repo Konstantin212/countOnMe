@@ -68,7 +68,7 @@ def test_create_request_neither_path_invalid():
 
 def test_create_request_only_product_id_invalid():
     """Providing only product_id (no portion_id, no catalog) fails."""
-    with pytest.raises(ValidationError, match="Provide either"):
+    with pytest.raises(ValidationError, match="product_id and portion_id must be provided together"):
         FoodEntryCreateRequest(
             product_id=uuid.uuid4(),
             day=date.today(),
@@ -80,7 +80,7 @@ def test_create_request_only_product_id_invalid():
 
 def test_create_request_only_portion_id_invalid():
     """Providing only portion_id (no product_id, no catalog) fails."""
-    with pytest.raises(ValidationError, match="Provide either"):
+    with pytest.raises(ValidationError, match="product_id and portion_id must be provided together"):
         FoodEntryCreateRequest(
             portion_id=uuid.uuid4(),
             day=date.today(),

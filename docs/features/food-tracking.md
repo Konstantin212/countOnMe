@@ -1,7 +1,7 @@
 ---
 type: feature
 status: current
-last-updated: 2026-03-25
+last-updated: 2026-03-31
 related-features:
   - product-management
   - goal-system
@@ -28,6 +28,24 @@ Food entries are categorized into five meal types:
 These are defined in `client/src/services/constants/mealTypes.ts` and mirrored in the backend `MealType` enum.
 
 ## User Flows
+
+### Two Paths to Food Tracking
+
+As of ADR-010, food entries support two distinct paths:
+
+1. **Private product path** (user-created products, legacy):
+   - User creates a product manually or through "Add Food" screen
+   - Product + portion stored in backend
+   - Entry references both `product_id` and `portion_id`
+
+2. **Catalog path** (catalog products, new):
+   - User selects from global catalog (search, barcode, recents, favorites)
+   - No private product copy created
+   - Entry references `catalog_portion_id` directly
+   - Product name cached locally for display
+   - Nutrition data fetched from catalog on demand
+
+The catalog path eliminates 2-3 API calls per catalog food track, reduces redundant storage, and ensures entries always reflect current catalog data (auto-correcting stale private copies).
 
 ### Daily Overview (MyDayScreen)
 
@@ -63,13 +81,18 @@ Context actions:
 
 ### Saving a Meal
 
-When the user taps "Save" in AddMealScreen, the `useFoodEntries` hook's `saveMealToBackend()` method is called. For each item in the draft:
+When the user taps "Save" in AddMealScreen, the `useFoodEntries` hook's `saveMealToBackend()` method is called. For each item, the behavior depends on the item's source:
 
-1. **Ensure product exists in backend** -- Checks a local cache first. If the product is not cached as synced, it calls `GET /v1/products/{id}` to verify. If not found, it calls `POST /v1/products` to create it.
-2. **Get or create a default portion** -- Checks a portion cache first. If not cached, calls `GET /v1/products/{id}/portions` to find a default or "100g" portion. If none exist, calls `POST /v1/products/{id}/portions` to create one using the product's local nutritional data.
-3. **Create the food entry** -- Calls `POST /v1/food-entries` with `product_id`, `portion_id`, `day` (YYYY-MM-DD), `meal_type`, `amount`, and `unit`.
+**Private product path** (user-created):
+1. Ensure product exists in backend — Checks cache; if not cached, calls `GET /v1/products/{id}` or `POST /v1/products`
+2. Get or create a default portion — Calls `GET /v1/products/{id}/portions` or `POST /v1/products/{id}/portions`
+3. Create the food entry — Calls `POST /v1/food-entries` with `product_id` and `portion_id`
 
-The saving process is guarded by a `savingRef` to prevent concurrent saves.
+**Catalog path** (catalog item):
+1. Create the food entry — Single call to `POST /v1/food-entries` with `catalog_portion_id` only
+2. Product name cached locally for display purposes (no backend product created)
+
+The catalog path avoids 2-3 sequential API calls, making food tracking significantly faster. The saving process is guarded by a `savingRef` to prevent concurrent saves.
 
 ### Viewing and Editing Entries (MealFlow/MealTypeEntriesScreen)
 
@@ -90,7 +113,7 @@ The **MealTypeEntriesScreen** displays all food entries for a specific meal type
 
 ## Data Flow: How Macros Are Calculated
 
-Macro calculation follows the same pattern on both client and backend:
+Macro calculation follows the same pattern on both client and backend for both private and catalog entries:
 
 1. Look up the portion's `base_amount` and `base_unit` (e.g., 100g)
 2. Convert the entry's `amount`/`unit` to the portion's `base_unit` using unit conversion tables
@@ -98,12 +121,14 @@ Macro calculation follows the same pattern on both client and backend:
 4. Multiply each macro by the ratio: `calories * ratio`, `protein * ratio`, etc.
 
 **Client-side** (in `useMealTypeEntries`):
-- Primary path: Fetch portion data from the backend, use portion's nutritional values
-- Fallback path: If portion fetch fails, use the product's local nutritional data
+- **Private entries**: Fetch portion data from backend, use portion's nutritional values
+- **Catalog entries**: Use product's local nutritional data or fetch catalog portion details
+- Fallback: If any fetch fails, use cached product's per-100g values
 
-**Backend-side** (in `app/features/stats/calculation.py`):
-- `calc_totals_for_entry()` performs the same conversion using `Decimal` arithmetic for precision
-- Returns a `MacroTotals` dataclass with calories, protein, carbs, fat
+**Backend-side** (in `app/features/stats/service.py`):
+- Handles both paths with dual-join queries (private portions + catalog portions)
+- `calc_totals_for_entry()` performs unit conversion using `Decimal` arithmetic for precision
+- Both `ProductPortion` and `CatalogPortion` have identical nutritional columns, so calculation code is shared
 
 ## Hooks
 
@@ -174,15 +199,19 @@ See [Stats API](../api/stats.md) for full endpoint details.
 
 ### Food Entry Model (Backend)
 
-The `food_entries` table:
+The `food_entries` table (ADR-010: dual-path references):
 - `id` (UUID, PK)
 - `device_id` (UUID, FK to `devices`)
-- `product_id` (UUID, FK to `products`)
-- `portion_id` (UUID, FK to `product_portions`)
-- `day` (date, indexed) -- The client-local calendar day
+- `user_id` (UUID, FK to `users`)
+- `product_id` (UUID, nullable, FK to `products`) — Set for private products only
+- `portion_id` (UUID, nullable, FK to `product_portions`) — Set for private products only
+- `catalog_portion_id` (UUID, nullable, FK to `catalog_portions`) — Set for catalog items only
+- `day` (date, indexed) — The client-local calendar day
 - `meal_type` (enum: breakfast, lunch, dinner, snacks, water)
 - `amount` (Decimal, 12,3)
 - `unit` (enum: mg, g, kg, ml, l, tsp, tbsp, cup)
 - `created_at`, `updated_at`, `deleted_at` (from `TimestampMixin`)
 
-The stats service queries this table joined with `product_portions` to compute macro totals. Entries with `deleted_at` set are excluded from all queries.
+**XOR constraint** (planned for Phase 4 of ADR-010 migration): Exactly one of `(product_id + portion_id)` or `catalog_portion_id` is set, never both or neither.
+
+The stats service queries this table with separate JOINs for private and catalog entries, computing macro totals from either portion source. Entries with `deleted_at` set are excluded from all queries.

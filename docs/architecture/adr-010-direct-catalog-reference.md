@@ -1,7 +1,7 @@
 ---
 type: adr
-status: proposed
-last-updated: 2026-03-30
+status: accepted
+last-updated: 2026-03-31
 ---
 
 # ADR-010: Direct Catalog Reference in Food Entries
@@ -597,4 +597,4 @@ simplify the client significantly.
 
 ## Status
 
-Proposed
+Accepted. Implementation in progress (ADR-010 backend changes merged; client implementation pending).

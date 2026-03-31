@@ -1,10 +1,11 @@
 ---
 type: api
 status: current
-last-updated: 2026-03-30
+last-updated: 2026-03-31
 related-features:
   - sync-system
   - sqlite-cache
+  - food-tracking
 ---
 
 # Sync API
@@ -82,7 +83,7 @@ Send local dirty rows to the server. Each mutation specifies the entity type, ac
 
 **SyncPortion**: `id`, `product_id`, `label`, `base_amount`, `base_unit`, `calories`, `protein?`, `carbs?`, `fat?`, `is_default`, `created_at`, `updated_at`, `deleted_at?`
 
-**SyncFoodEntry**: `id`, `product_id`, `portion_id`, `day`, `meal_type`, `amount`, `unit`, `created_at`, `updated_at`, `deleted_at?`
+**SyncFoodEntry**: `id`, `product_id`, `portion_id`, `catalog_portion_id`, `day`, `meal_type`, `amount`, `unit`, `created_at`, `updated_at`, `deleted_at?` (ADR-010: catalog_portion_id added for direct catalog references)
 
 **SyncUserGoal**: `id`, `goal_type`, `value`, `created_at`, `updated_at`, `deleted_at?`
 

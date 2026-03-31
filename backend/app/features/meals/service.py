@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import uuid
 from datetime import UTC, date, datetime
+from decimal import Decimal
 
-from sqlalchemy import Select, select
+from sqlalchemy import Select, select, tuple_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.ownership import get_owner_filter
@@ -218,7 +219,7 @@ async def enrich_food_entry_response(
     Works for both private product entries and catalog entries.
     """
     resolved_product_name: str | None = None
-    resolved_calories: str | None = None
+    resolved_calories: Decimal | None = None
 
     if entry.catalog_portion_id is not None:
         # Catalog path: join catalog_portion -> catalog_product
@@ -256,3 +257,74 @@ async def enrich_food_entry_response(
         "resolved_product_name": resolved_product_name,
         "resolved_calories": resolved_calories,
     }
+
+
+async def batch_enrich_food_entries(
+    session: AsyncSession,
+    entries: list[FoodEntry],
+) -> dict[uuid.UUID, dict[str, str | Decimal | None]]:
+    """Batch-resolve product names and calories for multiple food entries.
+
+    Runs at most 2 queries (one for catalog portions, one for private portions)
+    instead of N per-entry queries.
+
+    Returns a dict keyed by entry.id -> enrichment dict.
+    """
+    # Collect unique IDs
+    catalog_portion_ids: set[uuid.UUID] = set()
+    private_pairs: set[tuple[uuid.UUID, uuid.UUID]] = set()
+    for entry in entries:
+        if entry.catalog_portion_id is not None:
+            catalog_portion_ids.add(entry.catalog_portion_id)
+        elif entry.product_id is not None and entry.portion_id is not None:
+            private_pairs.add((entry.product_id, entry.portion_id))
+
+    # Query catalog portions in batch
+    catalog_map: dict[uuid.UUID, tuple[str, Decimal]] = {}
+    if catalog_portion_ids:
+        stmt = (
+            select(CatalogPortion, CatalogProduct)
+            .join(CatalogProduct, CatalogProduct.id == CatalogPortion.catalog_product_id)
+            .where(CatalogPortion.id.in_(catalog_portion_ids))
+        )
+        res = await session.execute(stmt)
+        for portion, product in res.all():
+            catalog_map[portion.id] = (product.display_name, portion.calories)
+
+    # Query private product+portion pairs in batch
+    private_map: dict[tuple[uuid.UUID, uuid.UUID], tuple[str, Decimal]] = {}
+    if private_pairs:
+        stmt = (
+            select(Product, ProductPortion)
+            .join(ProductPortion, ProductPortion.product_id == Product.id)
+            .where(
+                tuple_(Product.id, ProductPortion.id).in_(private_pairs),
+                Product.deleted_at.is_(None),
+                ProductPortion.deleted_at.is_(None),
+            )
+        )
+        res = await session.execute(stmt)
+        for product, portion in res.all():
+            private_map[(product.id, portion.id)] = (product.name, portion.calories)
+
+    # Build result dict
+    result: dict[uuid.UUID, dict[str, str | Decimal | None]] = {}
+    for entry in entries:
+        resolved_product_name: str | None = None
+        resolved_calories: Decimal | None = None
+
+        if entry.catalog_portion_id is not None:
+            hit = catalog_map.get(entry.catalog_portion_id)
+            if hit is not None:
+                resolved_product_name, resolved_calories = hit
+        elif entry.product_id is not None and entry.portion_id is not None:
+            hit = private_map.get((entry.product_id, entry.portion_id))
+            if hit is not None:
+                resolved_product_name, resolved_calories = hit
+
+        result[entry.id] = {
+            "resolved_product_name": resolved_product_name,
+            "resolved_calories": resolved_calories,
+        }
+
+    return result

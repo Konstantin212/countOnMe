@@ -178,7 +178,7 @@ const CatalogTrackScreen = ({
         setCatalogPortionInfo(selectedPortion.id, {
           productName,
           baseAmount: selectedPortion.baseAmount,
-          baseUnit: selectedPortion.baseUnit,
+          baseUnit: selectedPortion.baseUnit as Unit,
           calories: selectedPortion.calories,
           protein: selectedPortion.protein ?? 0,
           carbs: selectedPortion.carbs ?? 0,

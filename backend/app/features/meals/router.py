@@ -8,12 +8,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db import get_session
 from app.core.deps import get_current_user_id, get_optional_device_id
+from app.features.meals.models import FoodEntry
 from app.features.meals.schemas import (
     FoodEntryCreateRequest,
     FoodEntryResponse,
     FoodEntryUpdateRequest,
 )
 from app.features.meals.service import (
+    batch_enrich_food_entries,
     create_food_entry,
     enrich_food_entry_response,
     get_food_entry,
@@ -25,7 +27,7 @@ from app.features.meals.service import (
 router = APIRouter(prefix="/food-entries", tags=["food-entries"])
 
 
-def _to_response(entry, enrichment: dict) -> FoodEntryResponse:
+def _to_response(entry: FoodEntry, enrichment: dict) -> FoodEntryResponse:
     """Convert a FoodEntry ORM object to response with enrichment."""
     return FoodEntryResponse.model_validate(
         {
@@ -54,11 +56,11 @@ async def food_entries_list(
     session: AsyncSession = Depends(get_session),
 ) -> list[FoodEntryResponse]:
     entries = await list_food_entries(session, user_id=user_id, day=day, from_day=from_day, to_day=to_day)
-    results: list[FoodEntryResponse] = []
-    for entry in entries:
-        enrichment = await enrich_food_entry_response(session, entry)
-        results.append(_to_response(entry, enrichment))
-    return results
+    enrichments = await batch_enrich_food_entries(session, entries)
+    return [
+        _to_response(entry, enrichments.get(entry.id, {}))
+        for entry in entries
+    ]
 
 
 @router.post("", response_model=FoodEntryResponse, status_code=status.HTTP_201_CREATED)

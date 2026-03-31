@@ -44,6 +44,7 @@
 - [`architecture/adr-002-macro-rings-overconsumption.md`](architecture/adr-002-macro-rings-overconsumption.md) — ADR: Macro ring visualization
 - [`architecture/adr-003-global-product-catalog.md`](architecture/adr-003-global-product-catalog.md) — ADR: Global product catalog design
 - [`architecture/adr-004-seed-data-improvement.md`](architecture/adr-004-seed-data-improvement.md) — ADR: Seed data improvement
+- [`architecture/adr-010-direct-catalog-reference.md`](architecture/adr-010-direct-catalog-reference.md) — ADR: Direct catalog portion reference in food entries (eliminate copy-on-track)
 
 ## Conventions
 

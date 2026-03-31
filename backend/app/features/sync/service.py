@@ -416,6 +416,19 @@ async def process_push(
         allowed_fields = _PUSH_FIELDS[mutation.entity_type]
 
         if mutation.action == MutationAction.upsert:
+            # XOR validation for food_entries: exactly one of
+            # portion_id / catalog_portion_id must be set
+            if mutation.entity_type == "food_entries" and mutation.data:
+                has_portion = mutation.data.get("portion_id") is not None
+                has_catalog = mutation.data.get("catalog_portion_id") is not None
+                if has_portion == has_catalog:
+                    results.append(MutationResult(
+                        id=mutation.id,
+                        status=MutationResultStatus.error,
+                        message="Provide either portion_id or catalog_portion_id, not both/neither",
+                    ))
+                    continue
+
             result = await _apply_upsert(
                 session, mutation, model, allowed_fields, user_id, device_id,
             )

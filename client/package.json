@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "main": "index.ts",
   "scripts": {
-    "start": "expo start",
+    "start": "node scripts/adb-connect.js && expo start",
+    "start:phone": "node scripts/adb-connect.js && expo start --dev-client",
     "start:c": "npx expo start -c",
     "android": "expo run:android",
     "ios": "expo run:ios",

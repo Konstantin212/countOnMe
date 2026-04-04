@@ -26,7 +26,8 @@ module.exports = {
       package: "com.countonme.app",
       adaptiveIcon: {
         foregroundImage: "./assets/adaptive-icon.png",
-        backgroundColor: "#ffffff",
+        monochromeImage: "./assets/adaptive-icon.png",
+        backgroundColor: "#1B6B4A",
       },
       edgeToEdgeEnabled: true,
       predictiveBackGestureEnabled: false,

@@ -1,0 +1,14 @@
+node_modules/
+client/android/
+client/ios/
+.expo/
+__pycache__/
+.venv/
+dist/
+seeds/
+.ruff_cache/
+.pytest_cache/
+client/coverage/
+htmlcov/
+.gradle/
+.kotlin/

@@ -144,10 +144,17 @@ export type GoalCalculateResponse = {
  */
 export type GoalCreateCalculatedRequest = GoalCalculateRequest & {
   id?: string;
+  dailyCaloriesKcal: number;
+  bmrKcal: number;
+  tdeeKcal: number;
   proteinPercent?: number;
   carbsPercent?: number;
   fatPercent?: number;
   waterMl?: number;
+  healthyWeightMinKg?: number;
+  healthyWeightMaxKg?: number;
+  currentBmi?: number;
+  bmiCategory?: string;
 };
 
 /**

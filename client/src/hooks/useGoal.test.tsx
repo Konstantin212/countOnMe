@@ -161,12 +161,27 @@ describe("useGoal", () => {
         currentWeightKg: 80,
         activityLevel: "moderate",
         weightGoalType: "maintain",
+        dailyCaloriesKcal: 2200,
+        bmrKcal: 1800,
+        tdeeKcal: 2200,
       });
     });
 
     expect(result.current.goal).toBeDefined();
     expect(result.current.goal?.goalType).toBe("calculated");
     expect(result.current.goal?.id).toBe("uuid-mock");
+    expect(result.current.goal?.dailyCaloriesKcal).toBe(2200);
+    expect(result.current.goal?.bmrKcal).toBe(1800);
+    expect(result.current.goal?.tdeeKcal).toBe(2200);
+    // Verify computeGrams uses dailyCaloriesKcal (not proteinPercent) as first arg
+    // Default macros: 30/40/30 → protein=165g, carbs=220g, fat=73g
+    expect(result.current.goal?.proteinGrams).toBe(
+      Math.round((2200 * 0.3) / 4),
+    );
+    expect(result.current.goal?.carbsGrams).toBe(
+      Math.round((2200 * 0.4) / 4),
+    );
+    expect(result.current.goal?.fatGrams).toBe(Math.round((2200 * 0.3) / 9));
     expect(mockUpsert).toHaveBeenCalled();
     expect(mockEnqueue).toHaveBeenCalledWith(
       expect.anything(),
@@ -177,6 +192,9 @@ describe("useGoal", () => {
         data: expect.objectContaining({
           goal_type: "calculated",
           gender: "male",
+          daily_calories_kcal: 2200,
+          bmr_kcal: 1800,
+          tdee_kcal: 2200,
         }),
       }),
     );

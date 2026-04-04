@@ -49,16 +49,19 @@ const MyDayScreen = () => {
   const rowCardBorder = colors.border;
 
   // Fetch goal and today's stats
-  const { goal, loading: goalLoading } = useGoal();
+  const { goal, loading: goalLoading, refresh: refreshGoal } = useGoal();
   const { stats, loading: statsLoading, refresh: refreshStats } = useDayStats();
-  const { todayTotal, waterGoal, addWater, removeWater } = useWaterTracking(goal?.waterMl);
+  const { todayTotal, waterGoal, addWater, removeWater } = useWaterTracking(
+    goal?.waterMl,
+  );
 
-  // Refresh stats when screen comes into focus (after adding meals)
+  // Refresh stats and goal when screen comes into focus (after adding meals or setting goal)
   useEffect(() => {
     if (isFocused) {
       refreshStats();
+      refreshGoal();
     }
-  }, [isFocused, refreshStats]);
+  }, [isFocused, refreshStats, refreshGoal]);
 
   useEffect(() => {
     const blurSub = navigation.addListener("blur", () => setFabOpen(false));

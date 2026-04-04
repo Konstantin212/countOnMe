@@ -74,10 +74,17 @@ const GoalCalculatedResultScreen = ({ navigation, route }: Props) => {
     try {
       const request: GoalCreateCalculatedRequest = {
         ...inputs,
+        dailyCaloriesKcal: calculation.dailyCaloriesKcal,
+        bmrKcal: calculation.bmrKcal,
+        tdeeKcal: calculation.tdeeKcal,
         proteinPercent,
         carbsPercent,
         fatPercent,
         waterMl,
+        healthyWeightMinKg: calculation.healthyWeightMinKg,
+        healthyWeightMaxKg: calculation.healthyWeightMaxKg,
+        currentBmi: calculation.currentBmi,
+        bmiCategory: calculation.bmiCategory,
       };
 
       await saveCalculatedGoal(request);

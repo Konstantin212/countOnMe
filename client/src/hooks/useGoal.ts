@@ -153,7 +153,7 @@ export const useGoal = (): UseGoalResult => {
     async (request: GoalCreateCalculatedRequest): Promise<UserGoal> => {
       const timestamp = new Date().toISOString();
       const grams = computeGrams(
-        request.proteinPercent ?? 30,
+        request.dailyCaloriesKcal,
         request.proteinPercent ?? 30,
         request.carbsPercent ?? 40,
         request.fatPercent ?? 30,
@@ -173,7 +173,9 @@ export const useGoal = (): UseGoalResult => {
         weightGoalType: request.weightGoalType,
         targetWeightKg: request.targetWeightKg,
         weightChangePace: request.weightChangePace,
-        dailyCaloriesKcal: 0, // Will be filled by server on sync
+        dailyCaloriesKcal: request.dailyCaloriesKcal,
+        bmrKcal: request.bmrKcal,
+        tdeeKcal: request.tdeeKcal,
         proteinPercent: request.proteinPercent ?? 30,
         carbsPercent: request.carbsPercent ?? 40,
         fatPercent: request.fatPercent ?? 30,
@@ -181,6 +183,10 @@ export const useGoal = (): UseGoalResult => {
         carbsGrams: grams.carbsGrams,
         fatGrams: grams.fatGrams,
         waterMl: request.waterMl ?? 2000,
+        healthyWeightMinKg: request.healthyWeightMinKg,
+        healthyWeightMaxKg: request.healthyWeightMaxKg,
+        currentBmi: request.currentBmi,
+        bmiCategory: request.bmiCategory as UserGoal["bmiCategory"],
         createdAt: timestamp,
         updatedAt: timestamp,
       };

@@ -101,6 +101,14 @@ cd backend && python -m bandit -r app/ -ll 2>/dev/null || echo "bandit not avail
 - Verify no default/test credentials in config
 - Check Docker Compose for exposed ports or insecure defaults
 
+### Phase 8: Row Level Security (RLS) — Supabase
+Supabase exposes all `public` schema tables via PostgREST. Without RLS, anyone with the anon key can bypass our FastAPI auth layer and access tables directly.
+- **Every table MUST have RLS enabled** — verify with: `SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND tablename NOT IN (SELECT tablename FROM pg_tables t JOIN pg_class c ON c.relname = t.tablename WHERE c.relrowsecurity = true);`
+- Check all Alembic migrations that create tables — each must include `op.execute("ALTER TABLE public.<table> ENABLE ROW LEVEL SECURITY")`
+- No RLS policies are needed (enabling RLS with no policies blocks all PostgREST access; SQLAlchemy service-role connections bypass RLS)
+- Flag any new `op.create_table()` or `CREATE TABLE` that lacks a corresponding RLS enable as **CRITICAL**
+- Reference migration: `backend/alembic/versions/0020_enable_rls_all_tables.py`
+
 ## Skill References
 
 Before scanning, read these skill files for project-specific security patterns:
@@ -158,6 +166,8 @@ Always produce your findings in this structured format:
 - [ ] Dependencies free of known critical vulnerabilities
 - [ ] CORS properly configured
 - [ ] Debug mode disabled in production config
+- [ ] RLS enabled on ALL public tables (Supabase PostgREST protection)
+- [ ] New table migrations include `ENABLE ROW LEVEL SECURITY`
 
 ## Recommendations
 [Any architectural or process improvements]

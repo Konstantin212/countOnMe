@@ -367,6 +367,34 @@ async def get_products(session: AsyncSession) -> list[Product]:
     return list(result.scalars().all())
 ```
 
+### Device FK Constraint on Insert (CRITICAL)
+
+```python
+# The `devices` table has FK constraints on all data tables (products, food_entries,
+# portions, goals, body_weights, water_logs, fasting_sessions).
+# Before ANY insert that sets device_id, ensure the device row exists.
+
+from app.core.device import ensure_device_exists
+
+# ✅ CORRECT: Ensure device exists before inserting
+async def create_entity(session, *, user_id, device_id=None, ...):
+    if device_id is not None:
+        await ensure_device_exists(session, device_id)
+    row = Entity(device_id=device_id, user_id=user_id, ...)
+    session.add(row)
+    await session.commit()
+
+# ❌ WRONG: Insert with device_id without guard (FK violation!)
+row = Entity(device_id=device_id, ...)
+session.add(row)
+await session.commit()  # ForeignKeyViolationError!
+```
+
+- `ensure_device_exists` is idempotent — safe to call multiple times
+- Uses `SUPABASE_MANAGED_HASH` as token_hash for auto-created devices
+- Applies to ALL service `create_*` functions AND the sync push service
+- The device may not exist yet when a Supabase-authenticated user syncs from a new device
+
 ### N+1 Query Prevention
 
 ```python

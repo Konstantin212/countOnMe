@@ -59,6 +59,7 @@ Always follow dependency order:
 - Device ID comes from `Depends(get_current_device_id)` — never parse headers manually
 - Test device scoping: Device A cannot read Device B's data
 
+
 #### Soft Deletes (CRITICAL)
 - EVERY query MUST include `deleted_at.is_(None)` filter by default
 - Delete operations set `deleted_at = datetime.now(UTC)`, never remove rows

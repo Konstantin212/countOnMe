@@ -17,7 +17,9 @@
 - [`features/shared-foods.md`](features/shared-foods.md) — Community food sharing, publish, search, import, visibility model
 - [`features/moderation.md`](features/moderation.md) — User reports, blocking, admin moderation, abuse controls
 - [`features/theme-system.md`](features/theme-system.md) — Light/dark/system themes, color tokens, persistence
-- [`features/analytics-mypath.md`](features/analytics-mypath.md) — MyPath analytics dashboard, charts, streaks, insights
+- [`features/analytics-mypath.md`](features/analytics-mypath.md) — MyPath analytics dashboard, charts, streaks, insights (deprecated, see mypath-widgets)
+- [`features/mypath-widgets.md`](features/mypath-widgets.md) — MyPath widgets dashboard, weight tracking, goal ETA, efficiency, consistency, hydration, fasting
+- [`features/fasting.md`](features/fasting.md) — Intermittent fasting tracking, session management, timer, sync
 - [`features/profile-screen.md`](features/profile-screen.md) — Profile hub, theme selector, sync status, data management
 
 ### API Reference
@@ -31,6 +33,7 @@
 - [`api/stats.md`](api/stats.md) — Day stats, daily trends, weight trends
 - [`api/body-weights.md`](api/body-weights.md) — Body weight CRUD
 - [`api/water-logs.md`](api/water-logs.md) — Water log CRUD
+- [`api/fasting.md`](api/fasting.md) — Fasting session CRUD, start, end, active session
 - [`api/sync.md`](api/sync.md) — Delta-based pull/push sync
 - [`api/catalog.md`](api/catalog.md) — Global product catalog search
 - [`api/shared-foods.md`](api/shared-foods.md) — Community food CRUD, publish, import, search

@@ -1,13 +1,16 @@
 ---
 type: feature
-status: current
-last-updated: 2026-03-25
+status: deprecated
+last-updated: 2026-04-05
 related-features:
+  - mypath-widgets
   - goal-system
   - food-tracking
 ---
 
 # MyPath Analytics Screen
+
+**DEPRECATED** — This doc describes the legacy MyPath implementation. Please see [`mypath-widgets.md`](mypath-widgets.md) for the current widget-based dashboard design.
 
 The **MyPath** tab is a comprehensive analytics dashboard that visualizes progress toward weight and nutrition goals using charts, trend indicators, and consistency metrics.
 

@@ -8,6 +8,7 @@ type FastingSessionApiResponse = {
   started_at: string;
   target_end_at: string;
   ended_at: string | null;
+  paused_at?: string | null;
   completed: boolean;
   created_at: string;
   updated_at: string;
@@ -22,6 +23,7 @@ const mapApiResponseToSession = (
   startedAt: response.started_at,
   targetEndAt: response.target_end_at,
   endedAt: response.ended_at,
+  pausedAt: response.paused_at ?? null,
   completed: response.completed,
   createdAt: response.created_at,
   updatedAt: response.updated_at,

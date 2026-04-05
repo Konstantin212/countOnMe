@@ -1,9 +1,10 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Alert, Modal, Pressable, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
 import { useTheme } from "@hooks/useTheme";
 import { NumericInput } from "@particles";
+import type { BodyWeightEntry } from "@models/types";
 
 const MIN_WEIGHT_KG = 1;
 const MAX_WEIGHT_KG = 700;
@@ -12,12 +13,17 @@ interface AddWeightModalProps {
   visible: boolean;
   onClose: () => void;
   onLogWeight: (day: string, weightKg: number) => Promise<void>;
+  weights: BodyWeightEntry[];
 }
 
-const formatToday = (): string => {
-  const now = new Date();
-  return now.toISOString().split("T")[0];
+const toLocalISODay = (date: Date): string => {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
 };
+
+const formatToday = (): string => toLocalISODay(new Date());
 
 const formatDisplayDate = (isoDay: string): string => {
   const [year, month, day] = isoDay.split("-");
@@ -30,16 +36,39 @@ const formatDisplayDate = (isoDay: string): string => {
   });
 };
 
+const shiftDay = (isoDay: string, delta: number): string => {
+  const [year, month, day] = isoDay.split("-");
+  const date = new Date(Number(year), Number(month) - 1, Number(day));
+  date.setDate(date.getDate() + delta);
+  return toLocalISODay(date);
+};
+
 export const AddWeightModal = ({
   visible,
   onClose,
   onLogWeight,
+  weights,
 }: AddWeightModalProps) => {
   const { colors } = useTheme();
   const [weight, setWeight] = useState<number | undefined>(undefined);
+  const [selectedDay, setSelectedDay] = useState<string>(formatToday);
   const [isSaving, setIsSaving] = useState(false);
 
+  // Reset to today when modal opens
+  useEffect(() => {
+    if (visible) {
+      setSelectedDay(formatToday());
+    }
+  }, [visible]);
+
+  // Pre-fill weight for selected day
+  useEffect(() => {
+    const existing = weights.find((w) => w.day === selectedDay);
+    setWeight(existing?.weightKg);
+  }, [selectedDay, weights]);
+
   const today = formatToday();
+  const isNextDayDisabled = selectedDay >= today;
   const isWeightOutOfRange =
     weight !== undefined && (weight < MIN_WEIGHT_KG || weight > MAX_WEIGHT_KG);
   const isSaveDisabled =
@@ -52,6 +81,15 @@ export const AddWeightModal = ({
     ? `Weight must be between ${MIN_WEIGHT_KG} and ${MAX_WEIGHT_KG} kg`
     : undefined;
 
+  const handlePrevDay = () => {
+    setSelectedDay((prev) => shiftDay(prev, -1));
+  };
+
+  const handleNextDay = () => {
+    if (isNextDayDisabled) return;
+    setSelectedDay((prev) => shiftDay(prev, 1));
+  };
+
   const handleSave = async () => {
     if (
       weight === undefined ||
@@ -62,8 +100,9 @@ export const AddWeightModal = ({
 
     setIsSaving(true);
     try {
-      await onLogWeight(today, weight);
+      await onLogWeight(selectedDay, weight);
       setWeight(undefined);
+      setSelectedDay(formatToday());
       onClose();
     } catch {
       Alert.alert("Error", "Failed to save weight. Please try again.");
@@ -74,6 +113,7 @@ export const AddWeightModal = ({
 
   const handleClose = () => {
     setWeight(undefined);
+    setSelectedDay(formatToday());
     onClose();
   };
 
@@ -104,10 +144,23 @@ export const AddWeightModal = ({
     closeButton: {
       padding: 4,
     },
+    datePicker: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      marginBottom: 20,
+    },
     dateText: {
+      flex: 1,
       fontSize: 14,
       color: colors.textSecondary,
-      marginBottom: 20,
+      textAlign: "center",
+    },
+    dateArrow: {
+      padding: 4,
+    },
+    dateArrowDisabled: {
+      opacity: 0.3,
     },
     inputContainer: {
       marginBottom: 24,
@@ -165,7 +218,37 @@ export const AddWeightModal = ({
             </Pressable>
           </View>
 
-          <Text style={styles.dateText}>{formatDisplayDate(today)}</Text>
+          <View style={styles.datePicker}>
+            <Pressable
+              testID="date-prev-button"
+              onPress={handlePrevDay}
+              style={styles.dateArrow}
+            >
+              <Ionicons
+                name="chevron-back"
+                size={20}
+                color={colors.textSecondary}
+              />
+            </Pressable>
+            <Text style={styles.dateText}>
+              {formatDisplayDate(selectedDay)}
+            </Text>
+            <Pressable
+              testID="date-next-button"
+              onPress={handleNextDay}
+              disabled={isNextDayDisabled}
+              style={[
+                styles.dateArrow,
+                isNextDayDisabled ? styles.dateArrowDisabled : undefined,
+              ]}
+            >
+              <Ionicons
+                name="chevron-forward"
+                size={20}
+                color={colors.textSecondary}
+              />
+            </Pressable>
+          </View>
 
           <View style={styles.inputContainer}>
             <NumericInput

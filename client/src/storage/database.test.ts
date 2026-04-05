@@ -44,8 +44,8 @@ describe("database", () => {
       await initDatabase(db);
 
       expect(db.getFirstAsync).toHaveBeenCalledWith("PRAGMA user_version");
-      // V1 schema + V1 pragma + V2 schema + V2 pragma = 4 exec calls
-      expect(db._execCalls.length).toBe(4);
+      // V1 schema + V1 pragma + V2 schema + V2 pragma + V3 schema + V3 pragma = 6 exec calls
+      expect(db._execCalls.length).toBe(6);
       expect(db._execCalls[0]).toContain("CREATE TABLE IF NOT EXISTS products");
       expect(db._execCalls[0]).toContain(
         "CREATE TABLE IF NOT EXISTS user_goals",
@@ -77,6 +77,8 @@ describe("database", () => {
         "CREATE TABLE IF NOT EXISTS fasting_sessions",
       );
       expect(db._execCalls[3]).toBe("PRAGMA user_version = 2");
+      expect(db._execCalls[4]).toContain("ALTER TABLE fasting_sessions");
+      expect(db._execCalls[5]).toBe("PRAGMA user_version = 3");
     });
 
     it("runs only V2 migration when user_version is 1", async () => {
@@ -87,18 +89,20 @@ describe("database", () => {
 
       await initDatabase(db);
 
-      // Only V2 schema + V2 pragma = 2 exec calls
-      expect(db._execCalls.length).toBe(2);
+      // V2 schema + V2 pragma + V3 schema + V3 pragma = 4 exec calls
+      expect(db._execCalls.length).toBe(4);
       expect(db._execCalls[0]).toContain(
         "CREATE TABLE IF NOT EXISTS fasting_sessions",
       );
       expect(db._execCalls[1]).toBe("PRAGMA user_version = 2");
+      expect(db._execCalls[2]).toContain("ALTER TABLE fasting_sessions");
+      expect(db._execCalls[3]).toBe("PRAGMA user_version = 3");
     });
 
-    it("skips all migrations when user_version is >= 2", async () => {
+    it("skips all migrations when user_version is >= 3", async () => {
       const db = createMockDb();
       (db.getFirstAsync as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-        user_version: 2,
+        user_version: 3,
       });
 
       await initDatabase(db);
@@ -106,15 +110,29 @@ describe("database", () => {
       expect(db._execCalls.length).toBe(0);
     });
 
+    it("runs only V3 migration when user_version is 2", async () => {
+      const db = createMockDb();
+      (db.getFirstAsync as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+        user_version: 2,
+      });
+
+      await initDatabase(db);
+
+      // Only V3 schema + V3 pragma = 2 exec calls
+      expect(db._execCalls.length).toBe(2);
+      expect(db._execCalls[0]).toContain("ALTER TABLE fasting_sessions");
+      expect(db._execCalls[1]).toBe("PRAGMA user_version = 3");
+    });
+
     it("is idempotent — calling twice does not error", async () => {
       const db = createMockDb();
 
       await initDatabase(db);
-      // After first init, userVersion is now 2 internally
+      // After first init, userVersion is now 3 internally
       await initDatabase(db);
 
-      // First call: 4 exec calls (V1 schema + V1 pragma + V2 schema + V2 pragma), second: 0
-      expect(db._execCalls.length).toBe(4);
+      // First call: 6 exec calls (V1+V2+V3 schemas + pragmas), second: 0
+      expect(db._execCalls.length).toBe(6);
     });
   });
 

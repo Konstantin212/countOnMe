@@ -6,7 +6,6 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Ionicons } from "@expo/vector-icons";
 
 import { useTheme } from "@hooks/useTheme";
-import { useFasting } from "@hooks/useFasting";
 import { NumericInput, Button } from "@particles";
 import type { MyPathStackParamList } from "@app/navigationTypes";
 import type { FastingTechnique } from "@models/types";
@@ -54,7 +53,6 @@ const MAX_CUSTOM_HOURS = 72;
 const FastingSetupScreen = () => {
   const { colors } = useTheme();
   const navigation = useNavigation<NavigationProp>();
-  const { startSession, loading } = useFasting();
 
   const [selectedTechnique, setSelectedTechnique] =
     useState<FastingTechnique>("16:8");
@@ -63,36 +61,28 @@ const FastingSetupScreen = () => {
   const handleCustomHoursChange = (value: number | undefined): void => {
     setCustomHours(value !== undefined ? Math.floor(value) : undefined);
   };
-  const [isStarting, setIsStarting] = useState(false);
-  const [startError, setStartError] = useState<string | null>(null);
 
   const isCustom = selectedTechnique === "custom";
   const isCustomValid =
     customHours !== undefined &&
     customHours >= MIN_CUSTOM_HOURS &&
     customHours <= MAX_CUSTOM_HOURS;
-  const isStartDisabled = isStarting || loading || (isCustom && !isCustomValid);
+  const isStartDisabled = isCustom && !isCustomValid;
 
   const handleSelectTechnique = (technique: FastingTechnique) => {
     setSelectedTechnique(technique);
   };
 
-  const handleStartFast = async () => {
-    setIsStarting(true);
-    setStartError(null);
-    try {
-      const hours = isCustom
-        ? (customHours ?? 16)
-        : (TECHNIQUE_OPTIONS.find((o) => o.technique === selectedTechnique)
-            ?.hours ?? 16);
+  const handleStartFast = () => {
+    const hours = isCustom
+      ? (customHours ?? 16)
+      : (TECHNIQUE_OPTIONS.find((o) => o.technique === selectedTechnique)
+          ?.hours ?? 16);
 
-      const session = await startSession(selectedTechnique, hours);
-      navigation.navigate("FastingScreen", { sessionId: session.id });
-    } catch {
-      setStartError("Failed to start fasting session. Please try again.");
-    } finally {
-      setIsStarting(false);
-    }
+    navigation.navigate("FastingScreen", {
+      technique: selectedTechnique,
+      fastingHours: hours,
+    });
   };
 
   const handleGoBack = () => {
@@ -229,12 +219,6 @@ const FastingSetupScreen = () => {
     startButton: {
       marginTop: 8,
     },
-    errorText: {
-      fontSize: 14,
-      color: colors.error,
-      textAlign: "center",
-      marginBottom: 4,
-    },
   });
 
   return (
@@ -329,6 +313,7 @@ const FastingSetupScreen = () => {
                 value={customHours}
                 onChangeValue={handleCustomHoursChange}
                 placeholder="e.g. 14"
+                keyboardType="numeric"
               />
               <Text style={styles.customHint}>
                 Enter between {MIN_CUSTOM_HOURS} and {MAX_CUSTOM_HOURS} hours
@@ -338,16 +323,10 @@ const FastingSetupScreen = () => {
         </Pressable>
 
         <View style={styles.startButton}>
-          {startError && (
-            <Text testID="start-error-text" style={styles.errorText}>
-              {startError}
-            </Text>
-          )}
           <Button
             testID="start-fast-button"
             onPress={handleStartFast}
             disabled={isStartDisabled}
-            loading={isStarting}
           >
             Start Fast
           </Button>

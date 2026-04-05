@@ -311,6 +311,7 @@ const mergeFastingSessions = async (
       startedAt: asString(data.started_at, item.updatedAt),
       targetEndAt: asString(data.target_end_at, item.updatedAt),
       endedAt: asOptionalString(data.ended_at) ?? null,
+      pausedAt: asOptionalString(data.paused_at) ?? null,
       completed: data.completed === true || data.completed === 1,
       createdAt: asString(data.created_at, item.updatedAt),
       updatedAt: item.updatedAt,

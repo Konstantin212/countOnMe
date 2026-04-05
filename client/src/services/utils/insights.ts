@@ -317,7 +317,7 @@ export function calculateWeightDelta(
 const WEIGHT_STABLE_THRESHOLD_KG = 0.3;
 
 /** Minimum days of weight data required for ETA projection. */
-const MIN_DAYS_FOR_ETA = 7;
+const MIN_DAYS_FOR_ETA = 2;
 
 /** Maximum projected days remaining (cap). */
 const MAX_PROJECTED_DAYS = 365;
@@ -350,7 +350,21 @@ export function calculateWeightTrend(
 
   const filtered = weights.filter((w) => w.day >= from && w.day <= to);
 
-  if (filtered.length < 2) {
+  const sorted = [...filtered].sort(
+    (a, b) => new Date(a.day).getTime() - new Date(b.day).getTime(),
+  );
+
+  // Deduplicate by day — keep the last entry per day (sorted by time, so last wins)
+  const dedupedByDay: BodyWeightEntry[] = [];
+  const seenDays = new Set<string>();
+  for (let i = sorted.length - 1; i >= 0; i--) {
+    if (!seenDays.has(sorted[i].day)) {
+      seenDays.add(sorted[i].day);
+      dedupedByDay.unshift(sorted[i]);
+    }
+  }
+
+  if (dedupedByDay.length < 2) {
     return {
       direction: "stable",
       changeKg: 0,
@@ -359,12 +373,8 @@ export function calculateWeightTrend(
     };
   }
 
-  const sorted = [...filtered].sort(
-    (a, b) => new Date(a.day).getTime() - new Date(b.day).getTime(),
-  );
-
-  const firstWeight = sorted[0].weightKg;
-  const lastWeight = sorted[sorted.length - 1].weightKg;
+  const firstWeight = dedupedByDay[0].weightKg;
+  const lastWeight = dedupedByDay[dedupedByDay.length - 1].weightKg;
   const changeKg = lastWeight - firstWeight;
   const changePercent = (changeKg / firstWeight) * 100;
 
@@ -375,7 +385,7 @@ export function calculateWeightTrend(
         ? "up"
         : "down";
 
-  const dataPoints = sorted.map((w) => ({ day: w.day, weightKg: w.weightKg }));
+  const dataPoints = dedupedByDay.map((w) => ({ day: w.day, weightKg: w.weightKg }));
 
   return { direction, changeKg, changePercent, dataPoints };
 }

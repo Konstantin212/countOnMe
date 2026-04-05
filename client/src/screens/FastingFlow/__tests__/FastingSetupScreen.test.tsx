@@ -1,5 +1,5 @@
 import React from "react";
-import { render, fireEvent, act } from "@testing-library/react";
+import { render, fireEvent } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mockNavigate = vi.fn();
@@ -24,22 +24,6 @@ vi.mock("react-native-safe-area-context", () => {
     }) => React.createElement("div", { style }, children),
   };
 });
-
-const mockStartSession = vi.fn();
-
-vi.mock("@hooks/useFasting", () => ({
-  useFasting: () => ({
-    sessions: [],
-    activeSession: null,
-    loading: false,
-    error: null,
-    refresh: vi.fn(),
-    startSession: mockStartSession,
-    endSession: vi.fn(),
-    updateSession: vi.fn(),
-    deleteSession: vi.fn(),
-  }),
-}));
 
 vi.mock("@hooks/useTheme", () => ({
   useTheme: () => ({
@@ -74,17 +58,6 @@ import FastingSetupScreen from "../FastingSetupScreen";
 describe("FastingSetupScreen", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockStartSession.mockResolvedValue({
-      id: "session-123",
-      technique: "16:8",
-      fastingHours: 16,
-      startedAt: new Date().toISOString(),
-      targetEndAt: new Date(Date.now() + 16 * 3600000).toISOString(),
-      endedAt: null,
-      completed: false,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    });
   });
 
   it("renders the title and technique options", () => {
@@ -115,16 +88,14 @@ describe("FastingSetupScreen", () => {
     expect(getByText("Advanced")).not.toBeNull();
   });
 
-  it("calls startSession and navigates on start fast", async () => {
+  it("navigates to FastingScreen with technique and hours on start fast", () => {
     const { getByTestId } = render(<FastingSetupScreen />);
 
-    await act(async () => {
-      fireEvent.click(getByTestId("start-fast-button"));
-    });
+    fireEvent.click(getByTestId("start-fast-button"));
 
-    expect(mockStartSession).toHaveBeenCalledWith("16:8", 16);
     expect(mockNavigate).toHaveBeenCalledWith("FastingScreen", {
-      sessionId: "session-123",
+      technique: "16:8",
+      fastingHours: 16,
     });
   });
 
@@ -134,15 +105,15 @@ describe("FastingSetupScreen", () => {
     expect(mockGoBack).toHaveBeenCalledTimes(1);
   });
 
-  it("selects a different technique when pressed", async () => {
+  it("navigates with correct technique and hours for 18:6", () => {
     const { getByTestId } = render(<FastingSetupScreen />);
 
     fireEvent.click(getByTestId("technique-18:6"));
+    fireEvent.click(getByTestId("start-fast-button"));
 
-    await act(async () => {
-      fireEvent.click(getByTestId("start-fast-button"));
+    expect(mockNavigate).toHaveBeenCalledWith("FastingScreen", {
+      technique: "18:6",
+      fastingHours: 18,
     });
-
-    expect(mockStartSession).toHaveBeenCalledWith("18:6", 18);
   });
 });

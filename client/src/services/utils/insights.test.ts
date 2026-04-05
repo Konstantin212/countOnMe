@@ -1373,7 +1373,33 @@ describe("insights utility", () => {
       });
     });
 
-    it("returns defaults when less than 7 days of data", () => {
+    it("returns defaults when less than 2 days of data", () => {
+      const weights: BodyWeightEntry[] = [
+        {
+          id: "w1",
+          day: "2025-06-10",
+          weightKg: 80,
+          createdAt: "2025-06-10T00:00:00.000Z",
+          updatedAt: "2025-06-10T00:00:00.000Z",
+        },
+        {
+          id: "w2",
+          day: "2025-06-11",
+          weightKg: 79.8,
+          createdAt: "2025-06-11T00:00:00.000Z",
+          updatedAt: "2025-06-11T00:00:00.000Z",
+        },
+      ];
+      const result = calculateETA(weights, baseGoal, "2025-06-11");
+      expect(result).toEqual({
+        targetDate: null,
+        daysRemaining: null,
+        progressPercent: 0,
+        isOnTrack: false,
+      });
+    });
+
+    it("projects ETA with 2+ days of data", () => {
       const weights: BodyWeightEntry[] = [
         {
           id: "w1",
@@ -1391,12 +1417,9 @@ describe("insights utility", () => {
         },
       ];
       const result = calculateETA(weights, baseGoal, "2025-06-15");
-      expect(result).toEqual({
-        targetDate: null,
-        daysRemaining: null,
-        progressPercent: 0,
-        isOnTrack: false,
-      });
+      expect(result.targetDate).not.toBeNull();
+      expect(result.daysRemaining).toBeGreaterThan(0);
+      expect(result.isOnTrack).toBe(true);
     });
 
     it("returns defaults when goal has no target weight", () => {

@@ -41,11 +41,11 @@ describe("FastingWidget", () => {
     expect(getByTestId("fasting-widget")).toBeTruthy();
   });
 
-  it("shows default 16:8 text when no active session", () => {
-    const { getByText } = render(
+  it("shows 'Start' text when no active session", () => {
+    const { getByTestId } = render(
       <FastingWidget activeSession={null} onPress={defaultOnPress} />,
     );
-    expect(getByText("16:8")).toBeTruthy();
+    expect(getByTestId("fasting-no-active").textContent).toBe("Start");
   });
 
   it("shows Fasting label", () => {
@@ -73,6 +73,7 @@ describe("FastingWidget", () => {
       startedAt: new Date().toISOString(),
       targetEndAt: futureDate,
       endedAt: null,
+      pausedAt: null,
       completed: false,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),

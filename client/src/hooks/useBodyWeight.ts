@@ -46,12 +46,46 @@ export const useBodyWeight = (): UseBodyWeightResult => {
       try {
         const remoteWeights = await apiListBodyWeights();
 
-        if (isMountedRef.current) {
-          weightsRef.current = remoteWeights;
-          setWeights(remoteWeights);
-          // Update local storage with remote data
+        if (isMountedRef.current && remoteWeights.length > 0) {
+          // Merge: prefer the entry with the latest updatedAt per id
+          const localWeightsSnapshot = weightsRef.current;
+          const localMap = new Map(localWeightsSnapshot.map((w) => [w.id, w]));
+          const seenIds = new Set<string>();
+          const merged: BodyWeightEntry[] = [];
+
+          for (const remote of remoteWeights) {
+            const local = localMap.get(remote.id);
+            if (local && local.updatedAt > remote.updatedAt) {
+              merged.push(local);
+            } else {
+              merged.push(remote);
+            }
+            seenIds.add(remote.id);
+          }
+
+          for (const local of localWeightsSnapshot) {
+            if (!seenIds.has(local.id)) {
+              merged.push(local);
+            }
+          }
+
+          // Deduplicate by day — keep the entry with the latest updatedAt
+          const byDay = new Map<string, BodyWeightEntry>();
+          for (const w of merged) {
+            const existing = byDay.get(w.day);
+            if (!existing || w.updatedAt > existing.updatedAt) {
+              byDay.set(w.day, w);
+            }
+          }
+          const deduped = Array.from(byDay.values()).sort(
+            (a, b) => new Date(b.day).getTime() - new Date(a.day).getTime(),
+          );
+
+          weightsRef.current = deduped;
+          setWeights(deduped);
+
           await db.withTransactionAsync(async () => {
-            for (const entry of remoteWeights) {
+            for (const entry of deduped) {
               await bodyWeightRepository.upsert(db, userId, entry);
             }
           });

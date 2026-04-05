@@ -43,6 +43,8 @@ export const FastingWidget = ({
 
     setRemainingMs(computeRemaining());
 
+    if (activeSession.pausedAt !== null) return;
+
     const interval = setInterval(() => {
       const remaining = computeRemaining();
       setRemainingMs(remaining);
@@ -92,9 +94,12 @@ export const FastingWidget = ({
       textTransform: "uppercase",
       letterSpacing: 0.5,
     },
+    pausedText: {
+      fontSize: 14,
+      fontWeight: "600",
+      color: colors.textSecondary,
+    },
   });
-
-  const displayTechnique = activeSession?.technique ?? "16:8";
 
   return (
     <Pressable style={styles.card} onPress={onPress} testID="fasting-widget">
@@ -107,12 +112,20 @@ export const FastingWidget = ({
       {activeSession ? (
         <>
           <Text style={styles.technique}>{activeSession.technique}</Text>
-          <Text style={styles.value} testID="fasting-countdown">
-            {formatCountdown(remainingMs)}
-          </Text>
+          {activeSession.pausedAt !== null ? (
+            <Text testID="fasting-paused" style={styles.pausedText}>
+              Paused
+            </Text>
+          ) : (
+            <Text style={styles.value} testID="fasting-countdown">
+              {formatCountdown(remainingMs)}
+            </Text>
+          )}
         </>
       ) : (
-        <Text style={styles.value}>{displayTechnique}</Text>
+        <Text testID="fasting-no-active" style={styles.value}>
+          Start
+        </Text>
       )}
       <Text style={styles.label}>Fasting</Text>
     </Pressable>

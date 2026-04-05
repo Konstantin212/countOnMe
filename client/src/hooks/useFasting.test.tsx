@@ -53,6 +53,7 @@ const makeFastingSession = (
   startedAt: "2026-04-01T20:00:00.000Z",
   targetEndAt: "2026-04-02T12:00:00.000Z",
   endedAt: null,
+  pausedAt: null,
   completed: false,
   createdAt: "2026-04-01T20:00:00.000Z",
   updatedAt: "2026-04-01T20:00:00.000Z",

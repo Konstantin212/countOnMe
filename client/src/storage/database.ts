@@ -242,6 +242,14 @@ CREATE INDEX IF NOT EXISTS idx_fasting_sessions_dirty ON fasting_sessions(is_dir
 `;
 
 // ---------------------------------------------------------------------------
+// Schema v3 — Add paused_at column to fasting_sessions
+// ---------------------------------------------------------------------------
+
+export const SCHEMA_V3 = `
+ALTER TABLE fasting_sessions ADD COLUMN paused_at TEXT;
+`;
+
+// ---------------------------------------------------------------------------
 // Initialisation
 // ---------------------------------------------------------------------------
 
@@ -264,6 +272,11 @@ export const initDatabase = async (db: Database): Promise<void> => {
   if (currentVersion < 2) {
     await db.execAsync(SCHEMA_V2);
     await db.execAsync("PRAGMA user_version = 2");
+  }
+
+  if (currentVersion < 3) {
+    await db.execAsync(SCHEMA_V3);
+    await db.execAsync("PRAGMA user_version = 3");
   }
 };
 

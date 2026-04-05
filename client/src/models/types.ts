@@ -371,6 +371,7 @@ export type FastingSession = {
   startedAt: string; // ISO date string
   targetEndAt: string; // ISO date string
   endedAt: string | null;
+  pausedAt: string | null; // ISO date string, null when running
   completed: boolean;
   createdAt: string;
   updatedAt: string;

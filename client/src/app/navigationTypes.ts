@@ -1,6 +1,8 @@
 import { NavigatorScreenParams } from "@react-navigation/native";
 import { CatalogPortionData } from "@hooks/useBarcodeLookup";
 import {
+  FastingSession,
+  FastingTechnique,
   GoalCalculateRequest,
   GoalCalculateResponse,
   MealTypeKey,
@@ -36,7 +38,9 @@ export type MyDayStackParamList = {
 export type MyPathStackParamList = {
   MyPath: undefined;
   FastingSetup: undefined;
-  FastingScreen: { sessionId: string };
+  FastingScreen:
+    | { sessionId: string; initialSession?: FastingSession }
+    | { technique: FastingTechnique; fastingHours: number };
 };
 
 export type AuthStackParamList = {

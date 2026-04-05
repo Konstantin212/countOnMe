@@ -1,5 +1,12 @@
 import React, { useEffect, useState } from "react";
-import { AppState, Pressable, StyleSheet, Text, View } from "react-native";
+import {
+  ActivityIndicator,
+  AppState,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -61,21 +68,48 @@ const FastingScreen = () => {
   const { colors } = useTheme();
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<FastingRouteProp>();
-  const { sessionId } = route.params;
-  const { sessions, endSession, loading } = useFasting();
+  const params = route.params;
+  const {
+    sessions,
+    startSession,
+    endSession,
+    pauseSession,
+    resumeSession,
+    loading,
+  } = useFasting();
+
+  // Determine flow: "start new" (has technique) vs "view existing" (has sessionId)
+  const isNewFastFlow = "technique" in params;
 
   const [now, setNow] = useState(Date.now());
   const [timerMode, setTimerMode] = useState<TimerMode>("remaining");
   const [isEnding, setIsEnding] = useState(false);
   const [endError, setEndError] = useState<string | null>(null);
+  const [isStarting, setIsStarting] = useState(false);
+  const [startError, setStartError] = useState<string | null>(null);
+  const [isPausing, setIsPausing] = useState(false);
+  const [isResuming, setIsResuming] = useState(false);
+  // activeSessionId is set after startSession resolves (pre-start flow)
+  const [activeSessionId, setActiveSessionId] = useState<string | undefined>(
+    isNewFastFlow ? undefined : params.sessionId,
+  );
 
-  const session = sessions.find((s) => s.id === sessionId) ?? null;
+  const initialSession: FastingSession | undefined = !isNewFastFlow
+    ? params.initialSession
+    : undefined;
 
-  // Timer tick
+  const hookSession =
+    activeSessionId !== undefined
+      ? (sessions.find((s) => s.id === activeSessionId) ?? null)
+      : null;
+  const session = hookSession ?? initialSession ?? null;
+
+  // Timer tick — frozen when session is paused
   useEffect(() => {
+    if (session?.pausedAt !== null) return;
     const interval = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(interval);
-  }, []);
+  }, [session?.pausedAt]);
 
   // Refresh time when app comes to foreground
   useEffect(() => {
@@ -91,12 +125,29 @@ const FastingScreen = () => {
     navigation.goBack();
   };
 
+  const handleStartFast = async () => {
+    if (!isNewFastFlow) return;
+    setIsStarting(true);
+    setStartError(null);
+    try {
+      const newSession = await startSession(
+        params.technique,
+        params.fastingHours,
+      );
+      setActiveSessionId(newSession.id);
+    } catch {
+      setStartError("Failed to start fasting session. Please try again.");
+    } finally {
+      setIsStarting(false);
+    }
+  };
+
   const handleEndFast = async () => {
+    if (activeSessionId === undefined) return;
     setIsEnding(true);
     setEndError(null);
     try {
-      await endSession(sessionId);
-      navigation.goBack();
+      await endSession(activeSessionId);
     } catch {
       setEndError("Failed to end fasting session. Please try again.");
     } finally {
@@ -106,6 +157,27 @@ const FastingScreen = () => {
 
   const handleToggleMode = () => {
     setTimerMode((prev) => (prev === "remaining" ? "elapsed" : "remaining"));
+  };
+
+  const handlePauseFast = async () => {
+    if (activeSessionId === undefined) return;
+    setIsPausing(true);
+    try {
+      await pauseSession(activeSessionId);
+    } finally {
+      setIsPausing(false);
+    }
+  };
+
+  const handleResumeFast = async () => {
+    if (activeSessionId === undefined) return;
+    setIsResuming(true);
+    try {
+      await resumeSession(activeSessionId);
+      setNow(Date.now());
+    } finally {
+      setIsResuming(false);
+    }
   };
 
   const styles = StyleSheet.create({
@@ -232,6 +304,22 @@ const FastingScreen = () => {
       fontWeight: "600",
       color: colors.text,
     },
+    pausedLabel: {
+      fontSize: 14,
+      fontWeight: "600",
+      color: colors.textSecondary,
+      marginBottom: 8,
+      textTransform: "uppercase",
+      letterSpacing: 1,
+    },
+    actionRow: {
+      flexDirection: "row",
+      gap: 12,
+      width: "100%",
+    },
+    actionButtonWrapper: {
+      flex: 1,
+    },
     endButton: {
       width: "100%",
     },
@@ -240,6 +328,28 @@ const FastingScreen = () => {
       color: colors.error,
       textAlign: "center",
       marginBottom: 8,
+    },
+    startErrorText: {
+      fontSize: 14,
+      color: colors.error,
+      textAlign: "center",
+      marginBottom: 8,
+    },
+    preStartTitle: {
+      fontSize: 28,
+      fontWeight: "800",
+      color: colors.text,
+      marginBottom: 8,
+      textAlign: "center",
+    },
+    preStartSubtitle: {
+      fontSize: 15,
+      color: colors.textSecondary,
+      marginBottom: 32,
+      textAlign: "center",
+    },
+    startButton: {
+      width: "100%",
     },
     // Summary styles for past sessions
     summaryCard: {
@@ -292,7 +402,78 @@ const FastingScreen = () => {
     },
   });
 
+  // Pre-start view: navigated with technique+hours, not yet started
+  if (isNewFastFlow && activeSessionId === undefined) {
+    const techniqueName =
+      params.technique === "custom"
+        ? `${params.fastingHours}h Custom`
+        : params.technique;
+
+    return (
+      <SafeAreaView style={styles.container} edges={["top"]}>
+        <View style={styles.header}>
+          <Pressable
+            testID="back-button"
+            onPress={handleGoBack}
+            style={styles.backButton}
+          >
+            <Ionicons name="arrow-back" size={24} color={colors.text} />
+          </Pressable>
+          <Text style={styles.headerTitle}>Start Fast</Text>
+        </View>
+        <View style={styles.content}>
+          <View style={styles.techniqueBadge}>
+            <Text
+              testID="pre-start-technique-badge"
+              style={styles.techniqueBadgeText}
+            >
+              {techniqueName}
+            </Text>
+          </View>
+          <Text style={styles.preStartTitle}>Ready to Fast?</Text>
+          <Text style={styles.preStartSubtitle}>
+            Your {techniqueName} fast will begin when you tap Start.
+          </Text>
+          <View style={styles.startButton}>
+            {startError && (
+              <Text testID="start-error-text" style={styles.startErrorText}>
+                {startError}
+              </Text>
+            )}
+            <Button
+              testID="confirm-start-fast-button"
+              onPress={handleStartFast}
+              disabled={isStarting || loading}
+              loading={isStarting}
+            >
+              Start Fast
+            </Button>
+          </View>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   if (!session) {
+    if (loading) {
+      return (
+        <SafeAreaView style={styles.container} edges={["top"]}>
+          <View style={styles.header}>
+            <Pressable
+              testID="back-button"
+              onPress={handleGoBack}
+              style={styles.backButton}
+            >
+              <Ionicons name="arrow-back" size={24} color={colors.text} />
+            </Pressable>
+            <Text style={styles.headerTitle}>Fasting</Text>
+          </View>
+          <View style={styles.errorContainer}>
+            <ActivityIndicator size="large" color={colors.fastingAccent} />
+          </View>
+        </SafeAreaView>
+      );
+    }
     return (
       <SafeAreaView style={styles.container} edges={["top"]}>
         <View style={styles.header}>
@@ -393,9 +574,10 @@ const FastingScreen = () => {
   }
 
   // Active session view
+  const isPaused = session.pausedAt !== null;
   const elapsed = now - new Date(session.startedAt).getTime();
   const remaining = new Date(session.targetEndAt).getTime() - now;
-  const isCompleted = remaining <= 0;
+  const isCompleted = !isPaused && remaining <= 0;
   const progress = calculateProgress(session, now);
 
   return (
@@ -425,6 +607,17 @@ const FastingScreen = () => {
             <Text testID="completed-text" style={styles.completedText}>
               COMPLETED!
             </Text>
+          ) : isPaused ? (
+            <>
+              <Text testID="paused-label" style={styles.pausedLabel}>
+                PAUSED
+              </Text>
+              <Text testID="timer-display" style={styles.timerText}>
+                {timerMode === "remaining"
+                  ? formatDuration(remaining)
+                  : formatDuration(elapsed)}
+              </Text>
+            </>
           ) : (
             <>
               <Text style={styles.timerLabel}>
@@ -487,15 +680,43 @@ const FastingScreen = () => {
               {endError}
             </Text>
           )}
-          <Button
-            testID="end-fast-button"
-            variant="danger"
-            onPress={handleEndFast}
-            disabled={isEnding || loading}
-            loading={isEnding}
-          >
-            End Fast
-          </Button>
+          <View style={styles.actionRow}>
+            {isPaused ? (
+              <View style={styles.actionButtonWrapper}>
+                <Button
+                  testID="resume-fast-button"
+                  onPress={handleResumeFast}
+                  disabled={isResuming || isEnding || loading}
+                  loading={isResuming}
+                >
+                  Resume
+                </Button>
+              </View>
+            ) : (
+              <View style={styles.actionButtonWrapper}>
+                <Button
+                  testID="pause-fast-button"
+                  variant="secondary"
+                  onPress={handlePauseFast}
+                  disabled={isPausing || isEnding || loading || isCompleted}
+                  loading={isPausing}
+                >
+                  Pause
+                </Button>
+              </View>
+            )}
+            <View style={styles.actionButtonWrapper}>
+              <Button
+                testID="end-fast-button"
+                variant="danger"
+                onPress={handleEndFast}
+                disabled={isEnding || loading}
+                loading={isEnding}
+              >
+                End Fast
+              </Button>
+            </View>
+          </View>
         </View>
       </View>
     </SafeAreaView>

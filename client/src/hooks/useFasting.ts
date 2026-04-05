@@ -18,6 +18,8 @@ export type UseFastingResult = {
     fastingHours: number,
   ) => Promise<FastingSession>;
   endSession: (id?: string) => Promise<FastingSession | null>;
+  pauseSession: (id: string) => Promise<FastingSession | null>;
+  resumeSession: (id: string) => Promise<FastingSession | null>;
   updateSession: (
     id: string,
     data: Partial<FastingSession>,
@@ -63,12 +65,34 @@ export const useFasting = (): UseFastingResult => {
         const remoteSessions = await apiListFastingSessions();
 
         if (isMountedRef.current) {
-          sessionsRef.current = remoteSessions;
-          setSessions(remoteSessions);
-          setActiveSession(deriveActive(remoteSessions));
-          // Update local storage with remote data
+          // Merge: prefer the entry with the latest updatedAt per id
+          const localMap = new Map(localSessions.map((s) => [s.id, s]));
+          const seenIds = new Set<string>();
+          const merged: FastingSession[] = [];
+
+          for (const remote of remoteSessions) {
+            const local = localMap.get(remote.id);
+            if (local && local.updatedAt > remote.updatedAt) {
+              merged.push(local);
+            } else {
+              merged.push(remote);
+            }
+            seenIds.add(remote.id);
+          }
+
+          for (const local of localSessions) {
+            if (!seenIds.has(local.id)) {
+              merged.push(local);
+            }
+          }
+
+          const finalList = remoteSessions.length > 0 ? merged : localSessions;
+          sessionsRef.current = finalList;
+          setSessions(finalList);
+          setActiveSession(deriveActive(finalList));
+          // Update local storage with merged data
           await db.withTransactionAsync(async () => {
-            for (const session of remoteSessions) {
+            for (const session of finalList) {
               await fastingRepository.upsert(db, userId, session);
             }
           });
@@ -109,6 +133,7 @@ export const useFasting = (): UseFastingResult => {
         startedAt: startedAt.toISOString(),
         targetEndAt,
         endedAt: null,
+        pausedAt: null,
         completed: false,
         createdAt: timestamp,
         updatedAt: timestamp,
@@ -134,6 +159,7 @@ export const useFasting = (): UseFastingResult => {
             fasting_hours: newSession.fastingHours,
             started_at: newSession.startedAt,
             target_end_at: newSession.targetEndAt,
+            paused_at: newSession.pausedAt,
             created_at: newSession.createdAt,
           },
           updatedAt: newSession.updatedAt,
@@ -191,6 +217,7 @@ export const useFasting = (): UseFastingResult => {
             started_at: updatedSession.startedAt,
             target_end_at: updatedSession.targetEndAt,
             ended_at: updatedSession.endedAt,
+            paused_at: updatedSession.pausedAt,
             completed: updatedSession.completed,
             created_at: updatedSession.createdAt,
           },
@@ -259,6 +286,7 @@ export const useFasting = (): UseFastingResult => {
             started_at: updatedSession.startedAt,
             target_end_at: updatedSession.targetEndAt,
             ended_at: updatedSession.endedAt,
+            paused_at: updatedSession.pausedAt,
             completed: updatedSession.completed,
             created_at: updatedSession.createdAt,
           },
@@ -306,6 +334,32 @@ export const useFasting = (): UseFastingResult => {
     [db, userId],
   );
 
+  const pauseSession = useCallback(
+    async (id: string): Promise<FastingSession | null> => {
+      return updateSession(id, { pausedAt: new Date().toISOString() });
+    },
+    [updateSession],
+  );
+
+  const resumeSession = useCallback(
+    async (id: string): Promise<FastingSession | null> => {
+      const existing = sessionsRef.current.find((s) => s.id === id);
+      if (!existing || !existing.pausedAt) return null;
+
+      const pausedDuration = Date.now() - new Date(existing.pausedAt).getTime();
+      const newStartedAt = new Date(
+        new Date(existing.startedAt).getTime() + pausedDuration,
+      ).toISOString();
+
+      // updateSession recalculates targetEndAt from startedAt + fastingHours
+      return updateSession(id, {
+        startedAt: newStartedAt,
+        pausedAt: null,
+      });
+    },
+    [updateSession],
+  );
+
   return {
     sessions,
     activeSession,
@@ -314,6 +368,8 @@ export const useFasting = (): UseFastingResult => {
     refresh,
     startSession,
     endSession,
+    pauseSession,
+    resumeSession,
     updateSession,
     deleteSession,
   };

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -92,10 +92,19 @@ const MyPathScreen = () => {
     ]);
   }, [refreshGoal, refreshWeights, refreshStats, refreshFasting]);
 
-  // Close FAB on navigation events
+  const isFirstFocusRef = useRef(true);
+
+  // Close FAB on navigation events; refresh data on re-focus (skip initial mount)
   useEffect(() => {
     const blurSub = navigation.addListener("blur", () => setFabOpen(false));
-    const focusSub = navigation.addListener("focus", () => setFabOpen(false));
+    const focusSub = navigation.addListener("focus", () => {
+      setFabOpen(false);
+      if (isFirstFocusRef.current) {
+        isFirstFocusRef.current = false;
+        return;
+      }
+      void handleRefresh();
+    });
 
     const parentNav =
       navigation.getParent<BottomTabNavigationProp<RootTabParamList>>();
@@ -108,7 +117,7 @@ const MyPathScreen = () => {
       focusSub();
       tabPressSub?.();
     };
-  }, [navigation]);
+  }, [navigation, handleRefresh]);
 
   // Handle goal setup navigation
   const handleSetupGoal = () => {
@@ -120,7 +129,10 @@ const MyPathScreen = () => {
   // Handle fasting press
   const handleFastingPress = () => {
     if (activeSession) {
-      navigation.navigate("FastingScreen", { sessionId: activeSession.id });
+      navigation.navigate("FastingScreen", {
+        sessionId: activeSession.id,
+        initialSession: activeSession,
+      });
     } else {
       navigation.navigate("FastingSetup");
     }
@@ -295,6 +307,7 @@ const MyPathScreen = () => {
         onLogWeight={async (day, weightKg) => {
           await logWeight(day, weightKg);
         }}
+        weights={weights}
       />
     </SafeAreaView>
   );

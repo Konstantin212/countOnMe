@@ -93,7 +93,11 @@ describe("useBodyWeight", () => {
       expect(result.current.loading).toBe(false);
     });
 
-    expect(result.current.weights).toEqual(remoteWeights);
+    // Merged result: remote is authoritative; sorted by day descending
+    expect(result.current.weights).toEqual(
+      expect.arrayContaining(remoteWeights),
+    );
+    expect(result.current.weights).toHaveLength(remoteWeights.length);
     // Each remote entry is upserted individually
     expect(mockUpsert).toHaveBeenCalledTimes(2);
   });

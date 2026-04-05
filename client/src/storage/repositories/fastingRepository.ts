@@ -13,6 +13,7 @@ type FastingSessionRow = {
   started_at: string;
   target_end_at: string;
   ended_at: string | null;
+  paused_at: string | null;
   completed: number;
   created_at: string;
   updated_at: string;
@@ -27,6 +28,7 @@ const rowToSession = (row: FastingSessionRow): FastingSession => ({
   startedAt: row.started_at,
   targetEndAt: row.target_end_at,
   endedAt: row.ended_at,
+  pausedAt: row.paused_at ?? null,
   completed: row.completed === 1,
   createdAt: row.created_at,
   updatedAt: row.updated_at,
@@ -64,8 +66,8 @@ export const fastingRepository = {
     await db.runAsync(
       `INSERT OR REPLACE INTO fasting_sessions (
         id, user_id, technique, fasting_hours, started_at, target_end_at,
-        ended_at, completed, created_at, updated_at, is_dirty
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)`,
+        ended_at, paused_at, completed, created_at, updated_at, is_dirty
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)`,
       [
         session.id,
         userId,
@@ -74,6 +76,7 @@ export const fastingRepository = {
         session.startedAt,
         session.targetEndAt,
         session.endedAt,
+        session.pausedAt ?? null,
         session.completed ? 1 : 0,
         session.createdAt,
         session.updatedAt,

@@ -1,11 +1,14 @@
 import React from "react";
 import { render, fireEvent, act } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mockGoBack = vi.fn();
 const mockEndSession = vi.fn(() => Promise.resolve(null));
+const mockStartSession = vi.fn();
 
-let mockRouteParams = { sessionId: "session-active" };
+let mockRouteParams: Record<string, unknown> = {
+  sessionId: "session-active",
+};
 
 vi.mock("@react-navigation/native", () => ({
   useNavigation: () => ({
@@ -40,6 +43,7 @@ const mockActiveSession = {
   startedAt: startedAt.toISOString(),
   targetEndAt: targetEndAt.toISOString(),
   endedAt: null as string | null,
+  pausedAt: null as string | null,
   completed: false,
   createdAt: startedAt.toISOString(),
   updatedAt: startedAt.toISOString(),
@@ -53,16 +57,19 @@ const mockEndedSession = {
 };
 
 let mockSessions = [mockActiveSession];
+let mockLoading = false;
 
 vi.mock("@hooks/useFasting", () => ({
   useFasting: () => ({
     sessions: mockSessions,
     activeSession: mockSessions.find((s) => s.endedAt === null) ?? null,
-    loading: false,
+    loading: mockLoading,
     error: null,
     refresh: vi.fn(),
-    startSession: vi.fn(),
+    startSession: mockStartSession,
     endSession: mockEndSession,
+    pauseSession: vi.fn(() => Promise.resolve(null)),
+    resumeSession: vi.fn(() => Promise.resolve(null)),
     updateSession: vi.fn(),
     deleteSession: vi.fn(),
   }),
@@ -109,7 +116,12 @@ describe("FastingScreen", () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     vi.setSystemTime(now);
     mockSessions = [mockActiveSession];
+    mockLoading = false;
     mockRouteParams = { sessionId: "session-active" };
+    mockStartSession.mockResolvedValue({
+      ...mockActiveSession,
+      id: "session-new",
+    });
   });
 
   afterEach(() => {
@@ -148,7 +160,7 @@ describe("FastingScreen", () => {
     expect(getByText("Show Time Remaining")).not.toBeNull();
   });
 
-  it("calls endSession and navigates back when end fast is pressed", async () => {
+  it("calls endSession without navigating back when end fast is pressed", async () => {
     const { getByTestId } = render(<FastingScreen />);
 
     await act(async () => {
@@ -156,13 +168,33 @@ describe("FastingScreen", () => {
     });
 
     expect(mockEndSession).toHaveBeenCalledWith("session-active");
-    expect(mockGoBack).toHaveBeenCalledTimes(1);
+    expect(mockGoBack).not.toHaveBeenCalled();
   });
 
-  it("shows error state when session is not found", () => {
+  it("shows error state when session is not found and no initialSession", () => {
     mockSessions = [];
+    mockRouteParams = { sessionId: "session-unknown" };
     const { getByTestId } = render(<FastingScreen />);
     expect(getByTestId("session-not-found")).not.toBeNull();
+  });
+
+  it("uses initialSession as fallback when session not in hook state", () => {
+    mockSessions = [];
+    mockLoading = false;
+    mockRouteParams = {
+      sessionId: "session-active",
+      initialSession: mockActiveSession,
+    };
+    const { getByTestId } = render(<FastingScreen />);
+    expect(getByTestId("technique-badge").textContent).toBe("16:8");
+  });
+
+  it("shows loading spinner when session not found and still loading", () => {
+    mockSessions = [];
+    mockLoading = true;
+    mockRouteParams = { sessionId: "session-unknown" };
+    const { queryByTestId } = render(<FastingScreen />);
+    expect(queryByTestId("session-not-found")).toBeNull();
   });
 
   it("shows summary view for ended session", () => {
@@ -180,5 +212,47 @@ describe("FastingScreen", () => {
     const { getByTestId } = render(<FastingScreen />);
     fireEvent.click(getByTestId("back-button"));
     expect(mockGoBack).toHaveBeenCalledTimes(1);
+  });
+
+  describe("pre-start flow (technique + fastingHours params)", () => {
+    beforeEach(() => {
+      mockSessions = [];
+      mockRouteParams = { technique: "16:8", fastingHours: 16 };
+    });
+
+    it("shows pre-start view with technique badge and Start Fast button", () => {
+      const { getByTestId, getByText } = render(<FastingScreen />);
+      expect(getByTestId("pre-start-technique-badge").textContent).toBe("16:8");
+      expect(getByText("Ready to Fast?")).not.toBeNull();
+      expect(getByTestId("confirm-start-fast-button")).not.toBeNull();
+    });
+
+    it("calls startSession with technique and hours when Start Fast is pressed", async () => {
+      const { getByTestId } = render(<FastingScreen />);
+
+      await act(async () => {
+        fireEvent.click(getByTestId("confirm-start-fast-button"));
+      });
+
+      expect(mockStartSession).toHaveBeenCalledWith("16:8", 16);
+    });
+
+    it("transitions to active timer view after startSession resolves", async () => {
+      mockSessions = [{ ...mockActiveSession, id: "session-new" }];
+      const { getByTestId, queryByTestId } = render(<FastingScreen />);
+
+      await act(async () => {
+        fireEvent.click(getByTestId("confirm-start-fast-button"));
+      });
+
+      expect(queryByTestId("confirm-start-fast-button")).toBeNull();
+      expect(getByTestId("technique-badge")).not.toBeNull();
+    });
+
+    it("navigates back from pre-start view", () => {
+      const { getByTestId } = render(<FastingScreen />);
+      fireEvent.click(getByTestId("back-button"));
+      expect(mockGoBack).toHaveBeenCalledTimes(1);
+    });
   });
 });

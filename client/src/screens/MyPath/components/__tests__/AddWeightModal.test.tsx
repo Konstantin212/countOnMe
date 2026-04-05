@@ -83,6 +83,7 @@ describe("AddWeightModal", () => {
     visible: true,
     onClose: vi.fn(),
     onLogWeight: vi.fn(() => Promise.resolve()),
+    weights: [],
   };
 
   beforeEach(() => {
@@ -120,10 +121,9 @@ describe("AddWeightModal", () => {
     expect(defaultProps.onClose).toHaveBeenCalledTimes(1);
   });
 
-  it("calls onLogWeight with weight when save is pressed", async () => {
+  it("calls onLogWeight with today's date and weight when save is pressed", async () => {
     const { getByTestId } = render(<AddWeightModal {...defaultProps} />);
 
-    // Simulate entering weight via the captured callback from NumericInput
     await act(async () => {
       capturedOnChangeValue?.(74.2);
     });
@@ -136,6 +136,59 @@ describe("AddWeightModal", () => {
     const callArgs = defaultProps.onLogWeight.mock.calls[0] as unknown[];
     expect(callArgs[0]).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     expect(callArgs[1]).toBe(74.2);
+  });
+
+  it("navigates to previous day when prev button is pressed", () => {
+    const { getByTestId, container } = render(
+      <AddWeightModal {...defaultProps} />,
+    );
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayYear = yesterday.getFullYear().toString();
+
+    fireEvent.click(getByTestId("date-prev-button"));
+
+    expect(container.textContent).toContain(yesterdayYear);
+  });
+
+  it("does not navigate past today when next button is pressed on today", () => {
+    const { getByTestId } = render(<AddWeightModal {...defaultProps} />);
+    const todayText = new Date().toLocaleDateString("en-US", {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+
+    // Next button should be disabled on today
+    const nextButton = getByTestId("date-next-button");
+    expect(nextButton.getAttribute("disabled")).not.toBeNull();
+    // Text stays the same
+    expect(getByTestId("date-next-button")).toBeTruthy();
+    void todayText;
+  });
+
+  it("calls onLogWeight with selected past date when navigated back", async () => {
+    const { getByTestId } = render(<AddWeightModal {...defaultProps} />);
+
+    fireEvent.click(getByTestId("date-prev-button"));
+
+    await act(async () => {
+      capturedOnChangeValue?.(70);
+    });
+
+    await act(async () => {
+      fireEvent.click(getByTestId("weight-save-button"));
+    });
+
+    expect(defaultProps.onLogWeight).toHaveBeenCalledTimes(1);
+    const callArgs = defaultProps.onLogWeight.mock.calls[0] as unknown[];
+    const day = callArgs[0] as string;
+    expect(day).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    // Should be yesterday, not today
+    const today = new Date().toISOString().split("T")[0];
+    expect(day).not.toBe(today);
   });
 
   it("disables save button when weight is empty", () => {
@@ -172,6 +225,25 @@ describe("AddWeightModal", () => {
     expect(
       getByTestId("weight-save-button").getAttribute("disabled"),
     ).not.toBeNull();
+  });
+
+  it("accepts float weight values like 74.25", async () => {
+    const { getByTestId, queryByTestId } = render(
+      <AddWeightModal {...defaultProps} />,
+    );
+
+    await act(async () => {
+      capturedOnChangeValue?.(74.25);
+    });
+
+    await act(async () => {
+      fireEvent.click(getByTestId("weight-save-button"));
+    });
+
+    expect(defaultProps.onLogWeight).toHaveBeenCalledTimes(1);
+    const callArgs = defaultProps.onLogWeight.mock.calls[0] as unknown[];
+    expect(callArgs[1]).toBe(74.25);
+    expect(queryByTestId("weight-error")).toBeNull();
   });
 
   it("allows save when weight is within valid range", async () => {

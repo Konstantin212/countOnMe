@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   Pressable,
   StyleSheet,
@@ -45,6 +45,10 @@ export const WeightMetricWidget = ({
 }: WeightMetricWidgetProps) => {
   const { colors } = useTheme();
   const { width: screenWidth } = useWindowDimensions();
+  const [selectedPoint, setSelectedPoint] = useState<{
+    day: string;
+    weightKg: number;
+  } | null>(null);
 
   const trendColor =
     trend.direction === "down"
@@ -117,12 +121,30 @@ export const WeightMetricWidget = ({
     },
     chartContainer: {
       marginTop: 4,
+      overflow: "hidden",
     },
     emptyText: {
       fontSize: 14,
       color: colors.textSecondary,
       textAlign: "center",
       paddingVertical: 24,
+    },
+    singleEntryWeight: {
+      fontSize: 32,
+      fontWeight: "800",
+      color: colors.text,
+      textAlign: "center",
+    },
+    singleEntryHint: {
+      fontSize: 13,
+      color: colors.textSecondary,
+      textAlign: "center",
+      marginTop: 4,
+    },
+    selectedPointText: {
+      fontSize: 13,
+      color: colors.textSecondary,
+      minHeight: 18,
     },
   });
 
@@ -133,13 +155,28 @@ export const WeightMetricWidget = ({
         )[0]?.weightKg
       : null;
 
-  // Empty state
-  if (weights.length === 0 || trend.dataPoints.length === 0) {
+  // Fully empty state
+  if (weights.length === 0) {
     return (
       <View style={styles.card} testID="weight-metric-widget">
         <Text style={styles.title}>Weight Metric Analysis</Text>
         <Text style={styles.emptyText}>
           Log your first weight to see trends
+        </Text>
+      </View>
+    );
+  }
+
+  // Single entry — show weight but no chart
+  if (trend.dataPoints.length === 0) {
+    return (
+      <View style={styles.card} testID="weight-metric-widget">
+        <Text style={styles.title}>Weight Metric Analysis</Text>
+        <Text style={styles.singleEntryWeight}>
+          {latestWeight?.toFixed(2) ?? "--"} kg
+        </Text>
+        <Text style={styles.singleEntryHint}>
+          Log one more weight to see trends
         </Text>
       </View>
     );
@@ -184,6 +221,12 @@ export const WeightMetricWidget = ({
         </View>
       </View>
 
+      <Text style={styles.selectedPointText}>
+        {selectedPoint
+          ? `${selectedPoint.day}: ${selectedPoint.weightKg.toFixed(2)} kg`
+          : " "}
+      </Text>
+
       <View style={styles.periodRow}>
         {PERIOD_OPTIONS.map((opt) => {
           const isActive = opt.value === period;
@@ -198,7 +241,10 @@ export const WeightMetricWidget = ({
                     : colors.borderLight,
                 },
               ]}
-              onPress={() => onPeriodChange(opt.value)}
+              onPress={() => {
+                onPeriodChange(opt.value);
+                setSelectedPoint(null);
+              }}
               testID={`period-tab-${opt.value}`}
             >
               <Text
@@ -223,6 +269,8 @@ export const WeightMetricWidget = ({
           height={chartHeight}
           color={colors.chartLine}
           thickness={2}
+          curved
+          curvature={0.2}
           hideDataPoints={false}
           dataPointsColor={colors.chartLine}
           dataPointsRadius={3}
@@ -237,6 +285,16 @@ export const WeightMetricWidget = ({
           hideRules={false}
           rulesColor={colors.borderLight}
           rulesType="solid"
+          disableScroll
+          focusEnabled
+          focusedDataPointColor={colors.chartLine}
+          focusedDataPointRadius={6}
+          onFocus={(item: { value: number }, index: number) => {
+            const dp = trend.dataPoints[index];
+            if (dp) {
+              setSelectedPoint({ day: dp.day, weightKg: dp.weightKg });
+            }
+          }}
         />
       </View>
     </View>

@@ -44,7 +44,8 @@ describe("database", () => {
       await initDatabase(db);
 
       expect(db.getFirstAsync).toHaveBeenCalledWith("PRAGMA user_version");
-      expect(db._execCalls.length).toBe(2);
+      // V1 schema + V1 pragma + V2 schema + V2 pragma = 4 exec calls
+      expect(db._execCalls.length).toBe(4);
       expect(db._execCalls[0]).toContain("CREATE TABLE IF NOT EXISTS products");
       expect(db._execCalls[0]).toContain(
         "CREATE TABLE IF NOT EXISTS user_goals",
@@ -72,13 +73,32 @@ describe("database", () => {
         "CREATE TABLE IF NOT EXISTS food_entries",
       );
       expect(db._execCalls[1]).toBe("PRAGMA user_version = 1");
+      expect(db._execCalls[2]).toContain(
+        "CREATE TABLE IF NOT EXISTS fasting_sessions",
+      );
+      expect(db._execCalls[3]).toBe("PRAGMA user_version = 2");
     });
 
-    it("skips schema creation when user_version is >= 1", async () => {
+    it("runs only V2 migration when user_version is 1", async () => {
       const db = createMockDb();
-      // Simulate version already at 1
       (db.getFirstAsync as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         user_version: 1,
+      });
+
+      await initDatabase(db);
+
+      // Only V2 schema + V2 pragma = 2 exec calls
+      expect(db._execCalls.length).toBe(2);
+      expect(db._execCalls[0]).toContain(
+        "CREATE TABLE IF NOT EXISTS fasting_sessions",
+      );
+      expect(db._execCalls[1]).toBe("PRAGMA user_version = 2");
+    });
+
+    it("skips all migrations when user_version is >= 2", async () => {
+      const db = createMockDb();
+      (db.getFirstAsync as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+        user_version: 2,
       });
 
       await initDatabase(db);
@@ -90,12 +110,11 @@ describe("database", () => {
       const db = createMockDb();
 
       await initDatabase(db);
-      // After first init, userVersion is now 1 internally
+      // After first init, userVersion is now 2 internally
       await initDatabase(db);
 
-      // Second call should skip (version already 1)
-      // First call: 2 exec calls (schema + pragma), second: 0
-      expect(db._execCalls.length).toBe(2);
+      // First call: 4 exec calls (V1 schema + V1 pragma + V2 schema + V2 pragma), second: 0
+      expect(db._execCalls.length).toBe(4);
     });
   });
 
@@ -112,6 +131,9 @@ describe("database", () => {
       expect(db.withTransactionAsync).toHaveBeenCalledTimes(1);
 
       const deletedTables = db._runCalls.map((c) => c.sql);
+      expect(deletedTables).toContain(
+        "DELETE FROM fasting_sessions WHERE user_id = ?",
+      );
       expect(deletedTables).toContain(
         "DELETE FROM water_logs WHERE user_id = ?",
       );
@@ -135,11 +157,11 @@ describe("database", () => {
       expect(deletedTables).toContain("DELETE FROM sync_outbox");
       expect(deletedTables).toContain("DELETE FROM sync_cursors");
 
-      // Verify userId is passed as parameter
+      // Verify userId is passed as parameter (8 user-scoped tables)
       const userScopedCalls = db._runCalls.filter(
         (c) => c.args[0] === "user-123",
       );
-      expect(userScopedCalls.length).toBe(7);
+      expect(userScopedCalls.length).toBe(8);
     });
   });
 });

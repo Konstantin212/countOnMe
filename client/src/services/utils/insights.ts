@@ -1,6 +1,11 @@
 import type {
   BodyWeightEntry,
+  ConsistencyDay,
+  ConsistencyResult,
+  ConsistencyWeek,
   DailyStatsPoint,
+  EfficiencyResult,
+  EtaProjection,
   GoalPace,
   MacroAdherence,
   StatsPeriod,
@@ -8,6 +13,7 @@ import type {
   UserGoal,
   WeightChangePace,
   WeightGoalType,
+  WeightTrend,
 } from "@models/types";
 
 /**
@@ -186,10 +192,11 @@ export function deriveGoalPace(
   const actualChange = lastWeight.weightKg - firstWeight.weightKg;
   const actualRate = Math.abs(actualChange / weeksDiff);
 
-  // Calculate expected rate based on pace (already verified non-null for non-maintain goals)
-  const expectedRate = getExpectedWeeklyRate(
-    goal.weightChangePace as WeightChangePace,
-  );
+  // For non-maintain goals, weightChangePace is guaranteed by guard above.
+  // For maintain goals, default to moderate rate (used only if maintain block doesn't early-return).
+  const expectedRate = goal.weightChangePace
+    ? getExpectedWeeklyRate(goal.weightChangePace)
+    : 0.5;
 
   // For 'lose' goals
   if (goal.weightGoalType === "lose") {
@@ -300,4 +307,325 @@ export function calculateWeightDelta(
     remaining,
     percentComplete,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Widget calculation functions
+// ---------------------------------------------------------------------------
+
+/** Stability threshold in kg — changes smaller than this are "stable". */
+const WEIGHT_STABLE_THRESHOLD_KG = 0.3;
+
+/** Minimum days of weight data required for ETA projection. */
+const MIN_DAYS_FOR_ETA = 7;
+
+/** Maximum projected days remaining (cap). */
+const MAX_PROJECTED_DAYS = 365;
+
+/** Efficiency deviation threshold (percent). Below this is "on_target". */
+const EFFICIENCY_ON_TARGET_THRESHOLD = 5;
+
+/** Protein hit threshold — 80% of daily protein goal. */
+const PROTEIN_HIT_RATIO = 0.8;
+
+/** Calorie hit threshold — within 15% of daily calorie goal. */
+const CALORIE_HIT_TOLERANCE = 0.15;
+
+/** Number of weeks in the consistency grid. */
+const CONSISTENCY_WEEKS = 4;
+
+/**
+ * Calculate weight trend over a time period.
+ * @param weights - Array of body weight entries
+ * @param period - Time period ('7d', '30d', '90d')
+ * @param today - Optional date string (YYYY-MM-DD). Defaults to current date.
+ * @returns WeightTrend with direction, change, and data points
+ */
+export function calculateWeightTrend(
+  weights: BodyWeightEntry[],
+  period: StatsPeriod,
+  today?: string,
+): WeightTrend {
+  const { from, to } = getDateRange(period, today);
+
+  const filtered = weights.filter((w) => w.day >= from && w.day <= to);
+
+  if (filtered.length < 2) {
+    return {
+      direction: "stable",
+      changeKg: 0,
+      changePercent: 0,
+      dataPoints: [],
+    };
+  }
+
+  const sorted = [...filtered].sort(
+    (a, b) => new Date(a.day).getTime() - new Date(b.day).getTime(),
+  );
+
+  const firstWeight = sorted[0].weightKg;
+  const lastWeight = sorted[sorted.length - 1].weightKg;
+  const changeKg = lastWeight - firstWeight;
+  const changePercent = (changeKg / firstWeight) * 100;
+
+  const direction =
+    Math.abs(changeKg) < WEIGHT_STABLE_THRESHOLD_KG
+      ? "stable"
+      : changeKg > 0
+        ? "up"
+        : "down";
+
+  const dataPoints = sorted.map((w) => ({ day: w.day, weightKg: w.weightKg }));
+
+  return { direction, changeKg, changePercent, dataPoints };
+}
+
+/**
+ * Calculate estimated time of arrival to goal weight.
+ * @param weights - Array of body weight entries (not necessarily sorted)
+ * @param goal - User's goal with target weight
+ * @param today - Optional date string (YYYY-MM-DD). Defaults to current date.
+ * @returns EtaProjection with target date, days remaining, progress, and on-track flag
+ */
+export function calculateETA(
+  weights: BodyWeightEntry[],
+  goal: UserGoal,
+  today?: string,
+): EtaProjection {
+  const noData: EtaProjection = {
+    targetDate: null,
+    daysRemaining: null,
+    progressPercent: 0,
+    isOnTrack: false,
+  };
+
+  if (weights.length === 0 || goal.targetWeightKg == null) {
+    return noData;
+  }
+
+  const sorted = [...weights].sort(
+    (a, b) => new Date(a.day).getTime() - new Date(b.day).getTime(),
+  );
+
+  const firstWeight = sorted[0].weightKg;
+  const lastWeight = sorted[sorted.length - 1].weightKg;
+  const firstDay = new Date(sorted[0].day);
+  const lastDay = new Date(sorted[sorted.length - 1].day);
+  const daysBetween =
+    (lastDay.getTime() - firstDay.getTime()) / (1000 * 60 * 60 * 24);
+
+  if (daysBetween < MIN_DAYS_FOR_ETA) {
+    return noData;
+  }
+
+  const targetWeight = goal.targetWeightKg;
+  const startWeight = goal.currentWeightKg ?? firstWeight;
+
+  // Calculate progress percent
+  const totalJourney = Math.abs(startWeight - targetWeight);
+  const progressMade = Math.abs(startWeight - lastWeight);
+  const progressPercent =
+    totalJourney === 0
+      ? 100
+      : Math.min((progressMade / totalJourney) * 100, 100);
+
+  // Check if goal already reached
+  const remainingKg = Math.abs(lastWeight - targetWeight);
+  const isLoseGoal = targetWeight < startWeight;
+  const goalReached = isLoseGoal
+    ? lastWeight <= targetWeight
+    : lastWeight >= targetWeight;
+
+  if (goalReached) {
+    return {
+      targetDate: today ?? new Date().toISOString().split("T")[0],
+      daysRemaining: 0,
+      progressPercent: 100,
+      isOnTrack: true,
+    };
+  }
+
+  // Check direction
+  const weightChange = lastWeight - firstWeight;
+  const isRightDirection = isLoseGoal ? weightChange < 0 : weightChange > 0;
+
+  if (!isRightDirection) {
+    return {
+      targetDate: null,
+      daysRemaining: null,
+      progressPercent,
+      isOnTrack: false,
+    };
+  }
+
+  // Calculate daily rate and project
+  const dailyRate = Math.abs(weightChange) / daysBetween;
+  const rawDaysRemaining =
+    dailyRate === 0 ? MAX_PROJECTED_DAYS : remainingKg / dailyRate;
+  const daysRemaining = Math.min(
+    Math.round(rawDaysRemaining),
+    MAX_PROJECTED_DAYS,
+  );
+
+  const todayDate = today ? new Date(today) : new Date();
+  const targetDate = new Date(todayDate);
+  targetDate.setDate(targetDate.getDate() + daysRemaining);
+  const targetDateStr = targetDate.toISOString().split("T")[0];
+
+  return {
+    targetDate: targetDateStr,
+    daysRemaining,
+    progressPercent,
+    isOnTrack: true,
+  };
+}
+
+/**
+ * Calculate calorie efficiency comparing this week to last week.
+ * @param dailyStats - Array of daily stats points
+ * @param goal - User's nutrition goal (unused currently, reserved for future)
+ * @param today - Optional date string (YYYY-MM-DD). Defaults to current date.
+ * @returns EfficiencyResult with deviation percent, direction, and weekly averages
+ */
+export function calculateEfficiency(
+  dailyStats: DailyStatsPoint[],
+  _goal: UserGoal,
+  today?: string,
+): EfficiencyResult {
+  const todayDate = today ? new Date(today) : new Date();
+  const todayStr = todayDate.toISOString().split("T")[0];
+
+  // This week: last 7 days (today - 6 to today)
+  const thisWeekStart = new Date(todayDate);
+  thisWeekStart.setDate(thisWeekStart.getDate() - 6);
+  const thisWeekStartStr = thisWeekStart.toISOString().split("T")[0];
+
+  // Last week: 8-14 days ago (today - 13 to today - 7)
+  const lastWeekEnd = new Date(todayDate);
+  lastWeekEnd.setDate(lastWeekEnd.getDate() - 7);
+  const lastWeekEndStr = lastWeekEnd.toISOString().split("T")[0];
+  const lastWeekStart = new Date(todayDate);
+  lastWeekStart.setDate(lastWeekStart.getDate() - 13);
+  const lastWeekStartStr = lastWeekStart.toISOString().split("T")[0];
+
+  const thisWeekPoints = dailyStats.filter(
+    (p) => p.day >= thisWeekStartStr && p.day <= todayStr,
+  );
+  const lastWeekPoints = dailyStats.filter(
+    (p) => p.day >= lastWeekStartStr && p.day <= lastWeekEndStr,
+  );
+
+  const avgCaloriesThisWeek =
+    thisWeekPoints.length === 0
+      ? 0
+      : thisWeekPoints.reduce((sum, p) => sum + p.calories, 0) /
+        thisWeekPoints.length;
+  const avgCaloriesLastWeek =
+    lastWeekPoints.length === 0
+      ? 0
+      : lastWeekPoints.reduce((sum, p) => sum + p.calories, 0) /
+        lastWeekPoints.length;
+
+  if (avgCaloriesThisWeek === 0 || avgCaloriesLastWeek === 0) {
+    return {
+      deviationPercent: 0,
+      direction: "on_target",
+      avgCaloriesThisWeek,
+      avgCaloriesLastWeek,
+    };
+  }
+
+  const deviationPercent =
+    ((avgCaloriesThisWeek - avgCaloriesLastWeek) / avgCaloriesLastWeek) * 100;
+
+  const direction =
+    Math.abs(deviationPercent) < EFFICIENCY_ON_TARGET_THRESHOLD
+      ? "on_target"
+      : deviationPercent > 0
+        ? "over"
+        : "under";
+
+  return {
+    deviationPercent,
+    direction,
+    avgCaloriesThisWeek,
+    avgCaloriesLastWeek,
+  };
+}
+
+/**
+ * Calculate consistency score and weekly breakdown.
+ * @param dailyStats - Array of daily stats points
+ * @param goal - User's nutrition goal (for protein/calorie targets)
+ * @param today - Optional date string (YYYY-MM-DD). Defaults to current date.
+ * @returns ConsistencyResult with score, weeks grid, and 7-day average intake
+ */
+export function calculateConsistency(
+  dailyStats: DailyStatsPoint[],
+  goal: UserGoal,
+  today?: string,
+): ConsistencyResult {
+  const todayDate = today ? new Date(today) : new Date();
+
+  // Build a lookup map for daily stats by day string
+  const statsMap = new Map<string, DailyStatsPoint>();
+  for (const point of dailyStats) {
+    statsMap.set(point.day, point);
+  }
+
+  const proteinTarget = goal.proteinGrams * PROTEIN_HIT_RATIO;
+  const calorieTolerance = goal.dailyCaloriesKcal * CALORIE_HIT_TOLERANCE;
+
+  // Build 4-week grid (28 days back from today)
+  const totalDays = CONSISTENCY_WEEKS * 7;
+  const allDays: ConsistencyDay[] = [];
+
+  for (let i = totalDays - 1; i >= 0; i--) {
+    const date = new Date(todayDate);
+    date.setDate(date.getDate() - i);
+    const dayStr = date.toISOString().split("T")[0];
+    const stats = statsMap.get(dayStr);
+
+    const proteinHit = stats != null ? stats.protein >= proteinTarget : false;
+    const calorieHit =
+      stats != null
+        ? Math.abs(stats.calories - goal.dailyCaloriesKcal) <= calorieTolerance
+        : false;
+
+    allDays.push({ day: dayStr, proteinHit, calorieHit });
+  }
+
+  // Group into weeks (oldest first)
+  const weeks: ConsistencyWeek[] = [];
+  for (let w = 0; w < CONSISTENCY_WEEKS; w++) {
+    const start = w * 7;
+    const weekDays = allDays.slice(start, start + 7);
+    weeks.push({ weekStart: weekDays[0].day, days: weekDays });
+  }
+
+  // Calculate score: days with BOTH hits / total days with data
+  const daysWithData = allDays.filter((d) => statsMap.has(d.day));
+  const daysWithBothHits = daysWithData.filter(
+    (d) => d.proteinHit && d.calorieHit,
+  );
+  const score =
+    daysWithData.length === 0
+      ? 0
+      : (daysWithBothHits.length / daysWithData.length) * 100;
+
+  // Average intake for last 7 days
+  const last7Start = new Date(todayDate);
+  last7Start.setDate(last7Start.getDate() - 6);
+  const last7StartStr = last7Start.toISOString().split("T")[0];
+  const todayStr = todayDate.toISOString().split("T")[0];
+  const last7Points = dailyStats.filter(
+    (p) => p.day >= last7StartStr && p.day <= todayStr,
+  );
+  const avgIntake7d =
+    last7Points.length === 0
+      ? 0
+      : last7Points.reduce((sum, p) => sum + p.calories, 0) /
+        last7Points.length;
+
+  return { score, weeks, avgIntake7d };
 }

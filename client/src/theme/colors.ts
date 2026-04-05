@@ -67,6 +67,20 @@ export const LightTheme = {
   tabBarActive: "#1E293B",
   tabBarInactive: "#94A3B8",
 
+  // Heatmap colors
+  heatmapHit: "#16A34A",
+  heatmapPartial: "#FCD34D",
+  heatmapMiss: "#FCA5A5",
+  heatmapEmpty: "#F1F5F9",
+
+  // Fasting colors
+  fastingAccent: "#8B5CF6",
+  fastingBg: "#F5F3FF",
+
+  // Efficiency colors
+  efficiencyPositive: "#16A34A",
+  efficiencyNegative: "#DC2626",
+
   // Shadows and overlays
   shadow: "rgba(0, 0, 0, 0.1)",
   overlay: "rgba(0, 0, 0, 0.5)",
@@ -132,6 +146,20 @@ export const DarkTheme = {
   // Specific component colors
   tabBarActive: "#F8FAFC",
   tabBarInactive: "#94A3B8",
+
+  // Heatmap colors
+  heatmapHit: "#22C55E",
+  heatmapPartial: "#FBBF24",
+  heatmapMiss: "#F87171",
+  heatmapEmpty: "#1E293B",
+
+  // Fasting colors
+  fastingAccent: "#A78BFA",
+  fastingBg: "#1E1B4B",
+
+  // Efficiency colors
+  efficiencyPositive: "#22C55E",
+  efficiencyNegative: "#EF4444",
 
   // Shadows and overlays
   shadow: "rgba(0, 0, 0, 0.3)",

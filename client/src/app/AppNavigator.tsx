@@ -38,6 +38,8 @@ import SelectProductScreen from "@screens/AddMealFlow/components/SelectProduct";
 import AddFoodScreen from "@screens/AddMealFlow/components/AddFood";
 import MealTypeEntriesScreen from "@screens/MealFlow/MealTypeEntriesScreen";
 import BarcodeScannerScreen from "@screens/BarcodeFlow/BarcodeScannerScreen";
+import FastingSetupScreen from "@screens/FastingFlow/FastingSetupScreen";
+import FastingScreen from "@screens/FastingFlow/FastingScreen";
 import { DraftMealProvider } from "@screens/AddMealFlow/context";
 import { DatabaseProvider } from "@storage/DatabaseProvider";
 import DiscoverHomeScreen from "@screens/DiscoverFlow/DiscoverHomeScreen";
@@ -200,6 +202,16 @@ const MyPathStackNavigator = () => {
         name="MyPath"
         component={MyPathScreen}
         options={{ headerShown: false }}
+      />
+      <MyPathStack.Screen
+        name="FastingSetup"
+        component={FastingSetupScreen}
+        options={{ title: "Start Fast", headerShown: false }}
+      />
+      <MyPathStack.Screen
+        name="FastingScreen"
+        component={FastingScreen}
+        options={{ title: "Fasting", headerShown: false }}
       />
     </MyPathStack.Navigator>
   );

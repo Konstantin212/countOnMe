@@ -7,6 +7,7 @@ from decimal import Decimal
 from sqlalchemy import Select, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.device import ensure_device_exists
 from app.core.ownership import get_owner_filter
 from app.features.catalog.models import CatalogPortion, CatalogProduct
 from app.features.products.models import Product
@@ -48,6 +49,9 @@ async def create_product(
         )
         if existing is not None:
             return existing
+
+    if device_id is not None:
+        await ensure_device_exists(session, device_id)
 
     product = Product(
         device_id=device_id,

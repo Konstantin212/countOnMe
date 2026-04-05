@@ -3,7 +3,7 @@
 Also adds a UNIQUE constraint on catalog_portions(catalog_product_id, label, base_unit)
 to enable UPSERT in seed scripts (ON DELETE RESTRICT prevents DELETE+INSERT).
 
-Revision ID: 0019_food_entries_catalog_portion
+Revision ID: 0019_food_entry_catalog_ptn
 Revises: 0018_moderation_tables
 Create Date: 2026-03-31
 """
@@ -15,7 +15,7 @@ from sqlalchemy.dialects.postgresql import UUID
 
 from alembic import op
 
-revision = "0019_food_entries_catalog_portion"
+revision = "0019_food_entry_catalog_ptn"
 down_revision = "0018_moderation_tables"
 branch_labels = None
 depends_on = None

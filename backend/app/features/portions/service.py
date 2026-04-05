@@ -6,6 +6,7 @@ from datetime import UTC, datetime
 from sqlalchemy import Select, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.device import ensure_device_exists
 from app.core.ownership import get_owner_filter
 from app.features.portions.models import ProductPortion
 from app.features.products.service import get_product
@@ -64,6 +65,9 @@ async def create_portion(
     is_default: bool,
     device_id: uuid.UUID | None = None,
 ) -> ProductPortion | None:
+    if device_id is not None:
+        await ensure_device_exists(session, device_id)
+
     product = await get_product(session, user_id=user_id, product_id=product_id)
     if product is None:
         return None

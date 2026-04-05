@@ -72,8 +72,6 @@ const ensureProductInBackend = async (product: Product): Promise<void> => {
     productSyncedCache.add(product.id);
   } catch (err) {
     // Product doesn't exist, create it
-    if (__DEV__)
-      console.log("Product not found in backend, creating:", product.name);
     try {
       await apiCreateProduct({ id: product.id, name: product.name });
       productSyncedCache.add(product.id);
@@ -115,10 +113,8 @@ const getOrCreateDefaultPortion = async (
       portionCache.set(productId, defaultPortion.id);
       return defaultPortion.id;
     }
-  } catch (err) {
+  } catch {
     // No portions found, continue to create one
-    if (__DEV__)
-      console.log("No existing portions found for product:", productId);
   }
 
   // Create a default "100g" portion

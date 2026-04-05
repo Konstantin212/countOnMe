@@ -45,12 +45,21 @@ const TextInput = createMockComponent("TextInput");
 // TouchableOpacity / Pressable: map onPress → onClick so fireEvent.click works
 function createPressableMockComponent(name) {
   const component = function (props) {
-    const { testID, children, onPress, onPressIn, onPressOut, style, ...rest } = props || {};
+    const { testID, children, onPress, onPressIn, onPressOut, style, ...rest } =
+      props || {};
     // style may be a function (pressed state) — resolve to plain object for jsdom
-    const resolvedStyle = typeof style === "function" ? style({ pressed: false }) : style;
+    const resolvedStyle =
+      typeof style === "function" ? style({ pressed: false }) : style;
     return React.createElement(
       name.toLowerCase(),
-      { ...rest, style: resolvedStyle, "data-testid": testID, onClick: onPress, onMouseDown: onPressIn, onMouseUp: onPressOut },
+      {
+        ...rest,
+        style: resolvedStyle,
+        "data-testid": testID,
+        onClick: onPress,
+        onMouseDown: onPressIn,
+        onMouseUp: onPressOut,
+      },
       children,
     );
   };
@@ -66,7 +75,15 @@ const SafeAreaView = createMockComponent("SafeAreaView");
 
 // Modal: renders children only when visible is true
 function ModalMock(props) {
-  const { visible, children, testID, transparent, animationType, onRequestClose, ...rest } = props || {};
+  const {
+    visible,
+    children,
+    testID,
+    transparent,
+    animationType,
+    onRequestClose,
+    ...rest
+  } = props || {};
   if (!visible) return null;
   return React.createElement(
     "modal",
@@ -88,6 +105,13 @@ const Dimensions = {
   addEventListener: () => ({ remove: () => {} }),
 };
 
+const useWindowDimensions = () => ({
+  width: 375,
+  height: 812,
+  scale: 2,
+  fontScale: 1,
+});
+
 const Appearance = {
   getColorScheme: () => "light",
   addChangeListener: () => ({ remove: () => {} }),
@@ -103,6 +127,13 @@ const Linking = {
   openURL: () => Promise.resolve(),
   canOpenURL: () => Promise.resolve(true),
   addEventListener: () => ({ remove: () => {} }),
+};
+
+const AppState = {
+  currentState: "active",
+  addEventListener: (type, handler) => {
+    return { remove: () => {} };
+  },
 };
 
 const Animated = {
@@ -141,8 +172,10 @@ module.exports = {
   Dimensions,
   Appearance,
   useColorScheme,
+  useWindowDimensions,
   Alert,
   Linking,
   Animated,
   Modal,
+  AppState,
 };

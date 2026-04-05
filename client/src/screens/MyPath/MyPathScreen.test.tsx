@@ -126,6 +126,10 @@ vi.mock("@hooks/useBodyWeight", () => ({
     weights: [],
     loading: false,
     refresh: vi.fn(() => Promise.resolve()),
+    logWeight: vi.fn(() => Promise.resolve()),
+    updateWeight: vi.fn(),
+    deleteWeight: vi.fn(),
+    error: null,
   }),
 }));
 
@@ -136,6 +140,20 @@ vi.mock("@hooks/useStatsRange", () => ({
     setPeriod: vi.fn(),
     loading: false,
     refresh: vi.fn(() => Promise.resolve()),
+  }),
+}));
+
+vi.mock("@hooks/useFasting", () => ({
+  useFasting: () => ({
+    sessions: [],
+    activeSession: null,
+    loading: false,
+    error: null,
+    refresh: vi.fn(() => Promise.resolve()),
+    startSession: vi.fn(),
+    endSession: vi.fn(),
+    updateSession: vi.fn(),
+    deleteSession: vi.fn(),
   }),
 }));
 
@@ -158,10 +176,24 @@ vi.mock("@hooks/useTheme", () => ({
       shadow: "#000000",
       success: "#059669",
       warning: "#D97706",
+      error: "#DC2626",
       macroProtein: "#2563EB",
       macroCarb: "#D97706",
       macroFat: "#059669",
       buttonText: "#ffffff",
+      chartLine: "#2563EB",
+      efficiencyPositive: "#059669",
+      efficiencyNegative: "#DC2626",
+      heatmapHit: "#059669",
+      heatmapPartial: "#D97706",
+      heatmapMiss: "#DC2626",
+      heatmapEmpty: "#f3f4f6",
+      waterFill: "#2563EB",
+      fastingBg: "#f3f4f6",
+      fastingAccent: "#D97706",
+      textTertiary: "#aaaaaa",
+      disabled: "#cccccc",
+      overlay: "rgba(0,0,0,0.5)",
     },
   }),
 }));
@@ -169,20 +201,29 @@ vi.mock("@hooks/useTheme", () => ({
 // ---------------------------------------------------------------------------
 // Mock child components that have their own heavy dependencies
 // ---------------------------------------------------------------------------
-vi.mock("./components/GoalProgressCard", () => ({
-  GoalProgressCard: () => null,
+vi.mock("./components/WeightMetricWidget", () => ({
+  WeightMetricWidget: () => null,
 }));
-vi.mock("./components/WeightChart", () => ({
-  WeightChart: () => null,
+vi.mock("./components/EtaTrajectoryWidget", () => ({
+  EtaTrajectoryWidget: () => null,
 }));
-vi.mock("./components/CalorieTrendBars", () => ({
-  CalorieTrendBars: () => null,
+vi.mock("./components/EfficiencyWidget", () => ({
+  EfficiencyWidget: () => null,
 }));
-vi.mock("./components/MacroAdherenceCard", () => ({
-  MacroAdherenceCard: () => null,
+vi.mock("./components/ConsistencyWidget", () => ({
+  ConsistencyWidget: () => null,
 }));
-vi.mock("./components/StreaksCard", () => ({
-  StreaksCard: () => null,
+vi.mock("./components/HydrationWidget", () => ({
+  HydrationWidget: () => null,
+}));
+vi.mock("./components/FastingWidget", () => ({
+  FastingWidget: () => null,
+}));
+vi.mock("./components/ActiveCalWidget", () => ({
+  ActiveCalWidget: () => null,
+}));
+vi.mock("./components/AddWeightModal", () => ({
+  AddWeightModal: () => null,
 }));
 
 vi.mock("@components/WaterModal", () => ({
@@ -200,6 +241,18 @@ vi.mock("@hooks/useWaterTracking", () => ({
     deleteWaterLog: vi.fn(),
     refresh: vi.fn(),
   }),
+}));
+
+vi.mock("@services/utils/insights", () => ({
+  calculateWeightTrend: vi.fn(() => ({
+    direction: "stable",
+    changeKg: 0,
+    changePercent: 0,
+    dataPoints: [],
+  })),
+  calculateETA: vi.fn(() => null),
+  calculateEfficiency: vi.fn(() => null),
+  calculateConsistency: vi.fn(() => null),
 }));
 
 // ---------------------------------------------------------------------------
@@ -245,12 +298,14 @@ describe("MyPathScreen — FAB.Group behaviour", () => {
     expect(queryByText("Add product")).toBeNull();
     expect(queryByText("Add water")).toBeNull();
     expect(queryByText("Scan food")).toBeNull();
+    expect(queryByText("Log weight")).toBeNull();
+    expect(queryByText("Start fast")).toBeNull();
   });
 
   // -------------------------------------------------------------------------
-  // 2. FAB opens on press
+  // 2. FAB opens on press and shows 6 action items
   // -------------------------------------------------------------------------
-  it("opens the FAB group and shows 4 action items when the main button is pressed", async () => {
+  it("opens the FAB group and shows 6 action items when the main button is pressed", async () => {
     const { getByTestId, getByText } = render(<MyPathScreen />);
 
     const mainButton = getByTestId("fab-main-button");
@@ -259,17 +314,19 @@ describe("MyPathScreen — FAB.Group behaviour", () => {
       fireEvent.click(mainButton);
     });
 
-    // All 4 actions should now be visible
+    // All 6 actions should now be visible
     expect(getByText("Add meal")).not.toBeNull();
     expect(getByText("Add product")).not.toBeNull();
     expect(getByText("Add water")).not.toBeNull();
     expect(getByText("Scan food")).not.toBeNull();
+    expect(getByText("Log weight")).not.toBeNull();
+    expect(getByText("Start fast")).not.toBeNull();
   });
 
   // -------------------------------------------------------------------------
-  // 3. All 4 action labels are present when the group is open
+  // 3. All 6 action labels are present when the group is open
   // -------------------------------------------------------------------------
-  it("renders exactly the 4 expected action labels when open", async () => {
+  it("renders exactly the 6 expected action labels when open", async () => {
     const { getByTestId, getByText } = render(<MyPathScreen />);
 
     await act(async () => {
@@ -280,6 +337,8 @@ describe("MyPathScreen — FAB.Group behaviour", () => {
     expect(getByText("Add product")).not.toBeNull();
     expect(getByText("Add water")).not.toBeNull();
     expect(getByText("Scan food")).not.toBeNull();
+    expect(getByText("Log weight")).not.toBeNull();
+    expect(getByText("Start fast")).not.toBeNull();
   });
 
   // -------------------------------------------------------------------------
@@ -353,5 +412,32 @@ describe("MyPathScreen — FAB.Group behaviour", () => {
     expect(mockParentNavigate).toHaveBeenCalledWith("MyDayTab", {
       screen: "AddMeal",
     });
+  });
+});
+
+describe("MyPathScreen — new FAB actions", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    setIsFocused(true);
+    const parentNav = { addListener: vi.fn(() => vi.fn()) };
+    mockGetParent.mockReturnValue(parentNav);
+    mockAddListener.mockReturnValue(vi.fn());
+  });
+
+  // -------------------------------------------------------------------------
+  // "Start fast" navigates to FastingSetup when no active session
+  // -------------------------------------------------------------------------
+  it("navigates to FastingSetup when 'Start fast' is pressed with no active session", async () => {
+    const { getByTestId } = render(<MyPathScreen />);
+
+    await act(async () => {
+      fireEvent.click(getByTestId("fab-main-button"));
+    });
+
+    await act(async () => {
+      fireEvent.click(getByTestId("fab-action-Start fast"));
+    });
+
+    expect(mockNavigate).toHaveBeenCalledWith("FastingSetup");
   });
 });

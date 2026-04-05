@@ -9,6 +9,7 @@ from decimal import Decimal
 from sqlalchemy import Select, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.device import ensure_device_exists
 from app.core.enums import GoalType
 from app.core.ownership import get_owner_filter
 from app.features.goals.calculation import (
@@ -64,6 +65,9 @@ async def create_calculated_goal(
     device_id: uuid.UUID | None = None,
 ) -> UserGoal:
     """Create a calculated goal from body metrics."""
+    if device_id is not None:
+        await ensure_device_exists(session, device_id)
+
     # Perform full calculation
     calc = calculate_full_goal(
         gender=data.gender,
@@ -135,6 +139,8 @@ async def create_manual_goal(
     device_id: uuid.UUID | None = None,
 ) -> UserGoal:
     """Create a manual goal with direct calorie/macro input."""
+    if device_id is not None:
+        await ensure_device_exists(session, device_id)
     # Calculate macro grams
     macros = calculate_macros_for_manual(
         data.daily_calories_kcal,

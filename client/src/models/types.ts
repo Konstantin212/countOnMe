@@ -357,3 +357,69 @@ export type SharedFoodImportResult = {
   productId: string;
   portionCount: number;
 };
+
+// ---------------------------------------------------------------------------
+// Fasting
+// ---------------------------------------------------------------------------
+
+export type FastingTechnique = "16:8" | "18:6" | "20:4" | "custom";
+
+export type FastingSession = {
+  id: string;
+  technique: FastingTechnique;
+  fastingHours: number;
+  startedAt: string; // ISO date string
+  targetEndAt: string; // ISO date string
+  endedAt: string | null;
+  completed: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+// ---------------------------------------------------------------------------
+// Widget Calculation Results
+// ---------------------------------------------------------------------------
+
+/** Weight trend analysis over a time period. */
+export type WeightTrend = {
+  direction: "up" | "down" | "stable";
+  changeKg: number;
+  changePercent: number;
+  dataPoints: Array<{ day: string; weightKg: number }>;
+};
+
+/** Estimated time of arrival to goal weight. */
+export type EtaProjection = {
+  targetDate: string | null; // ISO date string
+  daysRemaining: number | null;
+  progressPercent: number;
+  isOnTrack: boolean;
+};
+
+/** Calorie efficiency comparing this week to last week. */
+export type EfficiencyResult = {
+  deviationPercent: number;
+  direction: "over" | "under" | "on_target";
+  avgCaloriesThisWeek: number;
+  avgCaloriesLastWeek: number;
+};
+
+/** Single day in the consistency grid. */
+export type ConsistencyDay = {
+  day: string;
+  proteinHit: boolean;
+  calorieHit: boolean;
+};
+
+/** One week of consistency tracking. */
+export type ConsistencyWeek = {
+  weekStart: string;
+  days: ConsistencyDay[];
+};
+
+/** Consistency score and weekly breakdown. */
+export type ConsistencyResult = {
+  score: number; // 0-100 percentage
+  weeks: ConsistencyWeek[];
+  avgIntake7d: number;
+};

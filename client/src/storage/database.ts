@@ -214,6 +214,34 @@ CREATE TABLE IF NOT EXISTS sync_cursors (
 `;
 
 // ---------------------------------------------------------------------------
+// Schema v2 — Fasting sessions table
+// ---------------------------------------------------------------------------
+
+export const SCHEMA_V2 = `
+CREATE TABLE IF NOT EXISTS fasting_sessions (
+    id                    TEXT PRIMARY KEY,
+    user_id               TEXT NOT NULL,
+    technique             TEXT NOT NULL,
+    fasting_hours         INTEGER NOT NULL,
+    started_at            TEXT NOT NULL,
+    target_end_at         TEXT NOT NULL,
+    ended_at              TEXT,
+    completed             INTEGER NOT NULL DEFAULT 0,
+    created_at            TEXT NOT NULL,
+    updated_at            TEXT NOT NULL,
+    deleted_at            TEXT,
+    server_updated_at     TEXT,
+    last_synced_at        TEXT,
+    is_dirty              INTEGER NOT NULL DEFAULT 1,
+    created_on_device_id  TEXT,
+    updated_on_device_id  TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_fasting_sessions_user_id ON fasting_sessions(user_id);
+CREATE INDEX IF NOT EXISTS idx_fasting_sessions_dirty ON fasting_sessions(is_dirty) WHERE is_dirty = 1;
+`;
+
+// ---------------------------------------------------------------------------
 // Initialisation
 // ---------------------------------------------------------------------------
 
@@ -231,6 +259,11 @@ export const initDatabase = async (db: Database): Promise<void> => {
   if (currentVersion < 1) {
     await db.execAsync(SCHEMA_V1);
     await db.execAsync("PRAGMA user_version = 1");
+  }
+
+  if (currentVersion < 2) {
+    await db.execAsync(SCHEMA_V2);
+    await db.execAsync("PRAGMA user_version = 2");
   }
 };
 
@@ -252,6 +285,7 @@ export const clearAllUserData = async (
   userId: string,
 ): Promise<void> => {
   await db.withTransactionAsync(async () => {
+    await db.runAsync("DELETE FROM fasting_sessions WHERE user_id = ?", userId);
     await db.runAsync("DELETE FROM water_logs WHERE user_id = ?", userId);
     await db.runAsync("DELETE FROM body_weights WHERE user_id = ?", userId);
     await db.runAsync("DELETE FROM user_goals WHERE user_id = ?", userId);

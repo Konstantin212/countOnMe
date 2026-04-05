@@ -24,6 +24,7 @@ from app.core.db import Base, get_session
 from app.features.auth.models import Device, User, UserDevice
 from app.features.auth.service import SUPABASE_MANAGED_HASH
 from app.features.catalog.models import CatalogPortion, CatalogProduct
+from app.features.fasting.models import FastingSession
 from app.features.goals.models import UserGoal
 from app.features.meals.models import FoodEntry
 from app.features.moderation.models import ContentReport, UserBlock
@@ -87,7 +88,7 @@ async def test_engine() -> AsyncIterator[AsyncEngine]:
     engine = create_async_engine(TEST_DATABASE_URL, echo=False, pool_pre_ping=True)
 
     # Import all models to ensure they're registered with Base
-    _ = (Device, User, UserDevice, Product, ProductPortion, FoodEntry, UserGoal, BodyWeight, WaterLog, CatalogProduct, CatalogPortion, SharedFood, SharedFoodPortion, ContentReport, UserBlock)
+    _ = (Device, User, UserDevice, Product, ProductPortion, FoodEntry, UserGoal, BodyWeight, WaterLog, CatalogProduct, CatalogPortion, SharedFood, SharedFoodPortion, ContentReport, UserBlock, FastingSession)
 
     # Create schema (reuse existing enums if they exist)
     async with engine.begin() as conn:
@@ -209,6 +210,7 @@ async def test_engine() -> AsyncIterator[AsyncEngine]:
         sync_tables = [
             "products", "product_portions", "food_entries",
             "user_goals", "body_weights", "water_logs",
+            "fasting_sessions",
         ]
         for tbl in sync_tables:
             await conn.execute(
@@ -258,6 +260,15 @@ async def test_engine() -> AsyncIterator[AsyncEngine]:
                 END $$;
                 """)
             )
+
+        # Partial unique index: only one active fasting session per user
+        await conn.execute(
+            text("""
+            CREATE UNIQUE INDEX IF NOT EXISTS uq_fasting_sessions_one_active_per_user
+            ON fasting_sessions (user_id)
+            WHERE ended_at IS NULL AND deleted_at IS NULL;
+            """)
+        )
 
     yield engine
 

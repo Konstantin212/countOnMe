@@ -8,6 +8,7 @@ Create Date: 2026-03-26
 from __future__ import annotations
 
 import sqlalchemy as sa
+from sqlalchemy.dialects import postgresql
 
 from alembic import op
 
@@ -41,7 +42,7 @@ def upgrade() -> None:
         sa.Column("target_shared_food_id", sa.UUID(), nullable=False),
         sa.Column(
             "reason",
-            sa.Enum("inaccurate", "spam", "offensive", "other", name="report_reason_enum", create_type=False),
+            postgresql.ENUM("inaccurate", "spam", "offensive", "other", name="report_reason_enum", create_type=False),
             nullable=False,
         ),
         sa.Column("detail", sa.Text(), nullable=True),

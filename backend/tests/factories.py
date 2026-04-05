@@ -12,6 +12,7 @@ from app.core.enums import MealType, ModerationStatus, ReportReason, Unit, Visib
 from app.features.auth.models import Device, User, UserDevice
 from app.features.auth.service import issue_device_token
 from app.features.catalog.models import CatalogPortion, CatalogProduct
+from app.features.fasting.models import FastingSession
 from app.features.goals.models import UserGoal
 from app.features.meals.models import FoodEntry
 from app.features.moderation.models import ContentReport, UserBlock
@@ -410,3 +411,37 @@ async def create_user_block(
     await session.flush()
     await session.refresh(block)
     return block
+
+
+async def create_fasting_session(
+    session: AsyncSession,
+    *,
+    user_id: uuid.UUID,
+    device_id: uuid.UUID | None = None,
+    **overrides,
+) -> FastingSession:
+    """Create a test fasting session."""
+    from datetime import timedelta
+
+    started_at = overrides.pop("started_at", datetime.now(UTC))
+    fasting_hours = overrides.pop("fasting_hours", 16)
+    target_end_at = overrides.pop("target_end_at", started_at + timedelta(hours=fasting_hours))
+
+    defaults: dict = {
+        "user_id": user_id,
+        "device_id": device_id,
+        "created_on_device_id": device_id,
+        "technique": "16:8",
+        "fasting_hours": fasting_hours,
+        "started_at": started_at,
+        "target_end_at": target_end_at,
+        "ended_at": None,
+        "completed": False,
+    }
+    defaults.update(overrides)
+
+    row = FastingSession(**defaults)
+    session.add(row)
+    await session.flush()
+    await session.refresh(row)
+    return row

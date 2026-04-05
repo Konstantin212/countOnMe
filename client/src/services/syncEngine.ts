@@ -1,5 +1,6 @@
 import type {
   BodyWeightEntry,
+  FastingSession,
   Product,
   UserGoal,
   WaterLog,
@@ -17,6 +18,7 @@ import {
   goalRepository,
   bodyWeightRepository,
   waterLogRepository,
+  fastingRepository,
   outboxRepository,
   syncCursorRepository,
 } from "@storage/repositories";
@@ -279,6 +281,45 @@ const mergeWaterLogs = async (
   }
 };
 
+const mergeFastingSessions = async (
+  db: Database,
+  userId: string,
+  items: SyncItem[],
+): Promise<void> => {
+  for (const item of items) {
+    if (item.deletedAt) {
+      await fastingRepository.markDeleted(db, item.id);
+      continue;
+    }
+
+    const { data } = item;
+
+    if (
+      typeof data.technique !== "string" ||
+      typeof data.fasting_hours !== "number"
+    ) {
+      continue;
+    }
+
+    const session: FastingSession = {
+      id: item.id,
+      technique: asString(
+        data.technique,
+        "custom",
+      ) as FastingSession["technique"],
+      fastingHours: asNumber(data.fasting_hours, 0),
+      startedAt: asString(data.started_at, item.updatedAt),
+      targetEndAt: asString(data.target_end_at, item.updatedAt),
+      endedAt: asOptionalString(data.ended_at) ?? null,
+      completed: data.completed === true || data.completed === 1,
+      createdAt: asString(data.created_at, item.updatedAt),
+      updatedAt: item.updatedAt,
+    };
+
+    await fastingRepository.upsert(db, userId, session);
+  }
+};
+
 const applyDeltas = async (
   db: Database,
   userId: string,
@@ -304,6 +345,9 @@ const applyDeltas = async (
   }
   if (grouped["water_log"]) {
     await mergeWaterLogs(db, userId, grouped["water_log"]);
+  }
+  if (grouped["fasting_session"]) {
+    await mergeFastingSessions(db, userId, grouped["fasting_session"]);
   }
 };
 

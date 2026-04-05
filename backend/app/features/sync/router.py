@@ -11,11 +11,13 @@ from app.core.db import get_session
 from app.core.deps import get_current_user_id, get_optional_device_id
 from app.features.sync.schemas import (
     BodyWeightChanges,
+    FastingSessionChanges,
     FoodEntryChanges,
     GoalChanges,
     PortionChanges,
     ProductChanges,
     SyncBodyWeight,
+    SyncFastingSession,
     SyncFoodEntry,
     SyncPortion,
     SyncProduct,
@@ -38,6 +40,7 @@ _ENTITY_SCHEMA_MAP: dict[str, tuple[type, type]] = {
     "goals": (GoalChanges, SyncUserGoal),
     "body_weights": (BodyWeightChanges, SyncBodyWeight),
     "water_logs": (WaterLogChanges, SyncWaterLog),
+    "fasting_sessions": (FastingSessionChanges, SyncFastingSession),
 }
 
 
@@ -67,6 +70,7 @@ def _build_pull_response(
         goals=result.get("goals", GoalChanges()),
         body_weights=result.get("body_weights", BodyWeightChanges()),
         water_logs=result.get("water_logs", WaterLogChanges()),
+        fasting_sessions=result.get("fasting_sessions", FastingSessionChanges()),
         sync_cursor=cursor,
         has_more=has_more,
     )

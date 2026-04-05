@@ -11,6 +11,7 @@ which Alembic cannot manage natively. We use raw SQL for that step.
 from __future__ import annotations
 
 import sqlalchemy as sa
+from sqlalchemy.dialects import postgresql
 
 from alembic import op
 
@@ -56,13 +57,13 @@ def upgrade() -> None:
         sa.Column("category", sa.Text(), nullable=True),
         sa.Column(
             "visibility",
-            sa.Enum("private", "unlisted", "public", name="visibility_enum", create_type=False),
+            postgresql.ENUM("private", "unlisted", "public", name="visibility_enum", create_type=False),
             server_default="private",
             nullable=False,
         ),
         sa.Column(
             "moderation_status",
-            sa.Enum("pending", "approved", "rejected", name="moderation_status_enum", create_type=False),
+            postgresql.ENUM("pending", "approved", "rejected", name="moderation_status_enum", create_type=False),
             server_default="pending",
             nullable=False,
         ),
@@ -104,7 +105,7 @@ def upgrade() -> None:
         sa.Column("base_amount", sa.Numeric(12, 3), nullable=False),
         sa.Column(
             "base_unit",
-            sa.Enum(
+            postgresql.ENUM(
                 "mg", "g", "kg", "ml", "l", "tsp", "tbsp", "cup", "pcs", "serving",
                 name="unit_enum",
                 create_type=False,

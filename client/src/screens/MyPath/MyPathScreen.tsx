@@ -19,20 +19,24 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useTheme } from "@hooks/useTheme";
 import { useGoal } from "@hooks/useGoal";
 import { useWaterTracking } from "@hooks/useWaterTracking";
-import { WaterModal } from "@components/WaterModal";
 import { useBodyWeight } from "@hooks/useBodyWeight";
 import { useStatsRange } from "@hooks/useStatsRange";
+import { useFasting } from "@hooks/useFasting";
+import { WaterModal } from "@components/WaterModal";
 import {
-  calculateStreak,
-  calculateMacroAdherence,
-  deriveGoalPace,
-  calculateWeightDelta,
+  calculateWeightTrend,
+  calculateETA,
+  calculateEfficiency,
+  calculateConsistency,
 } from "@services/utils/insights";
-import { GoalProgressCard } from "./components/GoalProgressCard";
-import { WeightChart } from "./components/WeightChart";
-import { CalorieTrendBars } from "./components/CalorieTrendBars";
-import { MacroAdherenceCard } from "./components/MacroAdherenceCard";
-import { StreaksCard } from "./components/StreaksCard";
+import { WeightMetricWidget } from "./components/WeightMetricWidget";
+import { EtaTrajectoryWidget } from "./components/EtaTrajectoryWidget";
+import { EfficiencyWidget } from "./components/EfficiencyWidget";
+import { ConsistencyWidget } from "./components/ConsistencyWidget";
+import { HydrationWidget } from "./components/HydrationWidget";
+import { FastingWidget } from "./components/FastingWidget";
+import { ActiveCalWidget } from "./components/ActiveCalWidget";
+import { AddWeightModal } from "./components/AddWeightModal";
 import type {
   MyPathStackParamList,
   RootTabParamList,
@@ -47,6 +51,8 @@ const MyPathScreen = () => {
   const isFocused = useIsFocused();
   const [fabOpen, setFabOpen] = useState(false);
   const [waterModalVisible, setWaterModalVisible] = useState(false);
+  const [weightModalVisible, setWeightModalVisible] = useState(false);
+  const [weightPeriod, setWeightPeriod] = useState<StatsPeriod>("7d");
   const backdropColor = colors.background;
 
   // Hooks
@@ -55,35 +61,36 @@ const MyPathScreen = () => {
     weights,
     loading: weightsLoading,
     refresh: refreshWeights,
+    logWeight,
   } = useBodyWeight();
   const {
     dailyStats,
-    period,
-    setPeriod,
     loading: statsLoading,
     refresh: refreshStats,
   } = useStatsRange();
-  const { todayTotal, waterGoal, addWater, removeWater } = useWaterTracking(goal?.waterMl);
+  const { todayTotal, waterGoal, addWater, removeWater } = useWaterTracking(
+    goal?.waterMl,
+  );
+  const { activeSession, refresh: refreshFasting } = useFasting();
 
   // Derived data
-  const weightDelta = goal ? calculateWeightDelta(weights, goal) : null;
-  const pace = goal ? deriveGoalPace(weights, goal) : "no_data";
-  const trackedDays = dailyStats.map((s) => s.day);
-  const streak = calculateStreak(trackedDays);
-  const adherence = goal
-    ? calculateMacroAdherence(dailyStats, goal)
-    : { protein: 0, carbs: 0, fat: 0 };
-  const latestWeight =
-    weights.length > 0 ? weights[weights.length - 1].weightKg : null;
-  const calorieGoal = goal?.dailyCaloriesKcal ?? 2000;
+  const trend = calculateWeightTrend(weights, weightPeriod);
+  const eta = goal ? calculateETA(weights, goal) : null;
+  const efficiency = goal ? calculateEfficiency(dailyStats, goal) : null;
+  const consistency = goal ? calculateConsistency(dailyStats, goal) : null;
 
   // Loading state
   const isLoading = goalLoading || weightsLoading || statsLoading;
 
   // Refresh all data
   const handleRefresh = useCallback(async () => {
-    await Promise.all([refreshGoal(), refreshWeights(), refreshStats()]);
-  }, [refreshGoal, refreshWeights, refreshStats]);
+    await Promise.all([
+      refreshGoal(),
+      refreshWeights(),
+      refreshStats(),
+      refreshFasting(),
+    ]);
+  }, [refreshGoal, refreshWeights, refreshStats, refreshFasting]);
 
   // Close FAB on navigation events
   useEffect(() => {
@@ -103,16 +110,20 @@ const MyPathScreen = () => {
     };
   }, [navigation]);
 
-  // Handle period selection
-  const handlePeriodChange = (newPeriod: StatsPeriod) => {
-    setPeriod(newPeriod);
-  };
-
   // Handle goal setup navigation
   const handleSetupGoal = () => {
     navigation
       .getParent<BottomTabNavigationProp<RootTabParamList>>()
       ?.navigate("ProfileTab", { screen: "GoalSetup" });
+  };
+
+  // Handle fasting press
+  const handleFastingPress = () => {
+    if (activeSession) {
+      navigation.navigate("FastingScreen", { sessionId: activeSession.id });
+    } else {
+      navigation.navigate("FastingSetup");
+    }
   };
 
   const styles = StyleSheet.create({
@@ -133,36 +144,13 @@ const MyPathScreen = () => {
       fontWeight: "800",
       color: colors.text,
     },
-    periodSelector: {
+    row: {
       flexDirection: "row",
-      gap: 8,
-      marginBottom: 8,
+      gap: 12,
     },
-    periodButton: {
-      flex: 1,
-      paddingVertical: 10,
-      paddingHorizontal: 16,
-      borderRadius: 8,
-      alignItems: "center",
-      borderWidth: 1,
-    },
-    periodButtonActive: {
-      backgroundColor: colors.primary,
-      borderColor: colors.primary,
-    },
-    periodButtonInactive: {
-      backgroundColor: colors.background,
-      borderColor: colors.border,
-    },
-    periodTextActive: {
-      fontSize: 14,
-      fontWeight: "600",
-      color: colors.buttonText,
-    },
-    periodTextInactive: {
-      fontSize: 14,
-      fontWeight: "600",
-      color: colors.textSecondary,
+    halfRow: {
+      flexDirection: "row",
+      gap: 12,
     },
     fabOverlay: {
       ...StyleSheet.absoluteFillObject,
@@ -193,91 +181,35 @@ const MyPathScreen = () => {
             <Text style={styles.title}>My Path</Text>
           </View>
 
-          <GoalProgressCard
-            goal={goal}
-            weightDelta={weightDelta}
-            pace={pace}
-            latestWeight={latestWeight}
-            onSetupGoal={handleSetupGoal}
+          <WeightMetricWidget
+            weights={weights}
+            trend={trend}
+            period={weightPeriod}
+            onPeriodChange={setWeightPeriod}
           />
 
-          <View style={styles.periodSelector}>
-            <Pressable
-              style={[
-                styles.periodButton,
-                period === "7d"
-                  ? styles.periodButtonActive
-                  : styles.periodButtonInactive,
-              ]}
-              onPress={() => handlePeriodChange("7d")}
-              testID="period-7d"
-            >
-              <Text
-                style={
-                  period === "7d"
-                    ? styles.periodTextActive
-                    : styles.periodTextInactive
-                }
-              >
-                7 Days
-              </Text>
-            </Pressable>
-
-            <Pressable
-              style={[
-                styles.periodButton,
-                period === "30d"
-                  ? styles.periodButtonActive
-                  : styles.periodButtonInactive,
-              ]}
-              onPress={() => handlePeriodChange("30d")}
-              testID="period-30d"
-            >
-              <Text
-                style={
-                  period === "30d"
-                    ? styles.periodTextActive
-                    : styles.periodTextInactive
-                }
-              >
-                30 Days
-              </Text>
-            </Pressable>
-
-            <Pressable
-              style={[
-                styles.periodButton,
-                period === "90d"
-                  ? styles.periodButtonActive
-                  : styles.periodButtonInactive,
-              ]}
-              onPress={() => handlePeriodChange("90d")}
-              testID="period-90d"
-            >
-              <Text
-                style={
-                  period === "90d"
-                    ? styles.periodTextActive
-                    : styles.periodTextInactive
-                }
-              >
-                90 Days
-              </Text>
-            </Pressable>
+          <View style={styles.row}>
+            <EtaTrajectoryWidget
+              eta={eta}
+              goal={goal}
+              onSetupGoal={handleSetupGoal}
+            />
+            <EfficiencyWidget efficiency={efficiency} />
           </View>
 
-          <WeightChart
-            weights={weights}
-            targetWeight={goal?.targetWeightKg}
-            healthyMin={goal?.healthyWeightMinKg}
-            healthyMax={goal?.healthyWeightMaxKg}
-          />
+          <ConsistencyWidget consistency={consistency} />
 
-          <CalorieTrendBars dailyStats={dailyStats} calorieGoal={calorieGoal} />
+          <View style={styles.row}>
+            <HydrationWidget todayTotal={todayTotal} waterGoal={waterGoal} />
+            <FastingWidget
+              activeSession={activeSession}
+              onPress={handleFastingPress}
+            />
+          </View>
 
-          {goal && <MacroAdherenceCard adherence={adherence} goal={goal} />}
-
-          <StreaksCard streak={streak} />
+          <View style={styles.halfRow}>
+            <ActiveCalWidget />
+          </View>
         </ScrollView>
       )}
 
@@ -324,6 +256,16 @@ const MyPathScreen = () => {
                   .getParent<BottomTabNavigationProp<RootTabParamList>>()
                   ?.navigate("MyDayTab", { screen: "BarcodeScanner" }),
             },
+            {
+              icon: "scale-bathroom",
+              label: "Log weight",
+              onPress: () => setWeightModalVisible(true),
+            },
+            {
+              icon: "timer-outline",
+              label: "Start fast",
+              onPress: () => handleFastingPress(),
+            },
           ]}
           onStateChange={({ open }) => setFabOpen(open)}
           onPress={() => {
@@ -345,6 +287,14 @@ const MyPathScreen = () => {
         onAddWater={addWater}
         onRemoveWater={removeWater}
         onClose={() => setWaterModalVisible(false)}
+      />
+
+      <AddWeightModal
+        visible={weightModalVisible}
+        onClose={() => setWeightModalVisible(false)}
+        onLogWeight={async (day, weightKg) => {
+          await logWeight(day, weightKg);
+        }}
       />
     </SafeAreaView>
   );

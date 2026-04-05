@@ -9,7 +9,7 @@ Also fixes the "Function Search Path Mutable" advisory on set_sync_version
 by pinning its search_path.
 
 Revision ID: 0020_enable_rls_all_tables
-Revises: 0019_food_entries_catalog_portion
+Revises: 0019_food_entry_catalog_ptn
 Create Date: 2026-04-04
 """
 
@@ -18,7 +18,7 @@ from __future__ import annotations
 from alembic import op
 
 revision = "0020_enable_rls_all_tables"
-down_revision = "0019_food_entries_catalog_portion"
+down_revision = "0019_food_entry_catalog_ptn"
 branch_labels = None
 depends_on = None
 

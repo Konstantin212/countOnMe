@@ -35,6 +35,8 @@ export type MyDayStackParamList = {
 
 export type MyPathStackParamList = {
   MyPath: undefined;
+  FastingSetup: undefined;
+  FastingScreen: { sessionId: string };
 };
 
 export type AuthStackParamList = {

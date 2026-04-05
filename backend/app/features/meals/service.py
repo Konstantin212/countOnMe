@@ -7,6 +7,7 @@ from decimal import Decimal
 from sqlalchemy import Select, select, tuple_
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.device import ensure_device_exists
 from app.core.ownership import get_owner_filter
 from app.features.catalog.models import CatalogPortion, CatalogProduct
 from app.features.meals.models import FoodEntry
@@ -66,6 +67,9 @@ async def create_food_entry(
     unit: str,
     device_id: uuid.UUID | None = None,
 ) -> FoodEntry | None:
+    if device_id is not None:
+        await ensure_device_exists(session, device_id)
+
     if catalog_portion_id is not None:
         # Catalog path: validate portion exists (global, no device scoping)
         cat_portion = await _get_catalog_portion(session, catalog_portion_id)

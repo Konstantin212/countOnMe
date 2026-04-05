@@ -11,11 +11,11 @@ from app.core.schemas import APIModel
 
 class BodyWeightCreateRequest(APIModel):
     day: date
-    weight_kg: Decimal = Field(gt=0)
+    weight_kg: Decimal = Field(gt=0, le=700)
 
 
 class BodyWeightUpdateRequest(APIModel):
-    weight_kg: Decimal = Field(gt=0)
+    weight_kg: Decimal = Field(gt=0, le=700)
 
 
 class BodyWeightResponse(APIModel):

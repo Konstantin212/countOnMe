@@ -1,6 +1,6 @@
 """Sync service — unified delta queries for sync pull + batch push with LWW.
 
-Pull: Returns changes across all 6 syncable entity types since a given
+Pull: Returns changes across all 7 syncable entity types since a given
 sync_version, ordered globally by sync_version.  Soft-deleted rows are
 included so the client can reconcile deletions.
 
@@ -20,7 +20,9 @@ from sqlalchemy import inspect as sa_inspect
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.device import ensure_device_exists
 from app.core.ownership import get_owner_filter
+from app.features.fasting.models import FastingSession
 from app.features.goals.models import UserGoal
 from app.features.meals.models import FoodEntry
 from app.features.portions.models import ProductPortion
@@ -48,6 +50,7 @@ SYNCABLE_MODELS: dict[str, type] = {
     "goals": UserGoal,
     "body_weights": BodyWeight,
     "water_logs": WaterLog,
+    "fasting_sessions": FastingSession,
 }
 
 # Fields each entity type accepts from push data dict.
@@ -72,6 +75,10 @@ _PUSH_FIELDS: dict[str, set[str]] = {
         "current_bmi", "bmi_category",
     },
     "water_logs": {"day", "amount_ml"},
+    "fasting_sessions": {
+        "technique", "fasting_hours", "started_at", "target_end_at",
+        "ended_at", "completed",
+    },
 }
 
 # Dependency order for push — parents first so FK references exist.
@@ -82,6 +89,7 @@ _PROCESS_ORDER = [
     "body_weights",
     "goals",
     "water_logs",
+    "fasting_sessions",
 ]
 
 # ===================================================================
@@ -400,6 +408,9 @@ async def process_push(
 
     All mutations run in the current session and are committed at the end.
     """
+    if device_id is not None:
+        await ensure_device_exists(session, device_id)
+
     sorted_mutations = _sort_mutations(mutations)
     results: list[MutationResult] = []
 

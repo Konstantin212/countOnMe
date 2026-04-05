@@ -6,6 +6,7 @@ from datetime import UTC, date, datetime
 from sqlalchemy import Select, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.device import ensure_device_exists
 from app.core.ownership import get_owner_filter
 from app.features.water.models import WaterLog
 
@@ -22,6 +23,9 @@ async def create_water_log(
     amount_ml: int,
     device_id: uuid.UUID | None = None,
 ) -> WaterLog:
+    if device_id is not None:
+        await ensure_device_exists(session, device_id)
+
     row = WaterLog(
         user_id=user_id,
         device_id=device_id,

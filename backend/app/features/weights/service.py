@@ -6,6 +6,7 @@ from datetime import UTC, date, datetime
 from sqlalchemy import Select, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.device import ensure_device_exists
 from app.core.ownership import get_owner_filter
 from app.features.weights.models import BodyWeight
 
@@ -26,6 +27,9 @@ async def create_body_weight(
     weight_kg,
     device_id: uuid.UUID | None = None,
 ) -> BodyWeight:
+    if device_id is not None:
+        await ensure_device_exists(session, device_id)
+
     # Only one per day (non-deleted).
     existing = await get_body_weight_by_day(session, user_id=user_id, day=day)
     if existing is not None:

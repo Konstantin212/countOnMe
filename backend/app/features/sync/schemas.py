@@ -45,8 +45,9 @@ class SyncPortion(APIModel):
 
 class SyncFoodEntry(APIModel):
     id: UUID
-    product_id: UUID
-    portion_id: UUID
+    product_id: UUID | None = None
+    portion_id: UUID | None = None
+    catalog_portion_id: UUID | None = None
     day: date
     meal_type: MealType
     amount: Decimal
@@ -104,6 +105,19 @@ class SyncWaterLog(APIModel):
     deleted_at: datetime | None = None
 
 
+class SyncFastingSession(APIModel):
+    id: UUID
+    technique: str
+    fasting_hours: int
+    started_at: datetime
+    target_end_at: datetime
+    ended_at: datetime | None = None
+    completed: bool
+    created_at: datetime
+    updated_at: datetime
+    deleted_at: datetime | None = None
+
+
 # ---------------------------------------------------------------------------
 # Pull response — grouped by entity type
 # ---------------------------------------------------------------------------
@@ -139,6 +153,11 @@ class WaterLogChanges(APIModel):
     deletes: list[UUID] = Field(default_factory=list)
 
 
+class FastingSessionChanges(APIModel):
+    upserts: list[SyncFastingSession] = Field(default_factory=list)
+    deletes: list[UUID] = Field(default_factory=list)
+
+
 class SyncPullResponse(APIModel):
     products: ProductChanges = Field(default_factory=ProductChanges)
     portions: PortionChanges = Field(default_factory=PortionChanges)
@@ -146,6 +165,7 @@ class SyncPullResponse(APIModel):
     goals: GoalChanges = Field(default_factory=GoalChanges)
     body_weights: BodyWeightChanges = Field(default_factory=BodyWeightChanges)
     water_logs: WaterLogChanges = Field(default_factory=WaterLogChanges)
+    fasting_sessions: FastingSessionChanges = Field(default_factory=FastingSessionChanges)
     sync_cursor: str | None = None
     has_more: bool = False
 
@@ -161,7 +181,7 @@ class MutationAction(StrEnum):
 
 
 class SyncMutation(APIModel):
-    entity_type: Literal["products", "portions", "food_entries", "goals", "body_weights", "water_logs"]
+    entity_type: Literal["products", "portions", "food_entries", "goals", "body_weights", "water_logs", "fasting_sessions"]
     action: MutationAction
     id: UUID
     data: dict | None = None
